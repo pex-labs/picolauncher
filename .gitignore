@@ -8,3 +8,5 @@ drive/bbs/
 drive/cdata/
 drive/log.txt
 drive/sdl_controllers.txt
+in_pipe
+out_pipe

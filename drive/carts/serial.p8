@@ -13,7 +13,34 @@ chan_buf_size=0x1000
 -- read init message (host os provides some information)
 -- see https://github.com/nlordell/p8-controller for discussion on caveats with serial read and write
 function serial_hello()
-  serial(stdin, 0x4300, 1)
+  serial_readline()
+end
+
+-- read from input file until a newline is reached
+-- TODO this can be refactored into a coroutine?
+function serial_readline()
+  result=''
+  got_newline=false
+  while true do
+    -- also use the argument space to receive the result
+    size = serial(stdin, chan_buf, chan_buf_size)
+    if (size == 0) then break end
+    printh('size: ' .. size)
+    for i=0,size do
+      b = peek(chan_buf+i)
+      printh('byte: '..b)
+      if b == 0x0a then
+        got_newline=true
+        break
+      end 
+      result = result..b
+    end
+  end
+  if not got_newline then
+    printh('warning: newline was not received')
+  end
+  printh('result '..result)
+  return result
 end
 
 function serial_fetch_carts()
@@ -23,22 +50,11 @@ function serial_fetch_carts()
   poke(chan_buf+1, 69)
   serial(stdout, chan_buf, 2) 
 
-  -- read result
-  --result=''
-  --repeat
-  --  -- also use the argument space to receive the result
-  --  size = serial(stdin, chan_buf, chan_buf_size)
-  --  for i=0,size do
-  --    b = peek(chan_buf+i)
-  --    result = result..b
-  --  end
-  --until(size == 0)
-  --printh('result '..result)
 end
 
 function _init()
   serial_hello()
-  serial_fetch_carts()
+  -- serial_fetch_carts()
 end
 
 function _update()
