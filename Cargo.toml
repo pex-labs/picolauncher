@@ -10,3 +10,5 @@ repository = ""
 [features]
 
 [dependencies]
+nix = { version = "0.29", features = ["fs"] }
+lazy_static = "1.5"
