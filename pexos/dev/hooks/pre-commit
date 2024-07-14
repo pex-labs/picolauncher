@@ -1,0 +1,21 @@
+#!/bin/sh
+
+BOLD='\033[1;36m'
+NC='\033[0m'
+printf "${BOLD}[PRE-COMMIT]${NC} formatting code...\n"
+cargo +nightly fmt --all
+git add -u
+
+# Disabling linting for now (building takes too long)
+# printf "${BOLD}[PRE-COMMIT]${NC} linting...\n"
+# cargo clippy
+
+# Run spellchecker
+if command -v typos &> /dev/null
+then
+    printf "${BOLD}[PRE-COMMIT]${NC} spellchecking..."
+    # Only a warning so don't block the commit
+    typos crates src || true
+else
+    printf "${BOLD}[PRE-COMMIT]${NC} spell checker not installed."
+fi
