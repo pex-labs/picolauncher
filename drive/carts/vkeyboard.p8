@@ -16,10 +16,15 @@ function Keyboard:new(key_color, border_color, selected_color, x,y,width,height)
         selected_color = selected_color,
         key_width = flr(width/12),
         key_height = flr(height/5),
-        sx = 2,
-        sy = 1,
+        --position on keyboard
+        kx = 2,
+        ky = 1,
+        --position on bottom row
+        bx = 1,
+        --position on right column
+        ry = 1,
         shift = false,
-        --if true symbol keyset if false letter keyset
+        --if true kymbol keyset if false letter keyset
         switch = false,
         switch_text = {[true] = "ABC", [false] = "#+="},
         uppercase_keyset = {
@@ -60,7 +65,7 @@ function Keyboard:draw()
             local y1 = y0 + self.key_height
             local key_color = self.key_color
 
-            if self.sx==j and self.sy == i then
+            if self.ky<=#keys and self.kx==j and self.ky == i then
                 key_color = self.selected_color
             end
 
@@ -79,17 +84,29 @@ function Keyboard:draw()
     local spacebar_color = self.key_color
     local shift_color = self.key_color
     local switch_color = self.key_color
-    if self.sy>#keys then
+    local backspace_color = self.key_color
+    local ok_color = self.key_color
+    local return_color = self.key_color
+    if self.kx>11 then
+        if self.ry==1 then
+            backspace_color = self.selected_color
+        elseif self.ry==2 then
+            return_color = self.selected_color
+        else ok_color= self.selected_color
+        end
 
-        if self.sx==3 then
-            spacebar_color = self.selected_color
-        elseif self.sx==2 then
-            switch_color = self.selected_color
-        elseif self.sx==1 then
+    elseif self.ky>#keys then
+
+        if self.bx==1 then
             shift_color = self.selected_color
+        elseif self.bx==2 then
+            switch_color = self.selected_color
+        elseif self.bx==3 then
+            spacebar_color = self.selected_color
         end
 
     end
+
 
     local shift_x0 = self.x
     local shift_y0 = self.y+self.key_height*4
@@ -119,42 +136,105 @@ function Keyboard:draw()
     rectfill(spacebar_x0,spacebar_y0,spacebar_x1,spacebar_y1,spacebar_color)
     rect(spacebar_x0,spacebar_y0,spacebar_x1,spacebar_y1,self.border_color)
 
+    local backspace_x0 = self.x+self.key_width*11
+    local backspace_y0 = self.y
+    local backspace_y1 = backspace_y0+self.key_height
+    local backspace_x1 = backspace_x0+self.key_width
+    rectfill(backspace_x0,backspace_y0,backspace_x1,backspace_y1,backspace_color)
+    rect(backspace_x0,backspace_y0,backspace_x1,backspace_y1,self.border_color)
+
+    local return_x0 = self.x+self.key_width*11
+    local return_y0 = self.y+ self.key_height
+    local return_y1 = return_y0+self.key_height*2
+    local return_x1 = return_x0+self.key_width
+    rectfill(return_x0,return_y0,return_x1,return_y1,return_color)
+    rect(return_x0,return_y0,return_x1,return_y1,self.border_color)
+
+
+    local ok_x0 = self.x+self.key_width*11
+    local ok_y0 = self.y+ self.key_height*3
+    local ok_y1 = ok_y0+self.key_height*2
+    local ok_x1 = ok_x0+self.key_width
+    rectfill(ok_x0,ok_y0,ok_x1,ok_y1,ok_color)
+    rect(ok_x0,ok_y0,ok_x1,ok_y1,self.border_color)
+
+
 
 
 
 end
 function Keyboard:current_keyset()
     if self.switch then
-        return self.symbols_keyset
+        return self.kymbols_keyset
     elseif self.shift then
         return self.uppercase_keyset
     end
     return self.lowercase_keyset
 end
 function Keyboard:current_char(keys)
-    return sub(keys[self.sy], self.sx, self.sx)
+    return sub(keys[self.ky], self.kx, self.kx)
 
 end
 
 function Keyboard:input()
     if btnp(0) then
-        if self.sx~=5 then
-            self.sx = self.sx-1
-            if self.sx==0 then
-                self.sx=11
+
+        if self.ky ~= 5 then
+            self.kx = self.kx-1
+
+            if self.kx==0 then
+                self.kx=12
+            end
+        else
+            self.bx = self.bx-1
+            if self.bx==0 then
+                self.bx=3
             end
         end
-    elseif btnp(1) then
-        self.sx = self.sx%11+1
 
+
+    elseif btnp(1) then
+
+        if self.ky ~= 5 then
+            self.kx = self.kx%12+1
+        else
+            self.bx = self.bx%3+1
+        end
 
     elseif btnp(2) then
-        self.sy = self.sy-1
-        if self.sy==0 then
-            self.sy=5
+        if self.kx>11 then
+            self.ry = self.ry-1
+            if self.ry==0 then
+                self.ry=3
+            end
+        else
+        self.ky = self.ky-1
+        if self.ky==0 then
+            self.ky=5
+            if self.kx<=2 then
+                self.bx=1
+            elseif self.kx<=4 then
+                self.bx=2
+            else self.bx=3
+            end
         end
+
+    end
+
+
     elseif btnp(3) then
-        self.sy = self.sy%5+1
+        self.ky = self.ky%5+1
+        if self.ky==5 then
+            if self.kx<=2 then
+                self.bx=1
+            elseif self.kx<=4 then
+                self.bx=2
+            else self.bx=3
+            end
+
+
+        end
+
     elseif btnp(4) then
         self.text = self.text .. self:current_char(self:current_keyset())
 
