@@ -1,10 +1,14 @@
 use std::path::{Path, PathBuf};
 use lazy_static::lazy_static;
-use nix::unistd::mkfifo;
+use nix::unistd::{mkfifo, Pid};
 use nix::sys::stat::Mode;
+use nix::sys::signal::{kill, Signal};
 use std::fs::{OpenOptions, File};
 use std::io::{Write, Read, BufRead, BufReader};
 use std::process::{Command};
+
+// root directory from perspective of pico8 process
+const DRIVE_DIR: &'static str = "drive";
 
 lazy_static! {
     // in file from the perspective of pico8 process, so we write to this
@@ -27,6 +31,12 @@ fn main() {
     create_pipe(&OUT_PIPE);
 
     // spawn pico8 process and setup pipes
+    // TODO capture stdout of pico8 and log it
+    let pico8_process = Command::new("pico8") // TODO this assumes pico8 is in path
+        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/serial.p8", "-i", "in_pipe", "-o", "out_pipe"])
+        .spawn()
+        .expect("failed to spawn pico8 process");
+    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
     // send hello message to pico8 process
     let mut in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE).expect("failed to open pipe {IN_PIPE}");
@@ -57,11 +67,20 @@ fn main() {
 
                 // spawn an executable of given name
                 // TODO ensure no ../ escape
-                let exe_path = EXE_DIR.join(data);
+                let exe_path = EXE_DIR.join(data).join(data); // TODO assume exe name is same as the directory name
                 println!("spawning executable {exe_path:?}");
-                let child = Command::new(exe_path)
+                let mut child = Command::new(exe_path)
+                    .args(vec!["-home", DRIVE_DIR]) // TODO when spawning should we override the config.txt?
                     .spawn()
                     .unwrap();
+
+                // suspend current pico8 process and swap with newly spawned process
+                kill(pico8_pid, Signal::SIGSTOP).expect("failed to send SIGSTOP to pico8 process"); 
+
+                // unsuspend when child finishes
+                child.wait().unwrap();
+                kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process"); 
+
             }
             "hello" => {
                 println!("ack hello");
