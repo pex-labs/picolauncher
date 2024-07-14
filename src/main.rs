@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use nix::unistd::mkfifo;
 use nix::sys::stat::Mode;
 use std::fs::{OpenOptions, File};
-use std::io::Write;
+use std::io::{Write, Read, BufRead, BufReader};
 
 lazy_static! {
     // in file from the perspective of pico8 process, so we write to this
@@ -29,10 +29,16 @@ fn main() {
     // send hello message to pico8 process
     let mut in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE).expect("failed to open pipe {IN_PIPE}");
     writeln!(in_pipe, "E").expect("failed to write to pipe {IN_PIPE}");
+    drop(in_pipe);
+
+    let mut out_pipe = OpenOptions::new().read(true).open(&*OUT_PIPE).expect("failed to open pipe {OUT_PIPE}");
+    let mut reader = BufReader::new(out_pipe);
+    let mut line = String::new();
+    reader.read_line(&mut line).expect("failed to read line from pipe");
+    println!("got line {line}");
 
     // listen for commands from pico8 process
     loop {
-
     }  
 
 }

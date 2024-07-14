@@ -14,6 +14,7 @@ chan_buf_size=0x1000
 -- see https://github.com/nlordell/p8-controller for discussion on caveats with serial read and write
 function serial_hello()
   serial_readline()
+  serial_writeline('hello')
 end
 
 -- read from input file until a newline is reached
@@ -43,23 +44,38 @@ function serial_readline()
   return result
 end
 
+function serial_writeline(buf)
+  -- TODO check length of buf to avoid overfloe
+  -- TODO not super efficient
+  for i=1,#buf do
+    b = ord(sub(buf, i, i))
+    printh('copy: '..b)
+    poke(chan_buf + i - 1, b)
+  end
+  -- write a newline character
+  poke(chan_buf+#buf, ord('\n'))
+
+  -- TODO currently this means that newlines are not allowed in messages
+  serial(stdout, chan_buf, #buf+1)
+end
+
 function serial_fetch_carts()
   -- send request
   -- use 0x4300 as a buffer for sending serial data arguments
   poke(chan_buf, 69)
   poke(chan_buf+1, 69)
   serial(stdout, chan_buf, 2) 
-
 end
 
 function _init()
+  cls(0)
   serial_hello()
   -- serial_fetch_carts()
+  print('done')
 end
 
 function _update()
 end
 
 function _draw()
-  cls(0)
 end
