@@ -14,7 +14,7 @@ chan_buf_size=0x1000
 -- see https://github.com/nlordell/p8-controller for discussion on caveats with serial read and write
 function serial_hello()
   serial_readline()
-  serial_writeline('hello')
+  serial_writeline('hello:')
 end
 
 -- read from input file until a newline is reached
@@ -47,9 +47,10 @@ end
 function serial_writeline(buf)
   -- TODO check length of buf to avoid overfloe
   -- TODO not super efficient
+  printh('output len '..#buf)
   for i=1,#buf do
     b = ord(sub(buf, i, i))
-    printh('copy: '..b)
+    -- printh('copy: '..b)
     poke(chan_buf + i - 1, b)
   end
   -- write a newline character
@@ -57,6 +58,7 @@ function serial_writeline(buf)
 
   -- TODO currently this means that newlines are not allowed in messages
   serial(stdout, chan_buf, #buf+1)
+  flip()
 end
 
 function serial_fetch_carts()
@@ -75,6 +77,9 @@ function _init()
 end
 
 function _update()
+  if btnp(4) then
+    serial_writeline("spawn:picocad")
+  end
 end
 
 function _draw()
