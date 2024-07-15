@@ -17,8 +17,8 @@ function serial_hello()
   serial_writeline('hello:')
 end
 
-function serial_ls()
-  serial_writeline('ls:')
+function serial_ls(dir)
+  serial_writeline('ls:'..dir)
   files=serial_readline()
   split_files=split(files, ',', false)
   return split_files

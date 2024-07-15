@@ -30,13 +30,13 @@ foreground_sleep_ms 2 // number of milliseconds to sleep each frame. Try 10 to c
 
 background_sleep_ms 10 // number of milliseconds to sleep each frame when running in the background
 
-sessions 227 // number of times program has been run
+sessions 239 // number of times program has been run
 
 // (scancode) hold this key down and left-click to simulate right-click
 rmb_key 0 // 0 for none  226 for LALT
 
 // Desktop for saving screenshots etc. Defaults to $HOME/Desktop
-desktop_path 
+desktop_path drive/carts/screenshots/
 
 // 1 to allow controller input even when application is in background
 read_controllers_in_background 0
@@ -101,8 +101,8 @@ cursor_snap 0
 gui_theme 0
 
 // scale of screenshots and gifs // 2 means 256x256
-screenshot_scale 3
-gif_scale 3
+screenshot_scale 1
+gif_scale 1
 
 // maximum gif length in seconds (0..120; 0 means no gif recording)
 gif_len 16

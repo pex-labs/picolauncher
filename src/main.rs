@@ -16,7 +16,7 @@ lazy_static! {
     // out file from the perspective of pico8 process, so we read from this
     static ref OUT_PIPE: PathBuf = PathBuf::from("out_pipe");
     static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
-    static ref CART_DIR: PathBuf = PathBuf::from("drive/carts/carts");
+    static ref CART_DIR: PathBuf = PathBuf::from("drive/carts");
 }
 
 /// create named pipes if they don't exist
@@ -34,7 +34,7 @@ fn main() {
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let pico8_process = Command::new("pico8") // TODO this assumes pico8 is in path
-        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/os.p8", "-i", "in_pipe", "-o", "out_pipe"])
+        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/gallery.p8", "-i", "in_pipe", "-o", "out_pipe"])
         .spawn()
         .expect("failed to spawn pico8 process");
     let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
@@ -90,8 +90,9 @@ fn main() {
             }
             "ls" => {
                 // fetch all carts in directory 
+                let dir = (&*CART_DIR).join(data); // TODO watch out for path traversal
                 let mut carts = vec![];
-                for entry in read_dir(&*CART_DIR).unwrap() {
+                for entry in read_dir(dir).unwrap() {
                     let entry = entry.unwrap().path();
                     if entry.is_file() {
                         let filename = entry.file_name().unwrap().to_str().unwrap().to_string();
