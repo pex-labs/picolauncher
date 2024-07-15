@@ -76,24 +76,24 @@ function serial_fetch_carts()
   serial(stdout, chan_buf, 2) 
 end
 
-carts={}
-function _init()
-  cls(0)
-  serial_hello()
-  -- serial_fetch_carts()
-  print('done')
-  carts=serial_ls()
-end
-
-function _update()
-  if btnp(4) then
-    serial_writeline("spawn:picocad")
-  end
-end
-
-function _draw()
-  cls(1)
-  for cart in all(carts) do
-    print(cart)
-  end
-end
+-- carts={}
+-- function _init()
+--   cls(0)
+--   serial_hello()
+--   -- serial_fetch_carts()
+--   print('done')
+--   carts=serial_ls()
+-- end
+-- 
+-- function _update()
+--   if btnp(4) then
+--     serial_writeline("spawn:picocad")
+--   end
+-- end
+-- 
+-- function _draw()
+--   cls(1)
+--   for cart in all(carts) do
+--     print(cart)
+--   end
+-- end

@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
+
 
 -- library
 function tcontains(table, element)
@@ -99,6 +101,7 @@ carts=ls(cart_dir)
 labels=ls(label_dir)
 
 function _init()
+    serial_hello()
     load_label()
 end
 
