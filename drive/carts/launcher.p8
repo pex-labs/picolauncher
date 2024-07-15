@@ -16,9 +16,6 @@ apps={
 select=0
 function _init()
     serial_hello()
-    for app in all(apps) do
-        printh(app.name)
-    end
 end
 
 function _update()
@@ -35,6 +32,10 @@ end
 
 function _draw()
     cls(1)
+
+    -- TODO wallpaper
+
+    -- draw app
     cur_app=apps[select+1]
     print(cur_app.name)
     spr(cur_app.sprite, 20, 20)
