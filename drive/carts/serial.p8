@@ -17,6 +17,13 @@ function serial_hello()
   serial_writeline('hello:')
 end
 
+function serial_ls()
+  serial_writeline('ls:')
+  files=serial_readline()
+  -- TODO split by comma
+  printh(files)
+end
+
 -- read from input file until a newline is reached
 -- TODO this can be refactored into a coroutine?
 function serial_readline()
@@ -26,15 +33,15 @@ function serial_readline()
     -- also use the argument space to receive the result
     size = serial(stdin, chan_buf, chan_buf_size)
     if (size == 0) then break end
-    printh('size: ' .. size)
+    -- printh('size: ' .. size)
     for i=0,size do
       b = peek(chan_buf+i)
-      printh('byte: '..b)
+      -- printh('byte: '..b)
       if b == 0x0a then
         got_newline=true
         break
       end 
-      result = result..b
+      result = result..chr(b)
     end
   end
   if not got_newline then
@@ -79,6 +86,9 @@ end
 function _update()
   if btnp(4) then
     serial_writeline("spawn:picocad")
+  end
+  if btnp(5) then
+    serial_ls()
   end
 end
 

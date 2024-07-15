@@ -3,7 +3,7 @@ use lazy_static::lazy_static;
 use nix::unistd::{mkfifo, Pid};
 use nix::sys::stat::Mode;
 use nix::sys::signal::{kill, Signal};
-use std::fs::{OpenOptions, File};
+use std::fs::{OpenOptions, File, read_dir};
 use std::io::{Write, Read, BufRead, BufReader};
 use std::process::{Command};
 
@@ -16,6 +16,7 @@ lazy_static! {
     // out file from the perspective of pico8 process, so we read from this
     static ref OUT_PIPE: PathBuf = PathBuf::from("out_pipe");
     static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
+    static ref CART_DIR: PathBuf = PathBuf::from("drive/carts/carts");
 }
 
 /// create named pipes if they don't exist
@@ -52,6 +53,11 @@ fn main() {
         let mut line = String::new();
         reader.read_line(&mut line).expect("failed to read line from pipe");
         line = line.trim().to_string();
+
+        // TODO this busy loops?
+        if line.len() == 0 {
+            continue;
+        }
         println!("received [{}] {}", line.len(), line);
 
         // spawn process command
@@ -82,6 +88,22 @@ fn main() {
                 kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process"); 
 
             }
+            "ls" => {
+                // fetch all carts in directory 
+                let mut carts = vec![];
+                for entry in read_dir(&*CART_DIR).unwrap() {
+                    let entry = entry.unwrap().path();
+                    if entry.is_file() {
+                        let filename = entry.file_name().unwrap().to_str().unwrap().to_string();
+                        carts.push(filename); 
+                    }
+                }
+                // TODO check efficiency for long files
+                let mut in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE).expect("failed to open pipe {IN_PIPE}");
+                let joined_carts = carts.join(",");
+                writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
+                drop(in_pipe);
+            },
             "hello" => {
                 println!("ack hello");
             }
