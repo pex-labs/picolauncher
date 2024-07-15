@@ -36,7 +36,7 @@ end
 -- print cart headers
 print('pico-8 cartridge // http://www.pico-8.com')
 print('version 42')
-print('__label__')
+print('__gfx__') -- export to gfx section
 
 scaled={}
 for j=1,128,128/size do
