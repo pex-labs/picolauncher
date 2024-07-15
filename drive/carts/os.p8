@@ -133,6 +133,9 @@ function _update()
     if btnp(5) then
         load(cart_dir .. '/' .. cur_cart(), 'back to pexsplore')
     end
+    if btnp(6) then
+        splore()
+    end
 end
 
 function clamp(x, l, h)
