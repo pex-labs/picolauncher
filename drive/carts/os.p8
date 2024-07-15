@@ -116,13 +116,18 @@ function load_label()
     end
 end
 
+swipe_anim_frame=0
+swipe_anim_max=8
+swipe_anim_dir=0
 function _update()
     if btnp(0) then
         select=(select-1)%(#carts)
+        -- swipe_anim_dir=-1
         load_label()
     end
     if btnp(1) then
         select=(select+1)%(#carts)
+        -- swipe_anim_dir=1
         load_label()
     end
     if btnp(5) then
@@ -130,12 +135,26 @@ function _update()
     end
 end
 
+function clamp(x, l, h)
+    if x < l then
+        return l
+    elseif x > h then
+        return h
+    end
+    return x
+end
+
 function _draw()
     cls(1)
     color(0)
-    sspr(0, 0, 128, 128, 0, 0)
-    render_poly({2, 64, 8, 58, 8, 71}, 10)
-    render_poly({126, 64, 120, 58, 120, 71}, 10)
+    swipe_anim_frame=clamp(swipe_anim_frame+swipe_anim_dir, 0, swipe_anim_max)
+
+    if swipe_anim_frame == 0 or swipe_anim_frame == swipe_anim_max then
+        swipe_anim_dir=0
+    end
+    sspr(0, 0, 128, 128, 0, swipe_anim_frame*16)
+    -- render_poly({2, 64, 8, 58, 8, 70}, 10)
+    -- render_poly({126, 64, 120, 58, 120, 70}, 10)
 
     -- w = 50
     -- h = 8
