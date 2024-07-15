@@ -1,0 +1,14 @@
+/target
+.DS_Store
+*.swp
+*.~undo-tree~
+drive/activity_log.txt
+drive/backup/
+drive/bbs/
+drive/cdata/
+drive/log.txt
+drive/sdl_controllers.txt
+drive/exe
+drive/carts/screenshots
+in_pipe
+out_pipe
