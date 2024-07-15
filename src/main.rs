@@ -98,7 +98,9 @@ fn main() {
                         carts.push(filename); 
                     }
                 }
-                // TODO check efficiency for long files
+                // TODO check efficiency for lots of files
+
+                // TODO make this pipe writing stuff better (duplicate code)
                 let mut in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE).expect("failed to open pipe {IN_PIPE}");
                 let joined_carts = carts.join(",");
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
