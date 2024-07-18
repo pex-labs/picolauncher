@@ -145,6 +145,9 @@ fn main() {
             "hello" => {
                 println!("ack hello");
             }
+            "debug" => {
+                println!("debug:{}", data);
+            }
             _ => {
                 println!("unhandled command");
             }

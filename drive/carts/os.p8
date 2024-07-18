@@ -103,6 +103,7 @@ labels=ls(label_dir)
 function _init()
     serial_hello()
     load_label()
+    poke(0x5f34,0x2) -- enabled inverted draw
 end
 
 function cur_cart()
@@ -116,6 +117,7 @@ function load_label()
     end
 end
 
+load_anim={active=false, frame=0, cart='', max_frame=10}
 function _update()
     if btnp(0) then
         select=(select-1)%(#carts)
@@ -126,10 +128,17 @@ function _update()
         load_label()
     end
     if btnp(5) then
-        load(cart_dir .. '/' .. cur_cart(), 'back to pexsplore')
+        load_anim.active=true
+        load_anim.frame=load_anim.max_frame
+        load_anim.cart=cur_cart()
     end
-    if btnp(6) then
-        splore()
+
+    if load_anim.active then
+        load_anim.frame = max(load_anim.frame-1, 0)
+        if load_anim.frame <= 0 then
+            load(cart_dir .. '/' .. load_anim.cart, 'back to pexsplore')
+            load_anim={active=false, frame=0, cart='', max_frame=10}
+        end
     end
 end
 
@@ -146,12 +155,17 @@ function _draw()
     cls(1)
     color(0)
 
+
     rect(64-32/2-1, 64-32/2-1, 64+32/2+1, 64+32/2+1, 6)
     rectfill(64-32/2, 64-32/2, 64+32/2, 64+32/2, 0)
-    sspr(0, 0, 128, 128, 64-32/2, 64-32/2)
+    sspr(0, 0, 32, 32, 64-32/2, 64-32/2)
     render_poly({2, 64, 8, 58, 8, 70}, 10)
     render_poly({126, 64, 120, 58, 120, 70}, 10)
     print(cur_cart(), 64-#cur_cart()*2, 64+32/2+5, 6)
+
+    if load_anim.active then
+        circfill(64, 64, (1-load_anim.frame/load_anim.max_frame)*124, 0)
+    end
 
     -- w = 50
     -- h = 8

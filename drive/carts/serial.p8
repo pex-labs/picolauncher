@@ -24,6 +24,10 @@ function serial_ls(dir)
   return split_files
 end
 
+function serial_debug(msg)
+  serial_writeline('debug:'..msg)
+end
+
 -- read from input file until a newline is reached
 -- TODO this can be refactored into a coroutine?
 function serial_readline()
