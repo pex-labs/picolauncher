@@ -40,6 +40,7 @@ fn parse_metadata(path: &Path) -> String {
     }
     
     let serialized = String::from_utf8_lossy(&output.stdout);
+    println!("{serialized}");
 
     return serialized.to_string();
 }
@@ -79,7 +80,7 @@ fn main() {
         if line.len() == 0 {
             continue;
         }
-        println!("received [{}] {}", line.len(), line);
+        //println!("received [{}] {}", line.len(), line);
 
         // spawn process command
         let mut split = line.splitn(2, ':');
@@ -149,7 +150,6 @@ fn main() {
                 // TODO make this pipe writing stuff better (duplicate code)
                 let mut in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE).expect("failed to open pipe {IN_PIPE}");
                 let joined_carts = carts.join(",");
-                println!("{joined_carts}");
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
                 drop(in_pipe);
             },

@@ -48,7 +48,7 @@ function serialize_table(table)
     end
     return new_str
   end
-  return '\''..escape(stringify_table(table))..'\''
+  return escape(stringify_table(table))
 end
 
 if #arg == 0 then

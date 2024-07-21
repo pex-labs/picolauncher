@@ -144,13 +144,12 @@ function _init()
 
   serial_hello()
 
+
   carts=menu_new(serial_ls(cart_dir))
   labels=ls(label_dir)
-
-  --serial_debug(''..#carts.items)
-  --for cart in all(carts.items) do
-  --  serial_debug(tostring(cart))
-  --end
+  for cart in all(carts.items) do
+    printh(tostring(cart))
+  end
 
   cart_tween_bobble()
 
