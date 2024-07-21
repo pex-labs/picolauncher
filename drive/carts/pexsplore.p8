@@ -5,6 +5,7 @@ __lua__
 #include serial.p8
 #include menu.p8
 #include utils.p8
+#include tween.lua
 
 bg_color=129
 bar_color_1=12
@@ -15,11 +16,16 @@ label_dir='labels'
 carts=menu_new(ls(cart_dir))
 labels=ls(label_dir)
 
+cart_state_idle=0
+cart_state={
+  state=cart_state_idle,
+}
+
 function load_label()
-    -- load cartridge art of current cartridge into memory
-    if tcontains(labels, carts:cur()) then
-        reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. carts:cur())
-    end
+  -- load cartridge art of current cartridge into memory
+  if tcontains(labels, carts:cur()) then
+    reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. carts:cur())
+  end
 end
 
 function draw_label(x, y)
@@ -60,6 +66,21 @@ function draw_label(x, y)
   sspr(0, 0, w, w, x-w/2, y-w/2)
 end
 
+cart_y_ease=0
+cart_tween_state=1
+
+function cart_tween_down()
+  cart_tween.v_start=0
+  cart_tween.v_end=90
+  cart_tween:restart()
+end
+
+function cart_tween_up()
+  cart_tween.v_start=90
+  cart_tween.v_end=0
+  cart_tween:restart()
+end
+
 function _init()
   -- setup dual palette
   --poke(0x5f5f,0x10)
@@ -67,10 +88,23 @@ function _init()
   ----memset(0x5f78,0xff,8)
 
   serial_hello()
+
+  cart_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=0,
+    v_end=0,
+    duration=1
+  })
+  cart_tween:register_step_callback(function(pos)
+    cart_y_ease=pos
+  end)
+
   load_label()
 end
 
-function _update()
+function _update60()
+  tween_machine:update()
+
   if btnp(2) then
     carts:up()
     load_label()
@@ -78,6 +112,15 @@ function _update()
   if btnp(3) then
     carts:down()
     load_label()
+  end
+  if btnp(5) then
+    -- load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
+    if cart_tween_state > 0 then
+      cart_tween_down()
+    else
+      cart_tween_up()
+    end
+    cart_tween_state = -cart_tween_state
   end
 end
 
@@ -108,9 +151,10 @@ function _draw()
 
   -- draw the cartridge
   label_x=110
-  draw_label(label_x, 64.5+2*sin(0.5*time()))
+  --draw_label(label_x, 64.5+2*sin(0.5*time()))
+  draw_label(label_x, 64+cart_y_ease)
   str="❎view"
-  print(str, label_x-#str*2, 117, 7)
+  print(str, label_x-#str*2, 117+cart_y_ease, 7)
 
   --for i=0,#carts do
   --end
