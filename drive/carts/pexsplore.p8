@@ -16,10 +16,20 @@ label_dir='labels'
 carts=menu_new(ls(cart_dir))
 labels=ls(label_dir)
 
-cart_state_idle=0
-cart_state={
-  state=cart_state_idle,
-}
+-- menu for each cartridge
+cart_options=menu_new({
+  {label='play',func=function()
+    load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
+  end},
+  {label='favourite',func=function()end},
+  {label='download',func=function()end},
+  {label='save music',func=function()end},
+  {label='similar carts',func=function()end},
+  {label='back',func=function()
+    cart_tween_up()
+    cart_tween_state = 1
+  end},
+})
 
 function load_label()
   -- load cartridge art of current cartridge into memory
@@ -67,6 +77,7 @@ function draw_label(x, y)
 end
 
 cart_y_ease=0
+-- 1 is up, -1 is down
 cart_tween_state=1
 
 function cart_tween_down()
@@ -105,22 +116,29 @@ end
 function _update60()
   tween_machine:update()
 
-  if btnp(2) then
-    carts:up()
-    load_label()
-  end
-  if btnp(3) then
-    carts:down()
-    load_label()
-  end
-  if btnp(5) then
-    -- load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
-    if cart_tween_state > 0 then
+  if cart_tween_state > 0 then
+    if btnp(2) then
+      carts:up()
+      load_label()
+    elseif btnp(3) then
+      carts:down()
+      load_label()
+    elseif btnp(5) then
+      -- load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
       cart_tween_down()
-    else
-      cart_tween_up()
+      cart_tween_state = -1
     end
-    cart_tween_state = -cart_tween_state
+  else
+    if btnp(2) then
+      cart_options:up()
+    elseif btnp(3) then
+      cart_options:down()
+    elseif btnp(4) then
+      cart_tween_up()
+      cart_tween_state = 1
+    elseif btnp(5) then
+      cart_options:cur().func()
+    end
   end
 end
 
@@ -137,24 +155,41 @@ end
 function _draw()
   cls(bg_color)
 
-  -- top bar
-  rectfill(0, 0, 128, 8, bar_color_1)
-  print("★", 2, 2, 10)
-  print("featured", 12, 2, 7)
+  -- draw the cartridge
+  label_x=90
+  --draw_label(label_x, 64.5+2*sin(0.5*time()))
+  draw_label(label_x, 64+cart_y_ease)
+  str="❎view"
+  print(str, label_x-#str*2, 117+cart_y_ease, 7)
 
+  print(carts:cur(), 70, -(#cart_options.items*7)-23+cart_y_ease, 14)
+  line_y=-(#cart_options.items*7)-17+cart_y_ease
+  line(70, line_y, 128, line_y, 6)
+  for i, menuitem in ipairs(cart_options.items) do
+    is_sel=cart_options.select+1 == i
+    if is_sel then
+      c=7
+      x_off=0
+    else
+      c=6
+      x_off=2
+    end
+    print(menuitem.label, 70+x_off, -(#cart_options.items*7)-20+i*7+cart_y_ease, c)
+  end
+
+  -- selection menu
   for i, cart in ipairs(carts.items) do
     is_sel=carts.select+1 == i
     if is_sel then w=60 else w=50 end
     draw_menuitem(w, 10+15*i, cart, is_sel)
   end
-  print(carts.select)
+  -- print(carts.select)
 
-  -- draw the cartridge
-  label_x=110
-  --draw_label(label_x, 64.5+2*sin(0.5*time()))
-  draw_label(label_x, 64+cart_y_ease)
-  str="❎view"
-  print(str, label_x-#str*2, 117+cart_y_ease, 7)
+  -- top bar
+  rectfill(0, 0, 128, 8, bar_color_1)
+  print("★", 2, 2, 10)
+  print("featured", 12, 2, 7)
+
 
   --for i=0,#carts do
   --end
