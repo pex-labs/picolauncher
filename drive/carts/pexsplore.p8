@@ -13,8 +13,8 @@ bar_color_2=-4
 
 cart_dir='carts'
 label_dir='labels'
-carts=menu_new(ls(cart_dir))
-labels=ls(label_dir)
+carts={}
+labels={}
 
 -- menu for each cartridge
 cart_options=menu_new({
@@ -80,15 +80,58 @@ cart_y_ease=0
 -- 1 is up, -1 is down
 cart_tween_state=1
 
+cart_tween={}
+cart_bobble_tween={}
+
+function cart_tween_bobble()
+  bob_amplitude=2
+  cart_bobble_tween=tween_machine:add_tween({
+    func=inOutSine,
+    v_start=-bob_amplitude,
+    v_end=bob_amplitude,
+    duration=1
+  })
+  cart_bobble_tween:register_step_callback(function(pos)
+    cart_y_ease=pos
+  end)
+  cart_bobble_tween:register_finished_callback(function(tween)
+    tween.v_start=tween.v_end 
+    tween.v_end=-tween.v_end
+    tween:restart()
+  end)
+  cart_bobble_tween:restart()
+end
+
 function cart_tween_down()
-  cart_tween.v_start=0
-  cart_tween.v_end=90
+  cart_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=0,
+    v_end=90,
+    duration=1
+  })
+  cart_tween:register_step_callback(function(pos)
+    cart_y_ease=pos
+  end)
+  cart_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
   cart_tween:restart()
 end
 
 function cart_tween_up()
-  cart_tween.v_start=90
-  cart_tween.v_end=0
+  cart_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=90,
+    v_end=0,
+    duration=1
+  })
+  cart_tween:register_step_callback(function(pos)
+    cart_y_ease=pos
+  end)
+  cart_tween:register_finished_callback(function(tween)
+    tween:remove()
+    cart_tween_bobble()
+  end)
   cart_tween:restart()
 end
 
@@ -100,15 +143,10 @@ function _init()
 
   serial_hello()
 
-  cart_tween=tween_machine:add_tween({
-    func=outQuart,
-    v_start=0,
-    v_end=0,
-    duration=1
-  })
-  cart_tween:register_step_callback(function(pos)
-    cart_y_ease=pos
-  end)
+  carts=menu_new(serial_ls(cart_dir))
+  labels=ls(label_dir)
+
+  cart_tween_bobble()
 
   load_label()
 end
@@ -125,6 +163,7 @@ function _update60()
       load_label()
     elseif btnp(5) then
       -- load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
+      cart_bobble_tween:remove()
       cart_tween_down()
       cart_tween_state = -1
     end
@@ -158,7 +197,7 @@ function _draw()
   -- draw the cartridge
   label_x=90
   --draw_label(label_x, 64.5+2*sin(0.5*time()))
-  draw_label(label_x, 64+cart_y_ease)
+  draw_label(label_x, 64.5+cart_y_ease)
   str="❎view"
   print(str, label_x-#str*2, 117+cart_y_ease, 7)
 

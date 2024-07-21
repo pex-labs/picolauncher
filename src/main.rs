@@ -17,6 +17,7 @@ lazy_static! {
     static ref OUT_PIPE: PathBuf = PathBuf::from("out_pipe");
     static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
     static ref CART_DIR: PathBuf = PathBuf::from("drive/carts");
+    static ref METADATA_DIR: PathBuf = PathBuf::from("drive/carts/metadata");
 }
 
 /// create named pipes if they don't exist
@@ -24,6 +25,23 @@ fn create_pipe(pipe: &Path) {
     if !pipe.exists() {
         mkfifo(pipe, Mode::S_IRUSR | Mode::S_IWUSR).expect("failed to create pipe {pipe}");
     }
+}
+
+fn parse_metadata(path: &Path) -> String {
+    let output = Command::new("lua")    
+        .args(vec!["scripts/table-string-encode.lua", path.to_str().unwrap()])
+        .output()
+        .expect("failed to execute table string script");
+
+    if !output.status.success() {
+        // TODO warn
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        println!("failed to parse metadata {path:?}, {stderr:?}");
+    }
+    
+    let serialized = String::from_utf8_lossy(&output.stdout);
+
+    return serialized.to_string();
 }
 
 fn main() {
@@ -116,8 +134,14 @@ fn main() {
                 for entry in read_dir(dir).unwrap() {
                     let entry = entry.unwrap().path();
                     if entry.is_file() {
-                        let filename = entry.file_name().unwrap().to_str().unwrap().to_string();
-                        carts.push(filename); 
+                        // for each file read metadata and pack into table string
+                        let filename = entry.file_name().unwrap();
+                        let mut metapath = PathBuf::from(filename);
+                        metapath.set_extension("lua");
+                        let metapath = METADATA_DIR.join(metapath); 
+                        let serialized = parse_metadata(&metapath); 
+
+                        carts.push(serialized); 
                     }
                 }
                 // TODO check efficiency for lots of files
@@ -125,6 +149,7 @@ fn main() {
                 // TODO make this pipe writing stuff better (duplicate code)
                 let mut in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE).expect("failed to open pipe {IN_PIPE}");
                 let joined_carts = carts.join(",");
+                println!("{joined_carts}");
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
                 drop(in_pipe);
             },

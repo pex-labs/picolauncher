@@ -2,6 +2,48 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+-- table string library
+function table_from_string(str)
+  local tab, is_key = {}, true
+  local key,val,is_on_key
+  local function reset()
+    key,val,is_on_key = '','',true
+  end
+  reset()
+  local i, len = 1, #str
+  while i <= len do
+    local char = sub(str, i, i)
+    -- token separator
+    if char == '\31' then
+      if is_on_key then
+        is_on_key = false
+      else
+        tab[tonum(key) or key] = val
+        reset()
+      end
+    -- subtable start
+    elseif char == '\29' then
+      local j,c = i,''
+      -- checking for subtable end character
+      while (c ~= '\30') do
+        j = j + 1
+        c = sub(str, j, j)
+      end
+      tab[tonum(key) or key] = table_from_string(sub(str,i+1,j-1))
+      reset()
+      i = j
+    else
+      if is_on_key then
+        key = key..char
+      else
+        val = val..char
+      end
+    end
+    i = i + 1
+  end
+  return tab
+end
+
 -- serial interface with the underlying operating system
 
 stdin=0x806
@@ -21,6 +63,9 @@ function serial_ls(dir)
   serial_writeline('ls:'..dir)
   files=serial_readline()
   split_files=split(files, ',', false)
+  for k, v in pairs(split_files) do
+    split_files[k]=table_from_string(v)
+  end
   return split_files
 end
 
