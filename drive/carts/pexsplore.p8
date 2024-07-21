@@ -18,7 +18,7 @@ labels=ls(label_dir)
 function load_label()
     -- load cartridge art of current cartridge into memory
     if tcontains(labels, carts:cur()) then
-        reload(0x0000, 0x0000, 0x2000, label_dir .. '/' .. carts:cur())
+        reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. carts:cur())
     end
 end
 
@@ -47,7 +47,13 @@ function draw_label(x, y)
   -- rectfill(x-w/2, y+w/2+3, x+w/2, y+w/2+11, 13)
 
   -- pico8 logo
-  spr(128, x-w/2+2, y-w/2-10, 5, 1)
+  spr(128, x-w/2+1, y-w/2-8, 5, 1)
+
+  -- edge connector
+  for i=0,9 do
+    rect(x-w/2+4+5*i, y+w/2+5, x-w/2+5+5*i, y+w/2+13, 9)
+    rect(x-w/2+6+5*i, y+w/2+5, x-w/2+6+5*i, y+w/2+13, 10)
+  end
 
   -- label
   rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
@@ -101,8 +107,10 @@ function _draw()
   print(carts.select)
 
   -- draw the cartridge
-  draw_label(90, 64)
-
+  label_x=110
+  draw_label(label_x, 64.5+2*sin(0.5*time()))
+  str="❎view"
+  print(str, label_x-#str*2, 117, 7)
 
   --for i=0,#carts do
   --end
