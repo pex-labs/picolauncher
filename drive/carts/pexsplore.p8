@@ -19,7 +19,7 @@ labels={}
 -- menu for each cartridge
 cart_options=menu_new({
   {label='play',func=function()
-    load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
+    load(cart_dir .. '/' .. tostring(carts:cur().filename) .. '.p8', 'back to pexsplore')
   end},
   {label='favourite',func=function()end},
   {label='download',func=function()end},
@@ -33,8 +33,9 @@ cart_options=menu_new({
 
 function load_label()
   -- load cartridge art of current cartridge into memory
-  if tcontains(labels, carts:cur()) then
-    reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. carts:cur())
+  label_name=tostring(carts:cur().filename) .. '.p8'
+  if tcontains(labels, label_name) then
+    reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. label_name)
   end
 end
 
@@ -146,6 +147,11 @@ function _init()
   carts=menu_new(serial_ls(cart_dir))
   labels=ls(label_dir)
 
+  --serial_debug(''..#carts.items)
+  --for cart in all(carts.items) do
+  --  serial_debug(tostring(cart))
+  --end
+
   cart_tween_bobble()
 
   load_label()
@@ -201,7 +207,7 @@ function _draw()
   str="❎view"
   print(str, label_x-#str*2, 117+cart_y_ease, 7)
 
-  print(carts:cur(), 70, -(#cart_options.items*7)-23+cart_y_ease, 14)
+  print(tostring(carts:cur().name), 70, -(#cart_options.items*7)-23+cart_y_ease, 14)
   line_y=-(#cart_options.items*7)-17+cart_y_ease
   line(70, line_y, 128, line_y, 6)
   for i, menuitem in ipairs(cart_options.items) do
@@ -220,7 +226,7 @@ function _draw()
   for i, cart in ipairs(carts.items) do
     is_sel=carts.select+1 == i
     if is_sel then w=60 else w=50 end
-    draw_menuitem(w, 10+15*i, cart, is_sel)
+    draw_menuitem(w, 10+15*i, tostring(cart.name), is_sel)
   end
   -- print(carts.select)
 
