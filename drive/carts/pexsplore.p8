@@ -144,7 +144,6 @@ function _init()
 
   serial_hello()
 
-
   carts=menu_new(serial_ls(cart_dir))
   labels=ls(label_dir)
   for cart in all(carts.items) do
