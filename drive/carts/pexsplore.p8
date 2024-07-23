@@ -209,7 +209,7 @@ function _draw()
   line_y=-(#cart_options.items*7)-17+cart_y_ease
   line(70, line_y, 128, line_y, 6)
   for i, menuitem in ipairs(cart_options.items) do
-    is_sel=cart_options.select+1 == i
+    is_sel=cart_options:index() == i
     if is_sel then
       c=7
       x_off=0
@@ -222,7 +222,7 @@ function _draw()
 
   -- selection menu
   for i, cart in ipairs(carts.items) do
-    is_sel=carts.select+1 == i
+    is_sel=carts:index() == i
     if is_sel then w=60 else w=50 end
     draw_menuitem(w, 10+15*i, tostring(cart.name), is_sel)
   end
