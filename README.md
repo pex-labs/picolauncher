@@ -7,3 +7,11 @@
 [![MIT/Apache 2.0](https://img.shields.io/badge/license-MIT%2FApache-blue.svg)](#)
 
 </div>
+
+## Setting up for development
+
+### picotool
+
+```
+git clone https://github.com/dansanderson/picotool.git
+```

@@ -1,4 +1,5 @@
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 use lazy_static::lazy_static;
 use nix::unistd::{mkfifo, Pid};
 use nix::sys::stat::Mode;
@@ -6,6 +7,10 @@ use nix::sys::signal::{kill, Signal};
 use std::fs::{OpenOptions, File, read_dir};
 use std::io::{Write, Read, BufRead, BufReader};
 use std::process::{Command};
+use std::thread; // TODO maybe switch to async
+
+use notify::event::CreateKind;
+use notify_debouncer_full::{notify::*, new_debouncer, DebounceEventResult};
 
 // root directory from perspective of pico8 process
 const DRIVE_DIR: &'static str = "drive";
@@ -45,6 +50,32 @@ fn parse_metadata(path: &Path) -> String {
     return serialized.to_string();
 }
 
+// Watch screenshot directory for new screenshots and then convert to a cartridge + downscale
+fn screenshot_watcher() {
+    let mut debouncer = new_debouncer(Duration::from_secs(2), None, |res: DebounceEventResult| {
+        match res {
+            Ok(events) => {
+                for event in events.iter() {
+                    if event.event.kind == EventKind::Create(CreateKind::File) {
+                        println!("{event:?}");
+
+                        // TODO should do this for each path?
+                        let screenshot_fullpath = event.event.paths.get(0).unwrap();
+
+                        // preprocess newly created screenshot and downscale to png
+                    }
+                }
+            }
+            Err(errors) => errors.iter().for_each(|error| println!("{error:?}")),
+        }
+    }).unwrap(); 
+
+    debouncer.watcher().watch(Path::new("drive/screenshots"), RecursiveMode::Recursive).unwrap();
+    println!("screenshot watcher registered");
+
+    loop {}
+}
+
 fn main() {
 
     let pico8_bin = std::env::var("PICO8_BINARY").unwrap_or("pico8".to_string());
@@ -53,10 +84,15 @@ fn main() {
     create_pipe(&IN_PIPE);
     create_pipe(&OUT_PIPE);
 
+    // spawn helper threads
+    let screenshot_handle = thread::spawn(|| {
+        screenshot_watcher(); 
+    });
+
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let pico8_process = Command::new(pico8_bin) // TODO this assumes pico8 is in path
-        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/pexsplore_home.p8", "-i", "in_pipe", "-o", "out_pipe"])
+        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/pexsplore.p8", "-i", "in_pipe", "-o", "out_pipe"])
         .spawn()
         .expect("failed to spawn pico8 process");
     let pico8_pid = Pid::from_raw(pico8_process.id() as i32);

@@ -19,7 +19,7 @@ labels={}
 -- menu for each cartridge
 cart_options=menu_new({
   {label='play',func=function()
-    load(cart_dir .. '/' .. tostring(carts:cur().filename) .. '.p8', 'back to pexsplore')
+    load(cart_dir .. '/' .. tostring(carts:cur().filename) .. '.p8', 'back to games')
   end},
   {label='favourite',func=function()end},
   {label='download',func=function()end},
@@ -231,7 +231,7 @@ function _draw()
   -- top bar
   rectfill(0, 0, 128, 8, bar_color_1)
   print("★", 2, 2, 10)
-  print("featured", 12, 2, 7)
+  print("my games", 12, 2, 7)
 
 
   --for i=0,#carts do

@@ -30,13 +30,13 @@ foreground_sleep_ms 2 // number of milliseconds to sleep each frame. Try 10 to c
 
 background_sleep_ms 10 // number of milliseconds to sleep each frame when running in the background
 
-sessions 566 // number of times program has been run
+sessions 580 // number of times program has been run
 
 // (scancode) hold this key down and left-click to simulate right-click
 rmb_key 0 // 0 for none  226 for LALT
 
 // Desktop for saving screenshots etc. Defaults to $HOME/Desktop
-desktop_path drive/carts/screenshots/
+desktop_path drive/screenshots/
 
 // 1 to allow controller input even when application is in background
 read_controllers_in_background 0

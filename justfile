@@ -18,3 +18,6 @@ fmt:
 
 lint:
     cargo clippy -- -W clippy::unwrap_used -W clippy::cargo
+
+test:
+    cargo test -- --nocapture
