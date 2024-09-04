@@ -30,17 +30,40 @@ lazy_static! {
     ]);
 }
 
+// TODO super stupid impl currently, each section is just represented by the entire string
+pub struct Cart {
+    pub sprite: Vec<String>
+}
+
+impl Cart {
+    pub fn new() -> Self {
+        Self {
+            sprite: vec![]
+        }
+    }
+
+    pub fn write<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
+        write!(writer, "pico-8 cartridge // http://www.pico-8.com\nversion 42\n__gfx__\n")?;
+        for spriteline in self.sprite.iter() {
+            writeln!(writer, "{}", spriteline)?;
+        }
+
+        Ok(())
+    }
+}
+
 // convert a screenshot png of size 128x128 to a cartridge
-pub fn screenshot2cart<W: Write>(png_path: &Path, writer: &mut W) -> anyhow::Result<()> {
+pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
     let img = ImageReader::open(png_path)?.decode()?;
 
     if img.width() != 128 || img.height() != 128 {
         return Err(anyhow!("Only images of size 128x128 are supported"));
     }
 
-    write!(writer, "pico-8 cartridge // http://www.pico-8.com\nversion 42\n__gfx__\n")?;
+    let mut cart = Cart::new();
 
     for y in 0..img.height() {
+        let mut spriteline = String::new();
         for x in 0..img.width() {
             let rgba: Array1<u8> = arr1(&img.get_pixel(x, y).0);
 
@@ -64,13 +87,30 @@ pub fn screenshot2cart<W: Write>(png_path: &Path, writer: &mut W) -> anyhow::Res
                 .unwrap();
 
             let col = format!("{:x}", min_index);
-            write!(writer, "{}", col)?;
+            spriteline += &col;
         }
-        write!(writer, "\n")?;
+        cart.sprite.push(spriteline);
     }
-    writer.flush()?;
 
-    Ok(()) 
+    Ok(cart) 
+}
+
+// takes cart with 128x128 sprite in sprite section and downscales it
+pub fn downscale_cart(cart: &Cart, size: u8) -> anyhow::Result<Cart> {
+    let mut new_cart = Cart::new();
+
+    let step = (128/size) as usize;
+    for y in (0..128).step_by(step) {
+        let mut spriteline = String::new();
+        for x in (0..128).step_by(step) {
+            // TODO this is cumbersome and not bounds checked
+            let pixel = cart.sprite.get(y).unwrap().chars().nth(x).unwrap(); 
+            spriteline += &pixel.to_string();
+        }
+        new_cart.sprite.push(spriteline);
+    }
+
+    Ok(new_cart)
 }
 
 #[cfg(test)]
@@ -79,7 +119,7 @@ mod tests {
 
     #[test]
     fn test_screenshot2cart() -> anyhow::Result<()> {
-        screenshot2cart("drive/screenshots/birdswithguns-5_0.png", &mut io::stdout())?;
+        // let cart = screenshot2cart("drive/screenshots/birdswithguns-5_0.png")?;
         Ok(())
     }
 }
