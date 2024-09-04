@@ -1,3 +1,5 @@
+mod p8util;
+
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use lazy_static::lazy_static;
