@@ -3,11 +3,15 @@
 use image::{ImageReader, GenericImageView, Pixel, Pixels};
 use ndarray::{arr1, Array1, arr2, Array2};
 use std::cmp::Ordering;
-use std::io::{self, Write};
+use std::collections::HashMap;
+use std::io::{self, Write, BufRead};
 use std::path::Path;
+use std::fs::File;
 
 use lazy_static::lazy_static;
 use anyhow::{anyhow, Result};
+use strum::IntoEnumIterator;
+use pino_deref::{Deref, DerefMut};
 
 lazy_static! {
     static ref PALETTE: Array2<u8> = arr2(&[
@@ -30,22 +34,102 @@ lazy_static! {
     ]);
 }
 
+#[derive(strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash)]
+pub enum SectionName {
+    Lua,
+    Gfx,
+    Gff,
+    Label,
+    Map,
+    Sfx,
+    Music,
+}
+
+impl SectionName {
+    pub fn header(&self) -> String {
+        format!("__{}__", self.to_string())
+    }
+}
+
+#[derive(Deref, DerefMut)]
+pub struct Section(Vec<String>);
+
+impl Section {
+    pub fn new() -> Self {
+        Section(Vec::new())
+    }
+}
+
+/*
+impl ToString for SectionName {
+    fn to_string(&self) -> String {
+        match self {
+            SectionName::Lua => "__lua__",
+            SectionName::Gfx => "__gfx__",
+            SectionName::Gff => "__gff__",
+            SectionName::Label => "__label__",
+            SectionName::Map => "__map__",
+            SectionName::Sfx => "__sfx__",
+            SectionName::Music => "__music__",
+        }.into()
+    }
+}
+*/
+
 // TODO super stupid impl currently, each section is just represented by the entire string
 pub struct Cart {
-    pub sprite: Vec<String>
+    pub sections: HashMap<SectionName, Section>,
 }
 
 impl Cart {
     pub fn new() -> Self {
         Self {
-            sprite: vec![]
+            sections: HashMap::new(),
         }
     }
 
+    pub fn get_section(&mut self, section: SectionName) -> &Section {
+        let section = self.sections.entry(section).or_insert(Section::new());
+        section
+    }
+
+    pub fn get_section_mut(&mut self, section: SectionName) -> &mut Section {
+        let section = self.sections.entry(section).or_insert(Section::new());
+        section
+    }
+
+    // Parse a cart file into memory
+    pub fn from_file(cart_path: &Path) -> anyhow::Result<Cart> {
+        let mut new_cart = Cart::new();
+        
+        let file = File::open(cart_path)?;
+
+        let reader = io::BufReader::new(file);
+
+        for line in reader.lines() {
+            let line = line?; // TODO trim line
+
+            // TODO all this parsing can be made better
+            for section_name in SectionName::iter() {
+                if line == section_name.header() {
+
+                }
+            }
+
+        }
+
+        Ok(new_cart)
+    }
+
     pub fn write<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        write!(writer, "pico-8 cartridge // http://www.pico-8.com\nversion 42\n__gfx__\n")?;
-        for spriteline in self.sprite.iter() {
-            writeln!(writer, "{}", spriteline)?;
+        write!(writer, "pico-8 cartridge // http://www.pico-8.com\nversion 42\n")?;
+
+        for (name, section) in self.sections.iter() {
+            write!(writer, "{}\n", name.header())?;
+
+            for line in section.iter() {
+                writeln!(writer, "{}", line)?;
+            }
         }
 
         Ok(())
@@ -89,7 +173,8 @@ pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
             let col = format!("{:x}", min_index);
             spriteline += &col;
         }
-        cart.sprite.push(spriteline);
+        let gfx = cart.get_section_mut(SectionName::Gfx);
+        gfx.push(spriteline);
     }
 
     Ok(cart) 
@@ -98,17 +183,25 @@ pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
 // takes cart with 128x128 sprite in sprite section and downscales it
 pub fn downscale_cart(cart: &Cart, size: u8) -> anyhow::Result<Cart> {
     let mut new_cart = Cart::new();
+    let gfx = new_cart.get_section_mut(SectionName::Gfx);
 
     let step = (128/size) as usize;
     for y in (0..128).step_by(step) {
         let mut spriteline = String::new();
         for x in (0..128).step_by(step) {
             // TODO this is cumbersome and not bounds checked
-            let pixel = cart.sprite.get(y).unwrap().chars().nth(x).unwrap(); 
+            let pixel = gfx.get(y).unwrap().chars().nth(x).unwrap(); 
             spriteline += &pixel.to_string();
         }
-        new_cart.sprite.push(spriteline);
+        gfx.push(spriteline);
     }
+
+    Ok(new_cart)
+}
+
+// Convert a standard cartridge into a music cart (a cartridge that only contains music data)
+pub fn cart2music(cart_path: &Path) -> anyhow::Result<Cart> {
+    let mut new_cart = Cart::new();
 
     Ok(new_cart)
 }

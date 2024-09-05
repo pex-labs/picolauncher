@@ -1,6 +1,10 @@
 pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
+
+#include menu.p8
+#include tween.lua
+
 -- constants
 local view_list = 1
 local view_player = 2
@@ -10,6 +14,7 @@ local visualizer_cover = 3
 
 -- state
 local current_view = view_list
+local song_files=ls('music')
 local songs = {
   {title="song a", duration=192, cover=0},
   {title="song b", duration=74, cover=2},
@@ -36,6 +41,11 @@ end
 
 function _draw()
   cls(1) -- dark blue background
+  
+  -- header
+  rectfill(0, 0, 128, 7, 11) -- green header
+  print("♪ tunes", 4, 1, 7)
+
   if current_view == view_list then
     draw_list()
   else
@@ -48,7 +58,7 @@ function update_list()
     selected_song = max(1, selected_song - 1)
   elseif btnp(3) then -- down
     selected_song = min(#songs, selected_song + 1)
-  elseif btnp(4) then -- o button
+  elseif btnp(5) then -- x button
     current_view = view_player
     is_playing = true
     play_time = 0
@@ -56,10 +66,6 @@ function update_list()
 end
 
 function draw_list()
-  -- header
-  rectfill(0, 0, 128, 16, 11) -- green header
-  print("tunes", 4, 5, 7)
-  
   -- song list
   for i, song in ipairs(songs) do
     local y = 20 + (i-1) * 12
@@ -75,9 +81,9 @@ end
 function update_player()
   local song = songs[selected_song]
   
-  if btnp(5) then -- x button
+  if btnp(4) then -- o button
     current_view = view_list
-  elseif btnp(4) then -- o button
+  elseif btnp(5) then -- x button
     if is_playing then
       is_playing = false
     else
@@ -110,11 +116,7 @@ end
 
 function draw_player()
   local song = songs[selected_song]
-  
-  -- header
-  rectfill(0, 0, 128, 16, 11) -- green header
-  print("♪ tunes", 4, 5, 7)
-  print(time_to_string(play_time) .. "/" .. time_to_string(song.duration), 70, 5, 7)
+  -- print(time_to_string(play_time) .. "/" .. time_to_string(song.duration), 70, 5, 7)
   
   -- song info
   print(song.title, 4, 20, 7)
