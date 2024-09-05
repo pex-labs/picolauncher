@@ -2,9 +2,6 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
-#include menu.p8
-#include tween.lua
-
 -- constants
 local view_list = 1
 local view_player = 2
@@ -14,7 +11,6 @@ local visualizer_cover = 3
 
 -- state
 local current_view = view_list
-local song_files=ls('music')
 local songs = {
   {title="song a", duration=192, cover=0},
   {title="song b", duration=74, cover=2},

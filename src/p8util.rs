@@ -121,7 +121,6 @@ impl Cart {
                 let sec = new_cart.get_section_mut(cur_section);
                 sec.push(line);
             }
-
         }
 
         Ok(new_cart)
