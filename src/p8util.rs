@@ -34,7 +34,7 @@ lazy_static! {
     ]);
 }
 
-#[derive(strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash)]
+#[derive(strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone, Copy)]
 pub enum SectionName {
     Lua,
     Gfx,
@@ -47,7 +47,7 @@ pub enum SectionName {
 
 impl SectionName {
     pub fn header(&self) -> String {
-        format!("__{}__", self.to_string())
+        format!("__{}__", self.to_string().to_lowercase())
     }
 }
 
@@ -106,14 +106,20 @@ impl Cart {
 
         let reader = io::BufReader::new(file);
 
-        for line in reader.lines() {
-            let line = line?; // TODO trim line
+        let mut cur_section: Option<SectionName> = None;
+        'line: for line in reader.lines() {
+            let line = line?;
 
-            // TODO all this parsing can be made better
             for section_name in SectionName::iter() {
                 if line == section_name.header() {
-
+                    cur_section = Some(section_name); 
+                    continue 'line;
                 }
+            }
+
+            if let Some(cur_section) = cur_section {
+                let sec = new_cart.get_section_mut(cur_section);
+                sec.push(line);
             }
 
         }
@@ -201,7 +207,21 @@ pub fn downscale_cart(cart: &Cart, size: u8) -> anyhow::Result<Cart> {
 
 // Convert a standard cartridge into a music cart (a cartridge that only contains music data)
 pub fn cart2music(cart_path: &Path) -> anyhow::Result<Cart> {
+    let mut cart = Cart::from_file(cart_path)?;
     let mut new_cart = Cart::new();
+
+    // copy over sfx and music sections
+    if let Some(sec_sfx) = cart.sections.remove(&SectionName::Sfx) {
+        new_cart.sections.insert(SectionName::Sfx, sec_sfx);
+    }
+    if let Some(sec_music) = cart.sections.remove(&SectionName::Music) {
+        new_cart.sections.insert(SectionName::Music, sec_music);
+    }
+
+    // move label to gfx
+    if let Some(sec_label) = cart.sections.remove(&SectionName::Label) {
+        new_cart.sections.insert(SectionName::Gfx, sec_label);
+    }
 
     Ok(new_cart)
 }

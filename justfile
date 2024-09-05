@@ -1,8 +1,11 @@
 
-default: debug
+default: pexos
 
-debug:
-    cargo run
+pexos:
+    cargo run --bin pexos
+
+util:
+    cargo run --bin p8util
 
 pico8:
     pico8 -home drive -run drive/carts/serial.p8 -i in_pipe -o out_pipe
