@@ -12,9 +12,8 @@ label_dir='labels'
 local song_menu=menu_new(ls(song_dir))
 
 function _init()
-  for i, song_file in ipairs(song_files) do
-    printh(song_file)
-  end
+  load_label()
+  load_song()
 end
 
 -- load song art of current song into memory
@@ -68,6 +67,7 @@ function draw_control_icon(x, y, icon)
 end
 
 play_state=false
+shuffle=false
 function play_song()
   play_state = true
   music(0)
@@ -94,17 +94,34 @@ function _update60()
   tween_machine:update()
 
   if btnp(0) then -- prev song
+    -- TODO add stack to support shuffled songs?
     song_menu:up()
     on_song_change()
   elseif btnp(1) then -- next song
-    song_menu:down()
+    if shuffle then
+      -- TODO currently allows same song to be played again
+      song_menu:set_index(flr(rnd(#song_menu.items))+1)
+    else
+      song_menu:down()
+    end
     on_song_change()
+  elseif btnp(4) then -- shuffle
+    shuffle = not shuffle
   elseif btnp(5) then -- pause/play
     play_state = not play_state
     if play_state then
       play_song()
     else
       stop_song()
+    end
+  end
+
+  -- detect when the current song ends
+  if play_state then
+    
+    if stat(54) == -1 then
+      song_menu:down()
+      on_song_change()
     end
   end
 end
@@ -116,7 +133,8 @@ function _draw()
   rectfill(0, 0, 128, 7, 11) -- green header
   print("♪ tunes", 4, 1, 7)
 
-  print(song_menu:cur(), 10, 10, 7)
+  print(song_menu:cur(), 64-#(song_menu:cur())*2, 20, 12)
+  print(song_menu:cur(), 64-#(song_menu:cur())*2, 19, 7)
 
   local x=64
   local y=64
@@ -131,4 +149,14 @@ function _draw()
     draw_control_icon(64-4, 100, 3)
   end
   draw_control_icon(64+8, 100, 5)
+
+  -- draw help text
+  print('❎pause/play', 3, 120, 6)
+  if shuffle then
+    shuffle_text='on'
+  else
+    shuffle_text='off'
+  end
+    
+  print('🅾️shuffle ' .. shuffle_text, 74, 120, 6)
 end

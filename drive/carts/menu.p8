@@ -40,6 +40,10 @@ function menu_new(items)
       return self.select+1
     end,
 
+    set_index=function(self, index)
+      self.select=mid(1, index, #self.items)-1
+    end,
+
     add_hook=function(self, index, hook)
       self.hooks[index] = hook
     end,

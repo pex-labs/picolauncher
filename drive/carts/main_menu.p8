@@ -8,7 +8,7 @@ __lua__
 app_menu=menu_new({
   {label='my games', icon=0, func=function()load('pexsplore.p8', 'back to menu')end},
   {label='photos', icon=1, func=function()load('gallery.p8', 'back to menu')end},
-  {label='tunes', icon=2, func=function()load('music_player.p8', 'back to menu')end},
+  {label='tunes', icon=2, func=function()load('tunes.p8', 'back to menu')end},
   {label='settings', icon=3, func=function()load('pexsplore_settings.p8', 'back to menu')end},
   -- TODO: only quits to prompt if not in exported binary
   {label='power off', icon=4, func=function()extcmd('shutdown')end},
