@@ -159,10 +159,12 @@ function _update60()
   tween_machine:update()
 
   if cart_tween_state > 0 then
-    if btnp(2) then
+    if btnp(0) then
+      sfx(0)
       carts:up()
       load_label()
-    elseif btnp(3) then
+    elseif btnp(1) then
+      sfx(0)
       carts:down()
       load_label()
     elseif btnp(5) then
@@ -173,8 +175,10 @@ function _update60()
     end
   else
     if btnp(2) then
+      sfx(0)
       cart_options:up()
     elseif btnp(3) then
+      sfx(0)
       cart_options:down()
     elseif btnp(4) then
       cart_tween_up()
@@ -199,15 +203,18 @@ function _draw()
   cls(bg_color)
 
   -- draw the cartridge
-  label_x=90
+  label_x=64
   --draw_label(label_x, 64.5+2*sin(0.5*time()))
+  draw_label(-16, 64.5)
+  draw_label(128+16, 64.5)
   draw_label(label_x, 64.5+cart_y_ease)
   str="❎view"
   print(str, label_x-#str*2, 117+cart_y_ease, 7)
 
-  print(tostring(carts:cur().name), 70, -(#cart_options.items*7)-23+cart_y_ease, 14)
+  menu_x=40
+  print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)-23+cart_y_ease, 14)
   line_y=-(#cart_options.items*7)-17+cart_y_ease
-  line(70, line_y, 128, line_y, 6)
+  line(menu_x, line_y, 88, line_y, 6)
   for i, menuitem in ipairs(cart_options.items) do
     is_sel=cart_options:index() == i
     if is_sel then
@@ -217,15 +224,15 @@ function _draw()
       c=6
       x_off=2
     end
-    print(menuitem.label, 70+x_off, -(#cart_options.items*7)-20+i*7+cart_y_ease, c)
+    print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)-20+i*7+cart_y_ease, c)
   end
 
   -- selection menu
-  for i, cart in ipairs(carts.items) do
-    is_sel=carts:index() == i
-    if is_sel then w=60 else w=50 end
-    draw_menuitem(w, 10+15*i, tostring(cart.name), is_sel)
-  end
+  -- for i, cart in ipairs(carts.items) do
+  --   is_sel=carts:index() == i
+  --   if is_sel then w=60 else w=50 end
+  --   draw_menuitem(w, 10+15*i, tostring(cart.name), is_sel)
+  -- end
   -- print(carts.select)
 
   -- top bar
@@ -308,3 +315,6 @@ __gfx__
 a777e077777007700770007707707707777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0b7d0077000007700770007707700007700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00c00077000077770777707777000007777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
+__sfx__
+000300000d7500d7500d7500840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000
