@@ -92,10 +92,12 @@ end
 
 cart_y_ease=0
 cart_y_bob=0
+cart_x_swipe=64
 -- 1 is up, -1 is down
 cart_tween_state=1
 
 cart_tween={}
+cart_swipe_tween={}
 cart_bobble_tween={}
 
 function cart_tween_bobble()
@@ -150,6 +152,43 @@ function cart_tween_up()
   cart_tween:restart()
 end
 
+-- dir is -1 (left) or 1 (right)
+function make_cart_swipe_tween(dir)
+  cart_swipe_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=64,
+    v_end=64+dir*128,
+    duration=0.25
+  })
+  cart_swipe_tween:register_step_callback(function(pos)
+    cart_x_swipe=pos
+  end)
+  cart_swipe_tween:register_finished_callback(function(tween)
+    cart_x_swipe=64-1*dir*128
+    tween:remove()
+    load_label(carts:cur(), 0)
+    make_cart_swipe_tween_2(dir)
+  end)
+  cart_swipe_tween:restart()
+end
+
+-- part 2 of tween
+function make_cart_swipe_tween_2(dir)
+  cart_swipe_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=64-1*dir*128,
+    v_end=64,
+    duration=0.25
+  })
+  cart_swipe_tween:register_step_callback(function(pos)
+    cart_x_swipe=pos
+  end)
+  cart_swipe_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
+  cart_swipe_tween:restart()
+end
+
 function _init()
   -- setup dual palette
   --poke(0x5f5f,0x10)
@@ -176,11 +215,11 @@ function _update60()
     if btnp(0) then
       sfx(0)
       carts:up()
-      load_label(carts:cur(), 0)
+      make_cart_swipe_tween(1)
     elseif btnp(1) then
       sfx(0)
       carts:down()
-      load_label(carts:cur(), 0)
+      make_cart_swipe_tween(-1)
     elseif btnp(5) then
       cart_bobble_tween:remove()
       cart_tween_down()
@@ -217,16 +256,17 @@ function _draw()
   cls(bg_color)
 
   -- draw the cartridge
-  label_x=64
   -- draw_cart(-16, 64.5, -1)
   -- draw_cart(128+16, 64.5, -1)
-  draw_cart(label_x, 64.5+cart_y_ease+cart_y_bob, 0)
+  draw_cart(cart_x_swipe, 64.5+cart_y_ease+cart_y_bob, 0)
   str="❎view"
-  print(str, label_x-#str*2, 117+cart_y_ease+cart_y_bob, 7)
-  print("⬅️", 3, 64, 7)
-  print("➡️", 118, 64, 7)
+  print(str, 64-#str*2, 117+cart_y_ease+cart_y_bob, 7)
+  if cart_tween_state > 0 then
+    print("⬅️", 3, 64, 7)
+    print("➡️", 118, 64, 7)
+  end
 
-  menu_x=40
+  menu_x=36
   print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)-23+cart_y_ease, 14)
   line_y=-(#cart_options.items*7)-17+cart_y_ease
   line(menu_x, line_y, 88, line_y, 6)
