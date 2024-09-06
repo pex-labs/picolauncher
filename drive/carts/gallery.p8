@@ -36,7 +36,6 @@ function _update()
 end
 
 function _draw()
-  cls(1)  -- dark blue background
   if is_fullscreen then
     draw_fullscreen()
   else
@@ -54,6 +53,7 @@ function update_gallery()
   elseif btnp(1) then  -- right
     current_photo = min(tsize(photos), current_photo + 1)
   elseif btnp(5) then  -- x button
+    load_full_photo()
     is_fullscreen = true
   end
    
@@ -73,10 +73,7 @@ function draw_thumbnail(n, x, y)
 end
 
 function draw_gallery()
-  -- draw header
-  rectfill(0, 0, 128, 8, 9) 
-  print("photos", 2, 2, 7)
-  -- print("❎ screenshot", 75, 5, 7)
+  cls(1)  -- dark blue background
    
   for i, photo in ipairs(loaded_thumbnails) do
     local col = (i-1) % grid_cols
@@ -95,26 +92,34 @@ function draw_gallery()
       end
     end
   end
+
+  -- draw header
+  rectfill(0, 0, 128, 8, 9) 
+  print("photos", 2, 2, 7)
+  -- print("❎ screenshot", 75, 5, 7)
 end
 
 function update_fullscreen()
-  if btnp(5) then  
+  if btnp(z) then
     is_fullscreen = false
+    load_photos()
   elseif btnp(0) then  
     current_photo = max(1, current_photo - 1)
+    load_full_photo()
   elseif btnp(1) then  
     current_photo = min(tsize(photos), current_photo + 1)
+    load_full_photo()
   end
 end
 
 function draw_fullscreen()
-  local photo = photos[current_photo]
-  rectfill(0, 0, 127, 127, 13)
-  print("screenshot "..photo.index, 32, 60, 7)
+  cls(0)
+  local photo_name = photos[current_photo]
+  sspr(0, 0, 128, 128, 0, 0)
   
   rectfill(0, 120, 127, 127, 9)  -- orange bar
-  print("photo_"..photo.index..".png", 4, 122, 7)
-  print("⬅️➡️", 110, 122, 7)
+  print(photo_name .. ".p8", 4, 121, 7)
+  print("⬅️➡️", 110, 121, 7)
 end
 
 loaded_thumbnails={}
@@ -124,17 +129,22 @@ function load_photos()
   for i, path in ipairs(ls(photo_dir)) do
     if ends_with(path, ".128.p8") then
       stripped_path = sub(path, 0, -#(".128.p8")-1)
-      photos[stripped_path] = true
+      add(photos, stripped_path)
     end
+
     if ends_with(path, ".32.p8") then
       stripped_path = sub(path, 0, -#(".32.p8")-1)
       photos[stripped_path] = true
       if #loaded_thumbnails < 9 then
         reload(#loaded_thumbnails*0x0200, 0x0000, 0x0200, photo_dir .. "/" .. path)
-        printh(photo_dir .. "/" .. path)
+        -- printh(photo_dir .. "/" .. path)
         add(loaded_thumbnails, path)
       end
     end
   end
 end
 
+function load_full_photo()
+  path = photo_dir .. "/" .. photos[current_photo] .. ".128.p8"
+  reload(0x0000, 0x0000, 0x2000, path)
+end
