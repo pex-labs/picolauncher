@@ -91,6 +91,7 @@ function draw_cart(x, y, slot)
 end
 
 cart_y_ease=0
+cart_y_bob=0
 -- 1 is up, -1 is down
 cart_tween_state=1
 
@@ -106,7 +107,7 @@ function cart_tween_bobble()
     duration=1
   })
   cart_bobble_tween:register_step_callback(function(pos)
-    cart_y_ease=pos
+    cart_y_bob=pos
   end)
   cart_bobble_tween:register_finished_callback(function(tween)
     tween.v_start=tween.v_end 
@@ -119,7 +120,7 @@ end
 function cart_tween_down()
   cart_tween=tween_machine:add_tween({
     func=outQuart,
-    v_start=0,
+    v_start=cart_y_ease,
     v_end=90,
     duration=1
   })
@@ -135,7 +136,7 @@ end
 function cart_tween_up()
   cart_tween=tween_machine:add_tween({
     func=outQuart,
-    v_start=90,
+    v_start=cart_y_ease,
     v_end=0,
     duration=1
   })
@@ -181,7 +182,6 @@ function _update60()
       carts:down()
       load_label(carts:cur(), 0)
     elseif btnp(5) then
-      -- load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
       cart_bobble_tween:remove()
       cart_tween_down()
       cart_tween_state = -1
@@ -194,6 +194,7 @@ function _update60()
       sfx(0)
       cart_options:down()
     elseif btnp(4) then
+      cart_bobble_tween:remove()
       cart_tween_up()
       cart_tween_state = 1
     elseif btnp(5) then
@@ -219,9 +220,9 @@ function _draw()
   label_x=64
   -- draw_cart(-16, 64.5, -1)
   -- draw_cart(128+16, 64.5, -1)
-  draw_cart(label_x, 64.5+cart_y_ease, 0)
+  draw_cart(label_x, 64.5+cart_y_ease+cart_y_bob, 0)
   str="❎view"
-  print(str, label_x-#str*2, 117+cart_y_ease, 7)
+  print(str, label_x-#str*2, 117+cart_y_ease+cart_y_bob, 7)
   print("⬅️", 3, 64, 7)
   print("➡️", 118, 64, 7)
 
