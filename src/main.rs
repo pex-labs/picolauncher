@@ -78,8 +78,8 @@ fn screenshot_watcher() {
                         let cart_name = screenshot_fullpath.file_stem().unwrap().to_string_lossy();
 
                         // preprocess newly created screenshot and downscale to png
-                        let cart_128 = screenshot2cart(screenshot_fullpath).unwrap();
-                        let cart_32 = downscale_cart(&cart_128, 32).unwrap();
+                        let mut cart_128 = screenshot2cart(screenshot_fullpath).unwrap();
+                        let cart_32 = downscale_cart(&mut cart_128, 32).unwrap();
 
                         let mut out_128_file = File::create(PathBuf::from(format!("{SCREENSHOT_PATH}/{cart_name}.128.p8"))).unwrap();
                         let mut out_32_file = File::create(PathBuf::from(format!("{SCREENSHOT_PATH}/{cart_name}.32.p8"))).unwrap();

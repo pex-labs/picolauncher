@@ -10,7 +10,10 @@ enum Commands {
     downscale,
     cart2music {
         cart_path: PathBuf
-    }
+    },
+    cart2label {
+        cart_path: PathBuf
+    },
 }
 
 #[derive(Parser, Debug)]
@@ -27,6 +30,14 @@ fn main() {
         Commands::downscale => todo!(),
         Commands::cart2music{ cart_path } => {
             match p8util::cart2music(cart_path) {
+                Ok(cart) => {
+                    cart.write(&mut io::stdout()).unwrap();                   
+                },
+                Err(e) => eprintln!("{}", e),
+            }
+        },
+        Commands::cart2label{ cart_path } => {
+            match p8util::cart2label(cart_path) {
                 Ok(cart) => {
                     cart.write(&mut io::stdout()).unwrap();                   
                 },

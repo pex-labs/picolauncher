@@ -186,9 +186,10 @@ pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
 }
 
 // takes cart with 128x128 sprite in sprite section and downscales it
-pub fn downscale_cart(cart: &Cart, size: u8) -> anyhow::Result<Cart> {
+pub fn downscale_cart(cart: &mut Cart, size: u8) -> anyhow::Result<Cart> {
     let mut new_cart = Cart::new();
-    let gfx = new_cart.get_section_mut(SectionName::Gfx);
+    let gfx = cart.get_section(SectionName::Gfx);
+    let new_gfx = new_cart.get_section_mut(SectionName::Gfx);
 
     let step = (128/size) as usize;
     for y in (0..128).step_by(step) {
@@ -198,7 +199,7 @@ pub fn downscale_cart(cart: &Cart, size: u8) -> anyhow::Result<Cart> {
             let pixel = gfx.get(y).unwrap().chars().nth(x).unwrap(); 
             spriteline += &pixel.to_string();
         }
-        gfx.push(spriteline);
+        new_gfx.push(spriteline);
     }
 
     Ok(new_cart)
@@ -223,6 +224,20 @@ pub fn cart2music(cart_path: &Path) -> anyhow::Result<Cart> {
     }
 
     Ok(new_cart)
+}
+
+pub fn cart2label(cart_path: &Path) -> anyhow::Result<Cart> {
+    let mut cart = Cart::from_file(cart_path)?;
+    let mut new_cart = Cart::new();
+
+    // move label to gfx
+    if let Some(sec_label) = cart.sections.remove(&SectionName::Label) {
+        new_cart.sections.insert(SectionName::Gfx, sec_label);
+    }
+
+    let scaled_cart = downscale_cart(&mut new_cart, 64)?;
+
+    Ok(scaled_cart)
 }
 
 #[cfg(test)]
