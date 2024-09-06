@@ -19,13 +19,14 @@ labels={}
 -- menu for each cartridge
 cart_options=menu_new({
   {label='play',func=function()
-    load(cart_dir .. '/' .. tostring(carts:cur().filename) .. '.p8', 'back to games')
+    make_transition_tween(carts:cur())
   end},
-  {label='favourite',func=function()end},
-  {label='download',func=function()end},
-  {label='save music',func=function()end},
-  {label='similar carts',func=function()end},
+  {label='favourite',func=function()sfx(1)end},
+  {label='download',func=function()sfx(1)end},
+  {label='save music',func=function()sfx(1)end},
+  {label='similar carts',func=function()sfx(1)end},
   {label='back',func=function()
+    sfx(3)
     cart_tween_up()
     cart_tween_state = 1
   end},
@@ -189,6 +190,25 @@ function make_cart_swipe_tween_2(dir)
   cart_swipe_tween:restart()
 end
 
+transition_radius=0
+transition_tween={}
+function make_transition_tween(cart)
+  transition_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=0,
+    v_end=200,
+    duration=1
+  })
+  transition_tween:register_step_callback(function(pos)
+    transition_radius=pos
+  end)
+  transition_tween:register_finished_callback(function(tween)
+    tween:remove()
+    load(cart_dir .. '/' .. tostring(cart.filename) .. '.p8', 'back to games')
+  end)
+  transition_tween:restart()
+end
+
 function _init()
   -- setup dual palette
   --poke(0x5f5f,0x10)
@@ -221,6 +241,7 @@ function _update60()
       carts:down()
       make_cart_swipe_tween(-1)
     elseif btnp(5) then
+      sfx(2)
       cart_bobble_tween:remove()
       cart_tween_down()
       cart_tween_state = -1
@@ -233,6 +254,7 @@ function _update60()
       sfx(0)
       cart_options:down()
     elseif btnp(4) then
+      sfx(3)
       cart_bobble_tween:remove()
       cart_tween_up()
       cart_tween_state = 1
@@ -267,8 +289,10 @@ function _draw()
   end
 
   menu_x=36
-  print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)-23+cart_y_ease, 14)
-  line_y=-(#cart_options.items*7)-17+cart_y_ease
+  menu_y=-10
+  print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)+menu_y-10+cart_y_ease, 14)
+  print('by ' .. tostring(carts:cur().author), menu_x, -(#cart_options.items*7)+menu_y-3+cart_y_ease, 15)
+  line_y=-(#cart_options.items*7)+menu_y+3+cart_y_ease
   line(menu_x, line_y, 88, line_y, 6)
   for i, menuitem in ipairs(cart_options.items) do
     is_sel=cart_options:index() == i
@@ -279,7 +303,7 @@ function _draw()
       c=6
       x_off=2
     end
-    print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)-20+i*7+cart_y_ease, c)
+    print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
   end
 
   -- selection menu
@@ -298,6 +322,9 @@ function _draw()
 
   --for i=0,#carts do
   --end
+
+  -- transition
+  circfill(64, 128, transition_radius, 0)
 end
 
 __gfx__
@@ -370,6 +397,8 @@ __gfx__
 a777e077777007700770007707707707777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0b7d0077000007700770007707700007700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00c00077000077770777707777000007777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-
 __sfx__
-000300000d7500d7500d7500840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000200000d7500d7500d7000840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000600000432004320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010000015500655008550095500a5500b5500c5500d5500e5500f5501155012550135501455017550195501c5501f550235002450022500215001f5001e5001d5001b500195001650014500145001250011500
+000100001a5501a5501855017550155501255012550105500d5500a55007550055500555004550035500155000550000000000000000000000000000000000000000000000000000000000000000000000000000
