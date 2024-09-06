@@ -12,8 +12,3 @@ pex philosophy: _"everything is a cart"_
 
 ## Setting up for development
 
-### picotool
-
-```
-git clone https://github.com/dansanderson/picotool.git
-```

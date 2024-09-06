@@ -11,6 +11,12 @@ function tcontains(table, element)
   return false
 end
 
+function tsize(table)
+  local count = 0
+  for _ in pairs(table) do count = count + 1 end
+  return count
+end
+
 -- converts anything to string, even nested tables
 -- https://www.lexaloffle.com/bbs/?pid=43636
 function tostring(any)
@@ -40,3 +46,7 @@ function tostring(any)
     return "unkown" -- should never show
 end
 
+-- check if a string ends with given suffix
+function ends_with(str, suffix)
+  return sub(str, -#suffix) == suffix
+end
