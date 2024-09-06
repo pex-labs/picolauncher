@@ -185,21 +185,35 @@ pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
     Ok(cart) 
 }
 
-// takes cart with 128x128 sprite in sprite section and downscales it
-pub fn downscale_cart(cart: &mut Cart, size: u8) -> anyhow::Result<Cart> {
+fn is_power_of_two(x: u8) -> bool {
+    x > 0 && (x & (x - 1)) == 0
+}
+
+// takes cart with 128x128 sprite in sprite section and downscales it as well as arranges in sfx
+// section
+pub fn format_label(cart: &mut Cart, size: u8) -> anyhow::Result<Cart> {
+    // check that size is passed as power of 2
+    if !is_power_of_two(size) && size <= 128 {
+        return Err(anyhow!("size can only be a power of 2"))
+    }
+
     let mut new_cart = Cart::new();
     let gfx = cart.get_section(SectionName::Gfx);
     let new_gfx = new_cart.get_section_mut(SectionName::Gfx);
 
     let step = (128/size) as usize;
+    let mut spriteline = String::new();
     for y in (0..128).step_by(step) {
-        let mut spriteline = String::new();
         for x in (0..128).step_by(step) {
             // TODO this is cumbersome and not bounds checked
             let pixel = gfx.get(y).unwrap().chars().nth(x).unwrap(); 
             spriteline += &pixel.to_string();
+
+            if spriteline.len() >= 128 {
+                new_gfx.push(spriteline.clone());
+                spriteline.clear();
+            }
         }
-        new_gfx.push(spriteline);
     }
 
     Ok(new_cart)
@@ -235,7 +249,7 @@ pub fn cart2label(cart_path: &Path) -> anyhow::Result<Cart> {
         new_cart.sections.insert(SectionName::Gfx, sec_label);
     }
 
-    let scaled_cart = downscale_cart(&mut new_cart, 64)?;
+    let scaled_cart = format_label(&mut new_cart, 64)?;
 
     Ok(scaled_cart)
 }

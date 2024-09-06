@@ -1,5 +1,5 @@
 return {
-  name='pico night punkin\'',
+  name="pico night punkin'",
   filename='pico_night_punkin',
   author='carsonk',
   tags='friday-night-funkin pico-day fnf demake friday night funkin'
