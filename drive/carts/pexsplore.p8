@@ -31,15 +31,29 @@ cart_options=menu_new({
   end},
 })
 
-function load_label()
+-- load label into slot into memory
+function load_label(cart, slot)
   -- load cartridge art of current cartridge into memory
-  label_name=tostring(carts:cur().filename) .. '.64.p8'
+  label_name=tostring(cart.filename) .. '.64.p8'
   if tcontains(labels, label_name) then
-    reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. label_name)
+    reload(slot*0x1000, 0x0000, 0x1000, label_dir .. '/' .. label_name)
   end
 end
 
-function draw_label(x, y)
+-- can pass -1 to slot to skip label
+function draw_label(x, y, w, slot)
+  rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
+  -- render a 64x64 label from memory in 'scanlines'
+  if slot >= 0 then
+    for j = 0, 31 do
+      for i = 0, 1 do
+        sspr(i*64, slot*32 + j, 64, 1, x-w/2, y-w/2+j*2+i)
+      end
+    end
+  end
+end
+
+function draw_cart(x, y, slot)
   local w=64
 
   -- border
@@ -73,13 +87,7 @@ function draw_label(x, y)
   end
 
   -- label
-  rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
-  -- render a 64x64 label from memory in 'scanlines'
-  for j = 0, 31 do
-    for i = 0, 1 do
-      sspr(i*64, j, 64, 1, x-w/2, y-w/2+j*2+i)
-    end
-  end
+  draw_label(x, y, w, slot)
 end
 
 cart_y_ease=0
@@ -157,7 +165,7 @@ function _init()
 
   cart_tween_bobble()
 
-  load_label()
+  load_label(carts:cur(), 0)
 end
 
 function _update60()
@@ -167,11 +175,11 @@ function _update60()
     if btnp(0) then
       sfx(0)
       carts:up()
-      load_label()
+      load_label(carts:cur(), 0)
     elseif btnp(1) then
       sfx(0)
       carts:down()
-      load_label()
+      load_label(carts:cur(), 0)
     elseif btnp(5) then
       -- load(cart_dir .. '/' .. carts:cur(), 'back to pexsplore')
       cart_bobble_tween:remove()
@@ -209,12 +217,13 @@ function _draw()
 
   -- draw the cartridge
   label_x=64
-  --draw_label(label_x, 64.5+2*sin(0.5*time()))
-  draw_label(-16, 64.5)
-  draw_label(128+16, 64.5)
-  draw_label(label_x, 64.5+cart_y_ease)
+  -- draw_cart(-16, 64.5, -1)
+  -- draw_cart(128+16, 64.5, -1)
+  draw_cart(label_x, 64.5+cart_y_ease, 0)
   str="❎view"
   print(str, label_x-#str*2, 117+cart_y_ease, 7)
+  print("⬅️", 3, 64, 7)
+  print("➡️", 118, 64, 7)
 
   menu_x=40
   print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)-23+cart_y_ease, 14)

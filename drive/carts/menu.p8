@@ -9,26 +9,43 @@ function menu_new(items)
     wrap=true,
     hooks={},
 
+    -- get index of up item in menu
+    up_index=function(self)
+      if self.wrap then
+        return (self.select-1)%(#self.items)
+      else
+        return max(self.select-1, 0)
+      end
+    end,
+
+    down_index=function(self)
+      if self.wrap then
+        return (self.select+1)%(#self.items)
+      else
+        -- TODO may be weird if #items = 0
+        return min(self.select+1, #self.items-1)
+      end
+    end,
+
+    peek_up=function(self)
+      return self.items[self:up_index()]
+    end,
+
+    peek_down=function(self)
+      return self.items[self:down_index()]
+    end,
+
     -- go up in the menu
     up=function(self)
       _select=self.select
-      if self.wrap then
-        self.select = (self.select-1)%(#self.items)
-      else
-        self.select = max(self.select-1, 0)
-      end
+      self.select=self:up_index()
       if _select != self.select then self:_check_hooks() end
     end,
 
     -- go down in the menu
     down=function(self)
       _select=self.select
-      if self.wrap then
-        self.select = (self.select+1)%(#self.items)
-      else
-        -- TODO may be weird if #items = 0
-        self.select = min(self.select+1, #self.items-1)
-      end
+      self.select=self:down_index()
       if _select != self.select then self:_check_hooks() end
     end,
 
