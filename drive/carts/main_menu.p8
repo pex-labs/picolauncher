@@ -9,7 +9,7 @@ app_menu=menu_new({
   {label='my games', icon=0, func=function()load('pexsplore.p8', 'back to menu')end},
   {label='photos', icon=1, func=function()load('gallery.p8', 'back to menu')end},
   {label='tunes', icon=2, func=function()load('tunes.p8', 'back to menu')end},
-  {label='settings', icon=3, func=function()load('pexsplore_settings.p8', 'back to menu')end},
+  {label='settings', icon=3, func=function()load('settings.p8', 'back to menu')end},
   -- TODO: only quits to prompt if not in exported binary
   {label='power off', icon=4, func=function()extcmd('shutdown')end},
 })
@@ -18,17 +18,45 @@ function _init()
   app_cursor_y = target_app_cursor_y()
 end
 
+function wait(a) for i = 1,a do flip() end end
+
+transition_radius=0
+transition_tween={}
+function make_transition_tween()
+  transition_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=0,
+    v_end=200,
+    duration=1
+  })
+  transition_tween:register_step_callback(function(pos)
+    transition_radius=pos
+  end)
+  transition_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
+  transition_tween:restart()
+end
+
+
+queued_fn=nil
+queued_fn_time=0
 function _update60()
   tween_machine:update()
 
   if btnp(2) then
     app_menu:up()
+    sfx(0)
     make_app_cursor_tween(target_app_cursor_y())
   elseif btnp(3) then
     app_menu:down()
+    sfx(0)
     make_app_cursor_tween(target_app_cursor_y())
   elseif btnp(5) then
-    app_menu:cur().func()
+    -- sfx(1)
+    queued_fn=app_menu:index()
+    queued_fn_time=time()
+    make_transition_tween()
   end
 end
 
@@ -107,6 +135,12 @@ function _draw()
   cursor_y = app_cursor_y
   rect(cursor_x, cursor_y, cursor_x+17, cursor_y+19, 7)
 
+  if queued_fn != nil then
+    circfill(28+8, 16+8+20*(queued_fn-1), transition_radius, 0)
+    if time()-queued_fn_time > 0.5 then
+      app_menu.items[queued_fn].func()
+    end
+  end
 end
 
 __gfx__
@@ -128,3 +162,6 @@ cccccccccccccccc9999999999999999bbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeedddddddddddddddd
 cccccccccccccccc9999999999999999bbbbbbbbbbbbbbbbeeeeeeeeeeeeeeeedddddddddddddddd000000000000000000000000000000000000000000000000
 dddddddddddddddd4444444444444444333333333333333322222222222222225555555555555555000000000000000000000000000000000000000000000000
 dddddddddddddddd4444444444444444333333333333333322222222222222225555555555555555000000000000000000000000000000000000000000000000
+__sfx__
+000300000d7500d7500d7500840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000200002705026050260502605022100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

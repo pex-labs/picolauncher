@@ -36,6 +36,7 @@ function _init()
  pex_y = -32 
  labs_y = 128  
  fade = 0
+ start_time=time()
 end
 
 function _update()
@@ -54,11 +55,15 @@ function _update()
  end
  
  if t >= 30 and t < 90 then
-  labs_y = max(labs_y - 2, 72)  -- Move to y=72
+  labs_y = max(labs_y - 2, 62)  -- Move to y=62
  end
  
  if t < 30 then
   fade = min(fade + 0.05, 1)
+ end
+
+ if time()-start_time > 3 then
+   load('main_menu.p8')
  end
 end
 
