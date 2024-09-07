@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="media/logo.png" alt="PicoLauncher">
+<img src="media/logo.png" alt="PicoLauncher" width="70%">
 
 PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 
@@ -21,6 +21,15 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 - physical cartridges (coming soon)
 
 **PicoLauncher** is developed for the [PeX Console](https://pex-labs.com/) by PeX Labs, however in the future support may come for other devices.
+
+<div style="display: flex; justify-content: space-between;">
+<img src="media/pexsplore.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
+<img src="media/gallery.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
+</div>
+<div style="display: flex; justify-content: space-between;">
+<img src="media/tunes.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
+<img src="media/settings.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
+</div>
 
 ## Setting up for development
 
