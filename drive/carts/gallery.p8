@@ -73,15 +73,19 @@ function update_gallery()
   if btnp(2) then  
     current_photo = max(1, current_photo - grid_cols)
     scroll_to()
+    sfx(0)
   elseif btnp(3) then  -- down
     current_photo = min(tsize(photos), current_photo + grid_cols)
     scroll_to()
+    sfx(0)
   elseif btnp(0) then  -- left
     current_photo = max(1, current_photo - 1)
     scroll_to()
+    sfx(0)
   elseif btnp(1) then  -- right
     current_photo = min(tsize(photos), current_photo + 1)
     scroll_to()
+    sfx(0)
   elseif btnp(5) then  -- x button
     load_full_photo()
     is_fullscreen = true
@@ -162,9 +166,11 @@ function update_fullscreen()
     scroll_to()
   elseif btnp(0) then  
     current_photo = max(1, current_photo - 1)
+    sfx(0)
     load_full_photo()
   elseif btnp(1) then  
     current_photo = min(tsize(photos), current_photo + 1)
+    sfx(0)
     load_full_photo()
   end
 end
@@ -207,3 +213,6 @@ function load_full_photo()
   path = photo_dir .. "/" .. photos[current_photo].path .. ".128.p8"
   reload(0x0000, 0x0000, 0x2000, path)
 end
+
+__sfx__
+000200000d7500d7500d7000840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000

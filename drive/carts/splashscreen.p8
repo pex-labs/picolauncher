@@ -51,11 +51,11 @@ function _update()
  end
  
  if t < 60 then
-  pex_y = min(pex_y + 2, 32)  -- Move to y=32
+  pex_y = min(pex_y + 2, 24)  -- Move to y=32
  end
  
  if t >= 30 and t < 90 then
-  labs_y = max(labs_y - 2, 62)  -- Move to y=62
+  labs_y = max(labs_y - 2, 56)  -- Move to y=62
  end
  
  if t < 30 then

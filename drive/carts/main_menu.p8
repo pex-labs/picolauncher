@@ -107,7 +107,7 @@ function _draw()
   cls(1)
 
   -- top bar
-  print('10:20', 7, 4, 7)
+  print(stat(93)..":"..stat(94), 7, 4, 7)
   draw_wifi_icon(83, 4)
   draw_bat_icon(94, 4)
   print('42%', 108, 4, 7)

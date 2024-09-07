@@ -72,12 +72,12 @@ function _draw()
 end
 
 function draw_banner()
-  rectfill(0, 0, screen_width, 12, c_banner)
+  rectfill(0, 0, screen_width, 8, c_banner)
   local breadcrumb = "settings"
   if current_screen != "main" then
     breadcrumb = breadcrumb .. "/" .. current_screen
   end
-  print(breadcrumb, 4, 4, c_selected)
+  print(breadcrumb, 2, 2, c_selected)
 end
 
 function update_main_menu()
