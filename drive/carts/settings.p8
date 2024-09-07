@@ -64,7 +64,8 @@ function _draw()
   elseif current_screen == "wifi" then
     draw_wifi_menu()
   elseif current_screen == "controls" then
-    draw_controls_menu()
+    --draw_controls_menu()
+    draw_generic_menu()
   else
     draw_generic_menu()
   end
@@ -83,11 +84,13 @@ function update_main_menu()
   local menu_size = #menu_items
   if btnp(2) then
     current_item = (current_item - 2 + menu_size) % menu_size + 1
+    sfx(0)
     update_scroll()
   elseif btnp(3) then
     current_item = current_item % menu_size + 1
+    sfx(0)
     update_scroll()
-  elseif btnp(4) then
+  elseif btnp(5) then
     current_screen = menu_items[current_item]
     current_item = 1
     scroll_offset = 0
@@ -105,13 +108,11 @@ end
 function draw_main_menu()
   for i = 1, min(items_visible, #menu_items) do
     local item_index = i + scroll_offset
-    local y = menu_start_y + (i-1) * 10
+    local y = menu_start_y + (i-1) * 8
     local color = (item_index == current_item) and c_selected or c_text
 
     if item_index == current_item then
-      print("▶", 2, y, color)
-    else
-      print("", 2, y, color)
+      print("▶", 4, y, color)
     end
 
     print(menu_items[item_index], 10, y, color)
@@ -121,22 +122,26 @@ function draw_main_menu()
     end
   end
 
-  print("system information", 4, 90, c_text)
-  print("version    v0.0.1", 4, 100, c_text)
-  print("model      pex one", 4, 108, c_text)
+  sysinfo_y_offset=70
+  print("system information", 10, sysinfo_y_offset, c_text)
+  line(10, sysinfo_y_offset+7, 118, sysinfo_y_offset+7, c_text)
+  print("version    v0.1.0", 10, sysinfo_y_offset+10, c_text)
+  print("model      pex one", 10, sysinfo_y_offset+18, c_text)
 end
 
 function update_wifi_menu()
   local menu_size = #wifi_networks + 2  -- +2 for [scan] and airplane mode
   if btnp(2) then
     current_item = max(1, current_item - 1)
+    sfx(0)
   elseif btnp(3) then
     current_item = min(menu_size, current_item + 1)
-  elseif btnp(4) then
+    sfx(0)
+  elseif btnp(5) then
     if current_item == 2 then
       airplane_mode = not airplane_mode
     end
-  elseif btnp(5) then
+  elseif btnp(4) then
     current_screen = "main"
     current_item = 1
     scroll_offset = 0
@@ -144,19 +149,19 @@ function update_wifi_menu()
 end
 
 function draw_wifi_menu()
-  print("[scan]", 4, menu_start_y, c_text)
+  print("[scan]", 10, menu_start_y, c_text)
 
   local airplane_y = menu_start_y + 10
   if current_item == 2 then
     rectfill(0, airplane_y, screen_width, airplane_y + 9, c_selected)
-    print("airplane mode", 4, airplane_y + 2, 0)
+    print("airplane mode", 10, airplane_y + 2, 0)
   else
-    print("airplane mode", 4, airplane_y + 2, c_text)
+    print("airplane mode", 10, airplane_y + 2, c_text)
   end
   print(airplane_mode and "on" or "off", screen_width - 20, airplane_y + 2, airplane_mode and 11 or 8)
 
-  print("networks", 4, menu_start_y + 25, c_text)
-  line(4, menu_start_y + 33, screen_width - 4, menu_start_y + 33, c_text)
+  print("networks", 10, menu_start_y + 25, c_text)
+  line(10, menu_start_y + 33, screen_width - 10, menu_start_y + 33, c_text)
 
   for i, network in ipairs(wifi_networks) do
     local y = menu_start_y + 35 + (i-1) * 10
@@ -164,14 +169,14 @@ function draw_wifi_menu()
 
     if is_selected then
       rectfill(0, y, screen_width, y + 9, c_selected)
-      print(network.name, 4, y + 2, 0)
+      print(network.name, 10, y + 2, 0)
     else
-      print(network.name, 4, y + 2, c_text)
+      print(network.name, 10, y + 2, c_text)
     end
 
     for j = 1, 4 do
       if j <= network.strength then
-        line(screen_width - 10 + j*2, y + 9 - j*2, screen_width - 10 + j*2, y + 8, c_text)
+        line(screen_width - 16 + j*2, y + 9 - j*2, screen_width - 16 + j*2, y + 8, c_text)
       end
     end
   end
@@ -180,11 +185,13 @@ end
 function update_controls_menu()
   if btnp(2) then
     current_control = max(1, current_control - 1)
+    sfx(0)
   elseif btnp(3) then
     current_control = min(#control_names, current_control + 1)
-  elseif btnp(4) then
-    wait_for_button_press()
+    sfx(0)
   elseif btnp(5) then
+    wait_for_button_press()
+  elseif btnp(4) then
     current_screen = "main"
     current_item = 1
   end
@@ -263,7 +270,7 @@ function wait_for_button_press()
 end
 
 function update_generic_menu()
-  if btnp(5) then
+  if btnp(4) then
     current_screen = "main"
     current_item = 1
     scroll_offset = 0
@@ -274,3 +281,6 @@ function draw_generic_menu()
   print(current_screen .. " settings", 10, menu_start_y, c_text)
   print("(not implemented)", 10, menu_start_y + 10, c_text)
 end
+
+__sfx__
+000200000d7500d7500d7000840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000
