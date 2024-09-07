@@ -12,7 +12,7 @@ lazy_static! {
     pub static ref OUT_PIPE: PathBuf = PathBuf::from("out_pipe");
     pub static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
     pub static ref CART_DIR: PathBuf = PathBuf::from("drive/carts");
-    pub static ref GAMES_DIR: PathBuf = PathBuf::from("drive/carts/carts");
+    pub static ref GAMES_DIR: PathBuf = PathBuf::from("drive/carts/games");
     pub static ref MUSIC_DIR: PathBuf = PathBuf::from("drive/carts/music");
     pub static ref LABEL_DIR: PathBuf = PathBuf::from("drive/carts/labels");
     pub static ref METADATA_DIR: PathBuf = PathBuf::from("drive/carts/metadata");

@@ -106,7 +106,7 @@ fn main() {
             "-home",
             DRIVE_DIR,
             "-run",
-            "drive/carts/pexsplore.p8",
+            "drive/carts/splashscreen.p8",
             "-i",
             "in_pipe",
             "-o",

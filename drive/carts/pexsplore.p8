@@ -11,7 +11,7 @@ bg_color=129
 bar_color_1=12
 bar_color_2=-4
 
-cart_dir='carts'
+cart_dir='games'
 label_dir='labels'
 carts={}
 labels={}

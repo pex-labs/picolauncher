@@ -93,7 +93,7 @@ function render_poly(v,col)
 end
 
 -- application code
-cart_dir='carts'
+cart_dir='games'
 label_dir='labels'
 
 select=0

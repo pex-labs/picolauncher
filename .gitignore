@@ -2,6 +2,7 @@
 .DS_Store
 *.swp
 *.~undo-tree~
+drive/config.txt
 drive/activity_log.txt
 drive/backup/
 drive/bbs/
@@ -13,3 +14,5 @@ drive/screenshots
 drive/carts/screenshots
 in_pipe
 out_pipe
+build
+build.zip
