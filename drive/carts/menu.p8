@@ -9,6 +9,10 @@ function menu_new(items)
     wrap=true,
     hooks={},
 
+    len=function(self)
+      return #self.items
+    end,
+
     -- get index of up item in menu
     up_index=function(self)
       if self.wrap then

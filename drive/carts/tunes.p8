@@ -19,7 +19,11 @@ end
 -- load song art of current song into memory
 function load_label()
   song_name=tostring(song_menu:cur())
-  reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. song_name)
+  -- replace .p8 with .64.p8
+  if ends_with(song_name, ".p8") then
+    stripped_path = sub(song_name, 0, -#(".p8")-1)
+    reload(0x0000, 0x0000, 0x1000, label_dir .. '/' .. stripped_path .. '.64.p8')
+  end
 end
 
 -- load sfx and music section
@@ -29,7 +33,16 @@ function load_song()
   reload(0x3200, 0x3200, 0x1100, song_dir .. '/' .. song_name)
 end
 
+function draw_label(x, y, w)
+  rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
+  for j = 0, 31 do
+    for i = 0, 1 do
+      sspr(i*64, j, 64, 1, x-w/2, y-w/2+j*2+i)
+    end
+  end
+end
 
+-- TODO: this function is kinda lmao, just use spritesheets instead
 function draw_control_icon(x, y, icon)
   -- draw 8x8 control icons
   if icon == 1 then -- rewind
@@ -140,7 +153,7 @@ function _draw()
   local y=64
   local w=64
   rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
-  sspr(0, 0, w, w, x-w/2, y-w/2)
+  draw_label(x, y, w)
 
   draw_control_icon(64-16, 100, 2)
   if play_state then

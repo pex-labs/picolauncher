@@ -145,7 +145,14 @@ function draw_gallery()
   -- draw header
   rectfill(0, 0, 128, 8, 9) 
   print("photos", 2, 2, 7)
-  -- print("❎ screenshot", 75, 5, 7)
+
+  -- print some text if you don't have any photos
+  if tsize(photos) == 0 then
+    line1="it's empty in here"
+    print(line1, 64-#line1*2, 60, 6)
+    line2="🐱 "
+    print(line2, 64-#line2*2, 68, 6)
+  end
 end
 
 function update_fullscreen()

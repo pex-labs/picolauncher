@@ -108,7 +108,16 @@ function update_player()
   end
 end
 
-
+function draw_label(x, y, w)
+  rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
+  if slot >= 0 then
+    for j = 0, 31 do
+      for i = 0, 1 do
+        sspr(i*64, j, 64, 1, x-w/2, y-w/2+j*2+i)
+      end
+    end
+  end
+end
 
 function draw_player()
   local song = songs[selected_song]
@@ -148,6 +157,7 @@ function draw_player()
   end
 end
 
+-- TODO this function is slightly lmao - can just use sprite sheet
 function draw_control_icon(x, y, icon)
   -- draw 8x8 control icons
   if icon == 1 then -- rewind

@@ -42,6 +42,7 @@ function load_label(cart, slot)
 end
 
 -- can pass -1 to slot to skip label
+-- TODO this function is duplicated a lot, should abstract it
 function draw_label(x, y, w, slot)
   rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
   -- render a 64x64 label from memory in 'scanlines'
@@ -277,6 +278,17 @@ end
 function _draw()
   cls(bg_color)
 
+  if carts:len() == 0 then
+    line1="it's empty in here"
+    print(line1, 64-#line1*2, 60, 6)
+    line2="🐱 "
+    print(line2, 64-#line2*2, 68, 6)
+  else
+    draw_carts_menu()
+  end
+end
+
+function draw_carts_menu()
   -- draw the cartridge
   -- draw_cart(-16, 64.5, -1)
   -- draw_cart(128+16, 64.5, -1)
