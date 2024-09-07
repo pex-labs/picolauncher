@@ -11,24 +11,72 @@ use std::{
     time::Duration,
 };
 
+use anyhow::anyhow;
 use consts::*;
-use nix::{
-    sys::{
-        signal::{kill, Signal},
-        stat::Mode,
-    },
-    unistd::{mkfifo, Pid},
-};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
 use serde_json::Map;
 
 /// create named pipes if they don't exist
-fn create_pipe(pipe: &Path) {
+#[cfg(target_os = "linux")]
+fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
+    use nix::{
+        sys::{
+            signal::{kill, Signal},
+            stat::Mode,
+        },
+        unistd::{mkfifo, Pid},
+    };
     if !pipe.exists() {
         mkfifo(pipe, Mode::S_IRUSR | Mode::S_IWUSR).expect("failed to create pipe {pipe}");
     }
+    Ok(())
+}
+
+#[cfg(target_os = "windows")]
+fn to_wstring(str: &str) -> Vec<u16> {
+    use std::{ffi::OsStr, os::windows::ffi::OsStrExt};
+
+    OsStr::new(str)
+        .encode_wide()
+        .chain(Some(0).into_iter())
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
+    use std::{io::Error, ptr};
+
+    use winapi::um::{
+        fileapi::CreateFileW,
+        handleapi::INVALID_HANDLE_VALUE,
+        namedpipeapi::CreateNamedPipeW,
+        winbase::{PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_WAIT},
+        winnt::{FILE_SHARE_READ, GENERIC_READ},
+    };
+
+    if !pipe.exists() {
+        let pipe_name_w = to_wstring(pipe.to_str().unwrap());
+
+        unsafe {
+            let handle = CreateNamedPipeW(
+                pipe_name_w.as_ptr(),
+                PIPE_ACCESS_DUPLEX,
+                PIPE_TYPE_BYTE | PIPE_WAIT,
+                1,               // Max instances
+                512,             // Output buffer size
+                512,             // Input buffer size
+                0,               // Default timeout
+                ptr::null_mut(), // Default security attributes
+            );
+
+            if handle == INVALID_HANDLE_VALUE {
+                return Err(anyhow!(Error::last_os_error()));
+            }
+        }
+    }
+    Ok(())
 }
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
@@ -114,7 +162,7 @@ fn main() {
         ])
         .spawn()
         .expect("failed to spawn pico8 process");
-    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    //let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
     // send hello message to pico8 process
     let mut in_pipe = OpenOptions::new()
@@ -151,6 +199,8 @@ fn main() {
         println!("received cmd:{cmd} data:{data}");
 
         match cmd {
+            // TODO disable until we port this to windows and support launching external binaries
+            /*
             "spawn" => {
                 // TODO double check that the command to run is in the exec directory (to avoid
                 // arbitrary code execution)
@@ -193,6 +243,7 @@ fn main() {
                 child.wait().unwrap();
                 kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process");
             },
+            */
             "ls" => {
                 // fetch all carts in directory
                 let dir = (&*CART_DIR).join(data); // TODO watch out for path traversal
@@ -225,6 +276,7 @@ fn main() {
             "label" => {
                 // fetch a label for a given cart, scaled to a given size
             },
+            /*
             "splore" => {
                 let mut child = Command::new("pico8") // TODO absolute path to pico8?
                     .args(vec!["-home", DRIVE_DIR, "-splore"])
@@ -238,6 +290,7 @@ fn main() {
                 child.wait().unwrap();
                 kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process");
             },
+            */
             "hello" => {
                 println!("ack hello");
             },
