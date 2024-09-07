@@ -1,4 +1,3 @@
-
 use std::path::PathBuf;
 
 use lazy_static::lazy_static;
@@ -25,5 +24,3 @@ pub const RAW_SCREENSHOT_PATH: &'static str = "drive/screenshots";
 
 // path of scaled cart screenshots
 pub const SCREENSHOT_PATH: &'static str = "drive/carts/screenshots";
-
-

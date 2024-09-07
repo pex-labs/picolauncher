@@ -1,18 +1,20 @@
 // misc pico8 utilities
 
-use image::{ImageReader, GenericImageView, Pixel, Pixels};
-use ndarray::{arr1, Array1, arr2, Array2};
-use serde_json::Map;
-use std::cmp::Ordering;
-use std::collections::HashMap;
-use std::io::{self, Write, BufRead};
-use std::path::Path;
-use std::fs::File;
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+    fs::File,
+    io::{self, BufRead, Write},
+    path::Path,
+};
 
-use lazy_static::lazy_static;
 use anyhow::{anyhow, Result};
-use strum::IntoEnumIterator;
+use image::{GenericImageView, ImageReader, Pixel, Pixels};
+use lazy_static::lazy_static;
+use ndarray::{arr1, arr2, Array1, Array2};
 use pino_deref::{Deref, DerefMut};
+use serde_json::Map;
+use strum::IntoEnumIterator;
 
 lazy_static! {
     static ref PALETTE: Array2<u8> = arr2(&[
@@ -35,7 +37,9 @@ lazy_static! {
     ]);
 }
 
-#[derive(strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone, Copy)]
+#[derive(
+    strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone, Copy,
+)]
 pub enum SectionName {
     Lua,
     Gfx,
@@ -102,7 +106,7 @@ impl Cart {
     // Parse a cart file into memory
     pub fn from_file(cart_path: &Path) -> anyhow::Result<Cart> {
         let mut new_cart = Cart::new();
-        
+
         let file = File::open(cart_path)?;
 
         let reader = io::BufReader::new(file);
@@ -113,7 +117,7 @@ impl Cart {
 
             for section_name in SectionName::iter() {
                 if line == section_name.header() {
-                    cur_section = Some(section_name); 
+                    cur_section = Some(section_name);
                     continue 'line;
                 }
             }
@@ -128,7 +132,10 @@ impl Cart {
     }
 
     pub fn write<W: Write>(&self, writer: &mut W) -> anyhow::Result<()> {
-        write!(writer, "pico-8 cartridge // http://www.pico-8.com\nversion 42\n")?;
+        write!(
+            writer,
+            "pico-8 cartridge // http://www.pico-8.com\nversion 42\n"
+        )?;
 
         for (name, section) in self.sections.iter() {
             write!(writer, "{}\n", name.header())?;
@@ -183,7 +190,7 @@ pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
         gfx.push(spriteline);
     }
 
-    Ok(cart) 
+    Ok(cart)
 }
 
 fn is_power_of_two(x: u8) -> bool {
@@ -195,19 +202,19 @@ fn is_power_of_two(x: u8) -> bool {
 pub fn format_label(cart: &mut Cart, size: u8) -> anyhow::Result<Cart> {
     // check that size is passed as power of 2
     if !is_power_of_two(size) && size <= 128 {
-        return Err(anyhow!("size can only be a power of 2"))
+        return Err(anyhow!("size can only be a power of 2"));
     }
 
     let mut new_cart = Cart::new();
     let gfx = cart.get_section(SectionName::Gfx);
     let new_gfx = new_cart.get_section_mut(SectionName::Gfx);
 
-    let step = (128/size) as usize;
+    let step = (128 / size) as usize;
     let mut spriteline = String::new();
     for y in (0..128).step_by(step) {
         for x in (0..128).step_by(step) {
             // TODO this is cumbersome and not bounds checked
-            let pixel = gfx.get(y).unwrap().chars().nth(x).unwrap(); 
+            let pixel = gfx.get(y).unwrap().chars().nth(x).unwrap();
             spriteline += &pixel.to_string();
 
             if spriteline.len() >= 128 {
@@ -303,7 +310,6 @@ fn escape_string(s: &str) -> String {
 pub fn serialize_table(table: &Map<String, serde_json::Value>) -> String {
     escape_string(&stringify_table(table))
 }
-
 
 #[cfg(test)]
 mod tests {
