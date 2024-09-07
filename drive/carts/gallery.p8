@@ -14,7 +14,7 @@ photo_dir='screenshots'
 local grid_cols = 3
 local grid_rows = 4
 local thumb_size = 32
-local grid_offset_x = 10
+local grid_offset_x = 12
 local grid_offset_y = 20
 
 -- state
@@ -25,6 +25,7 @@ local is_fullscreen = false
 function _init()
   cartdata("screenshot_gallery_data")
   load_photos()
+  make_thumbnail_freeq()
 end
 
 function _update60()
@@ -63,21 +64,24 @@ function make_scroll_tween(target_y)
   scroll_tween:restart()
 end
 
+function scroll_to()
+  local target_y = flr((current_photo - 1) / grid_cols) * (thumb_size + 4) - 32
+  make_scroll_tween(target_y)
+end
 
 function update_gallery()
   if btnp(2) then  
     current_photo = max(1, current_photo - grid_cols)
-    local target_y = flr((current_photo - 1) / grid_cols) * (thumb_size + 4) - 32
-    make_scroll_tween(target_y)
+    scroll_to()
   elseif btnp(3) then  -- down
     current_photo = min(tsize(photos), current_photo + grid_cols)
-    local target_y = flr((current_photo - 1) / grid_cols) * (thumb_size + 4) - 32
-    make_scroll_tween(target_y)
-    make_scroll_tween(target_y)
+    scroll_to()
   elseif btnp(0) then  -- left
     current_photo = max(1, current_photo - 1)
+    scroll_to()
   elseif btnp(1) then  -- right
     current_photo = min(tsize(photos), current_photo + 1)
+    scroll_to()
   elseif btnp(5) then  -- x button
     load_full_photo()
     is_fullscreen = true
@@ -98,15 +102,29 @@ end
 function draw_gallery()
   cls(1)  -- dark blue background
    
-  for i, photo in ipairs(loaded_thumbnails) do
+  for i, photo in ipairs(photos) do
     local col = (i-1) % grid_cols
     local row = flr((i-1) / grid_cols)
     local x = grid_offset_x + col * (thumb_size + 4)
     local y = grid_offset_y + row * (thumb_size + 4) - scroll_y
     
-    if y > -32 and y < 128+32 then
+    if y > -32 and y < 128 then
+      -- load if thumbnail is not loaded
+      if photo.slot == -1 then
+        -- find free slot
+        if #thumbnail_freeq > 0 then
+          new_slot = deli(thumbnail_freeq, 1)
+          local path = photo_dir .. "/" .. photo.path .. ".32.p8"
+          reload(new_slot*0x0200, 0x0000, 0x0200, path)
+          -- printh("lazy loading " .. path .. " to slot " .. new_slot)
+          photo.slot = new_slot
+        else
+          printh("no space left in thumbnail free queue")
+        end
+      end
+
       rectfill(x, y, x+thumb_size-1, y+thumb_size-1, 0)
-      draw_thumbnail(i-1, x, y)
+      draw_thumbnail(photo.slot, x, y)
       -- print(i, x+2, y+2, 7)
       
       -- highlight selected photo
@@ -114,6 +132,12 @@ function draw_gallery()
         rect(x-1, y-1, x+thumb_size, y+thumb_size, 7)
       else
         rect(x-1, y-1, x+thumb_size, y+thumb_size, 0)
+      end
+    else
+      -- can mark the image is unloaded
+      if photo.slot != -1 then
+        add(thumbnail_freeq, photo.slot)
+        photo.slot = -1
       end
     end
   end
@@ -128,6 +152,7 @@ function update_fullscreen()
   if btnp(4) then
     is_fullscreen = false
     load_photos()
+    scroll_to()
   elseif btnp(0) then  
     current_photo = max(1, current_photo - 1)
     load_full_photo()
@@ -139,37 +164,39 @@ end
 
 function draw_fullscreen()
   cls(0)
-  local photo_name = photos[current_photo]
   sspr(0, 0, 128, 128, 0, 0)
   
   rectfill(0, 120, 127, 127, 9)  -- orange bar
-  print(photo_name .. ".p8", 4, 121, 7)
+  local photo_name = photos[current_photo].path .. ".p8"
+  print(photo_name, 4, 121, 7)
   print("⬅️➡️", 110, 121, 7)
 end
 
-loaded_thumbnails={}
+-- photos={
+--   -- 0>= for loaded, -1 for unloaded
+--   {path="", slot=-1}
+-- }
+thumbnail_freeq={}
+total_slots=16
+function make_thumbnail_freeq()
+  thumbnail_freeq={}
+  for i = 0, total_slots-1 do
+    add(thumbnail_freeq, i)
+  end
+end
+
 function load_photos()
   photos={} -- reset photos
-  loaded_thumbnails={}
+  make_thumbnail_freeq() -- reset loaded thumnails
   for i, path in ipairs(ls(photo_dir)) do
     if ends_with(path, ".128.p8") then
       stripped_path = sub(path, 0, -#(".128.p8")-1)
-      add(photos, stripped_path)
-    end
-
-    if ends_with(path, ".32.p8") then
-      stripped_path = sub(path, 0, -#(".32.p8")-1)
-      photos[stripped_path] = true
-      if #loaded_thumbnails < 32 then
-        reload(#loaded_thumbnails*0x0200, 0x0000, 0x0200, photo_dir .. "/" .. path)
-        -- printh(photo_dir .. "/" .. path)
-        add(loaded_thumbnails, path)
-      end
+      add(photos, {path=stripped_path, slot=-1})
     end
   end
 end
 
 function load_full_photo()
-  path = photo_dir .. "/" .. photos[current_photo] .. ".128.p8"
+  path = photo_dir .. "/" .. photos[current_photo].path .. ".128.p8"
   reload(0x0000, 0x0000, 0x2000, path)
 end

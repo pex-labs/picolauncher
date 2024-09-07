@@ -11,8 +11,10 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 </div>
 
 **PicoLauncher** is a game launcher and 'operating system' for handheld consoles that run [PICO-8](https://www.lexaloffle.com/pico-8.php) natively. It seeks to streamline and revamp the PICO-8 gaming experience with features and apps like
-- revamped games explorer
+- revamped SPLORE
+- play paid games and apps too! (coming soon)
 - photo gallery
+- gif player (coming soon)
 - music player
 - settings/preferences app
 - on screen keyboard (coming soon)

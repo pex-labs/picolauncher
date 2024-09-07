@@ -96,7 +96,7 @@ fn main() {
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let pico8_process = Command::new(pico8_bin) // TODO this assumes pico8 is in path
-        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/main_menu.p8", "-i", "in_pipe", "-o", "out_pipe"])
+        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/gallery.p8", "-i", "in_pipe", "-o", "out_pipe"])
         .spawn()
         .expect("failed to spawn pico8 process");
     let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
