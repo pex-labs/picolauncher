@@ -1,6 +1,0 @@
-return {
-  name='POOM',
-  filename='poom_0-9',
-  author='freds72',
-  tags='3d fps'
-}

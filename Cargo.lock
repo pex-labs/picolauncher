@@ -1289,6 +1289,8 @@ dependencies = [
  "pino_deref",
  "regex",
  "reqwest",
+ "serde",
+ "serde_json",
  "strum",
  "strum_macros",
 ]

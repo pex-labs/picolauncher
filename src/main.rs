@@ -1,12 +1,14 @@
 mod p8util;
 mod consts;
 
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 use nix::unistd::{mkfifo, Pid};
 use nix::sys::stat::Mode;
 use nix::sys::signal::{kill, Signal};
-use std::fs::{OpenOptions, File, read_dir};
+use serde_json::Map;
+use std::fs::{OpenOptions, File, read_dir, read_to_string};
 use std::io::{Write, Read, BufRead, BufReader};
 use std::process::{Command};
 use std::thread; // TODO maybe switch to async
@@ -24,22 +26,12 @@ fn create_pipe(pipe: &Path) {
     }
 }
 
-fn parse_metadata(path: &Path) -> String {
-    let output = Command::new("lua")    
-        .args(vec!["scripts/table-string-encode.lua", path.to_str().unwrap()])
-        .output()
-        .expect("failed to execute table string script");
-
-    if !output.status.success() {
-        // TODO warn
-        let stderr = String::from_utf8_lossy(&output.stderr);
-        println!("failed to parse metadata {path:?}, {stderr:?}");
-    }
-    
-    let serialized = String::from_utf8_lossy(&output.stdout);
-    println!("{serialized}");
-
-    return serialized.to_string();
+fn parse_metadata(path: &Path) -> anyhow::Result<String> {
+    let content = read_to_string(path)?;
+    let table: Map<String, serde_json::Value> = serde_json::from_str(&content)?;
+    let serialized = serialize_table(&table);
+    println!("serialized {serialized}");
+    Ok(serialized)
 }
 
 // Watch screenshot directory for new screenshots and then convert to a cartridge + downscale
@@ -85,6 +77,7 @@ fn main() {
     let pico8_bin = std::env::var("PICO8_BINARY").unwrap_or("pico8".to_string());
 
     // set up environment
+    // TODO create all necessary directories
     create_pipe(&IN_PIPE);
     create_pipe(&OUT_PIPE);
 
@@ -96,7 +89,7 @@ fn main() {
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let pico8_process = Command::new(pico8_bin) // TODO this assumes pico8 is in path
-        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/splashscreen.p8", "-i", "in_pipe", "-o", "out_pipe"])
+        .args(vec!["-home", DRIVE_DIR, "-run", "drive/carts/pexsplore.p8", "-i", "in_pipe", "-o", "out_pipe"])
         .spawn()
         .expect("failed to spawn pico8 process");
     let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
@@ -178,11 +171,12 @@ fn main() {
                         // for each file read metadata and pack into table string
                         let filename = entry.file_name().unwrap();
                         let mut metapath = PathBuf::from(filename);
-                        metapath.set_extension("lua");
+                        metapath.set_extension("json");
                         let metapath = METADATA_DIR.join(metapath); 
-                        let serialized = parse_metadata(&metapath); 
-
-                        carts.push(serialized); 
+                        match parse_metadata(&metapath) {
+                            Ok(serialized) => carts.push(serialized),
+                            Err(e) => eprintln!("failed parsing metadata file: {e:?}"),
+                        }
                     }
                 }
                 // TODO check efficiency for lots of files

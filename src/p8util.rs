@@ -2,6 +2,7 @@
 
 use image::{ImageReader, GenericImageView, Pixel, Pixels};
 use ndarray::{arr1, Array1, arr2, Array2};
+use serde_json::Map;
 use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::io::{self, Write, BufRead};
@@ -253,6 +254,56 @@ pub fn cart2label(cart_path: &Path) -> anyhow::Result<Cart> {
 
     Ok(scaled_cart)
 }
+
+// ASCII US "unit separator"
+// used to delimit both keys and values
+const TOKEN_SEP: char = '\u{1F}';
+
+// ASCII GS "group separator"
+// used to delimit the beginning of a subtable following a key
+const SUBTABLE_START: char = '\u{1D}';
+
+// ASCII RS "record separator"
+// used to delimit the end of a subtable
+const SUBTABLE_END: char = '\u{1E}';
+
+fn stringify_table(table: &Map<String, serde_json::Value>) -> String {
+    let mut result = String::new();
+    for (key, val) in table.iter() {
+        result.push_str(key);
+
+        if val.is_object() {
+            result.push(SUBTABLE_START);
+            if let Some(subtable) = val.as_object() {
+                result.push_str(&stringify_table(subtable));
+            }
+            result.push(SUBTABLE_END);
+        } else {
+            result.push(TOKEN_SEP);
+            result.push_str(val.as_str().unwrap());
+            result.push(TOKEN_SEP);
+        }
+    }
+    result
+}
+
+fn escape_string(s: &str) -> String {
+    let mut new_str = String::new();
+    for ch in s.chars() {
+        if ch == '\'' {
+            new_str.push_str("\\'");
+        } else {
+            new_str.push(ch);
+        }
+    }
+    new_str
+}
+
+// Convert metadata into lua table so it's parseable on the pico8 side
+pub fn serialize_table(table: &Map<String, serde_json::Value>) -> String {
+    escape_string(&stringify_table(table))
+}
+
 
 #[cfg(test)]
 mod tests {
