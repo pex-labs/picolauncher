@@ -5,11 +5,24 @@ use lazy_static::lazy_static;
 // root directory from perspective of pico8 process
 pub const DRIVE_DIR: &'static str = "drive";
 
+#[cfg(target_os = "linux")]
 lazy_static! {
     // in file from the perspective of pico8 process, so we write to this
     pub static ref IN_PIPE: PathBuf = PathBuf::from("in_pipe");
     // out file from the perspective of pico8 process, so we read from this
     pub static ref OUT_PIPE: PathBuf = PathBuf::from("out_pipe");
+}
+
+#[cfg(target_os = "windows")]
+lazy_static! {
+    // in file from the perspective of pico8 process, so we write to this
+    pub static ref IN_PIPE: PathBuf = PathBuf::from(r"\\.\pipe\in_pipe");
+    // out file from the perspective of pico8 process, so we read from this
+    pub static ref OUT_PIPE: PathBuf = PathBuf::from(r"\\.\pipe\out_pipe");
+}
+
+lazy_static! {
+
     pub static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
     pub static ref CART_DIR: PathBuf = PathBuf::from("drive/carts");
     pub static ref GAMES_DIR: PathBuf = PathBuf::from("drive/carts/games");

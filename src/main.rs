@@ -135,12 +135,17 @@ fn screenshot_watcher() {
 }
 
 fn main() {
+
+    #[cfg(target_os = "linux")]
     let pico8_bin = std::env::var("PICO8_BINARY").unwrap_or("pico8".to_string());
+
+    #[cfg(target_os = "windows")]
+    let pico8_bin = std::env::var("PICO8_BINARY").unwrap_or("C:\\Program Files (x86)\\PICO-8\\pico8.exe".to_string());
 
     // set up environment
     // TODO create all necessary directories
-    create_pipe(&IN_PIPE);
-    create_pipe(&OUT_PIPE);
+    create_pipe(&IN_PIPE).unwrap();
+    create_pipe(&OUT_PIPE).unwrap();
 
     // spawn helper threads
     let screenshot_handle = thread::spawn(|| {
