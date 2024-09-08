@@ -39,6 +39,7 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 |---|---|
 |linux x86_64|✅|
 |linux armv7 (rpi)|✅|
+|linux aarch64 (rpi)|✅|
 |windows (64-bit)|🚧|
 
 ✅ - full support, 🚧 - WIP, ❌ - not (yet) supported
@@ -65,7 +66,7 @@ PICO8_BINARY=<path to pico8>
 
 ### Build from source
 
-To build from source, you need to have a [rust toolchain](https://www.rust-lang.org/tools/install) installed. To build **PicoLauncher** for all platforms, there is a provided build script at `dev/scripts/build_linux.sh` and `dev/scripts/build_windows.sh`. The built files are present in the `build_<platform>/` directory, as well as zipped up in `build_<platform>.zip`. This is the same build that is distributed in the pre-compiled release.
+To build from source, you need to have a [rust toolchain](https://www.rust-lang.org/tools/install) installed. To build **PicoLauncher** for all platforms, there is a provided build script at `dev/scripts/build-linux-x86_64.sh`, `dev/scripts/build-windows.sh`, etc. The built files are present in the `build/build-<platform>` directory, as well as zipped up in `build-<platform>.zip`. This is the same build that is distributed in the pre-compiled release.
 
 ## Adding custom games
 

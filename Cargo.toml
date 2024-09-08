@@ -10,7 +10,7 @@ repository = ""
 [features]
 
 [dependencies]
-reqwest = { version = "0.11", features = ["blocking"] }
+reqwest = { version = "0.11", features = ["blocking", "native-tls-vendored"] }
 notify = "6.1"
 notify-debouncer-full = "0.3"
 image = "0.25"

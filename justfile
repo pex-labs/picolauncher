@@ -24,3 +24,6 @@ lint:
 
 test:
     cargo test -- --nocapture
+
+clean:
+    rm -rf build; rm *.zip
