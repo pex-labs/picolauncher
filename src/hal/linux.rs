@@ -1,4 +1,7 @@
-use std::{fs::{File, OpenOptions}, path::{Path, PathBuf}};
+use std::{
+    fs::{File, OpenOptions},
+    path::{Path, PathBuf},
+};
 
 pub const IN_PIPE: &'static str = "in_pipe";
 pub const OUT_PIPE: &'static str = "out_pipe";
@@ -33,4 +36,3 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
 
     Ok(out_pipe)
 }
-

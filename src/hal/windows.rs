@@ -1,10 +1,11 @@
+use std::{
+    fs::{File, OpenOptions},
+    os::windows::{io::RawHandle, prelude::*},
+    path::{Path, PathBuf},
+    ptr,
+};
 
-use std::os::windows::{io::RawHandle, prelude::*};
-use std::ptr;
-use std::fs::{File};
-use std::path::{PathBuf, Path};
 use anyhow::anyhow;
-
 use winapi::um::{
     fileapi::{CreateFileW, OPEN_EXISTING},
     handleapi::INVALID_HANDLE_VALUE,
@@ -102,3 +103,22 @@ pub fn open_in_pipe() -> anyhow::Result<File> {
     }
 }
 
+/*
+pub fn open_out_pipe() -> anyhow::Result<File> {
+    let mut file = OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open("out_pipe")?;
+
+    Ok(file)
+}
+
+pub fn open_in_pipe() -> anyhow::Result<File> {
+    let mut file = OpenOptions::new()
+        .read(true)
+        .truncate(true)
+        .open("in_pipe")?;
+
+    Ok(file)
+}
+*/

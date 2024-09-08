@@ -33,7 +33,7 @@ nix = { version = "0.29", features = ["fs", "process", "signal"] }
 winapi = { version = "0.3", features = ["namedpipeapi", "handleapi", "winbase"] }
 
 [[bin]]
-name = "pexos"
+name = "picolauncher"
 path = "src/main.rs"
 
 [[bin]]

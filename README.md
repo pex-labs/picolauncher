@@ -35,15 +35,27 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 
 ## Getting started
 
-### Requirements
+**PicoLauncher** requires an installed version of PICO-8 (if you don't have it, you can buy it [here](https://www.lexaloffle.com/pico-8.php?#getpico8)). You can either use a pre-compiled version from the latest [release]() or build this project from source.
 
-**PicoLauncher** requires an installed version of PICO-8 (if you don't have it, you can buy it [here](https://www.lexaloffle.com/pico-8.php?#getpico8)).
+### Pre-compiled
 
-You can either build this project from source or use a pre-compiled version for your platform.
+Download the pre-compiled release for your platform and unzip it. You will then find executables for all supported platforms. The `drive/` directory will be where the PICO-8 data files will be stored. For now, you can only run **PicoLauncher** from the same directory as the executables.
 
+On windows, if your PICO-8 binary doesn't reside at the default location of `C:\\Program Files (x86)\\PICO-8\\pico8.exe`, you need to set the environment variable `PICO8_BINARY` before launching.
+```sh
+set PICO8_BINARY=<path to pico8>
+./picolauncher.exe
+```
 
+On linux, if PICO-8 is not in your PATH, you need to set the environment variable as well.
+```sh
+PICO8_BINARY=<path to pico8>
+./picolauncher
+```
 
-<!--pex philosophy: _"everything is a cart"_-->
+### Build from source
+
+To build from source, you need to have a [rust toolchain](https://www.rust-lang.org/tools/install) installed. To build **PicoLauncher** for all platforms, there is a provided build script at `dev/scripts/build_linux.sh` and `dev/scripts/build_windows.sh`. The built files are present in the `build_<platform>/` directory, as well as zipped up in `build_<platform>.zip`. This is the same build that is distributed in the pre-compiled release.
 
 ## Contributing
 
@@ -52,13 +64,13 @@ Please see [CONTRIBUTING.md](CONTRIBUTING.md) for more details! Don't hesitate t
 ## Credits
 
 Pre-bundled games
-- [birds with guns]()
-- [bun bun samurai]()
-- [celeste]()
-- [cherrybomb]()
-- [mot's grand prix]()
-- [oblivion eve]()
-- [pico night punkin']()
-- [poom]()
-- [swordfish]()
+- [birds with guns](https://www.lexaloffle.com/bbs/?tid=45334)
+- [bun bun samurai](https://www.lexaloffle.com/bbs/?tid=54707)
+- [celeste](https://www.lexaloffle.com/bbs/?tid=2145)
+- [cherrybomb](https://www.lexaloffle.com/bbs/?tid=48986)
+- [mot's grand prix](https://www.lexaloffle.com/bbs/?pid=97606)
+- [oblivion eve](https://www.lexaloffle.com/bbs/?pid=142641)
+- [pico night punkin'](https://www.lexaloffle.com/bbs/?tid=42715)
+- [poom](https://www.lexaloffle.com/bbs/?pid=101541)
+- [swordfish](https://www.lexaloffle.com/bbs/?tid=31141)
 

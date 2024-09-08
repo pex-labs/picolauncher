@@ -1,6 +1,6 @@
 mod consts;
-mod p8util;
 mod hal;
+mod p8util;
 
 use std::thread; // TODO maybe switch to async
 use std::{
@@ -15,11 +15,11 @@ use std::{
 
 use anyhow::anyhow;
 use consts::*;
+use hal::*;
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
 use serde_json::Map;
-use hal::*;
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
