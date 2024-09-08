@@ -1,5 +1,6 @@
 mod consts;
 mod p8util;
+mod hal;
 
 use std::thread; // TODO maybe switch to async
 use std::{
@@ -8,8 +9,8 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
     process::Command,
-    time::Duration,
     ptr,
+    time::Duration,
 };
 
 use anyhow::anyhow;
@@ -18,145 +19,7 @@ use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
 use serde_json::Map;
-
-/// create named pipes if they don't exist
-#[cfg(target_os = "linux")]
-fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
-    use nix::{
-        sys::{
-            signal::{kill, Signal},
-            stat::Mode,
-        },
-        unistd::{mkfifo, Pid},
-    };
-    if !pipe.exists() {
-        mkfifo(pipe, Mode::S_IRUSR | Mode::S_IWUSR).expect("failed to create pipe {pipe}");
-    }
-    Ok(())
-}
-
-#[cfg(target_os = "linux")]
-fn open_in_pipe() -> anyhow::Result<File> {
-    create_pipe(&PathBuf::from(IN_PIPE))?;
-
-    let in_pipe = OpenOptions::new()
-        .write(true)
-        .open(&*IN_PIPE)?;
-
-    Ok(in_pipe)
-}
-
-#[cfg(target_os = "linux")]
-fn open_out_pipe() -> anyhow::Result<File> {
-    create_pipe(&PathBuf::from(IN_PIPE))?;
-
-    let out_pipe = OpenOptions::new()
-        .read(true)
-        .open(&*OUT_PIPE)?;
-
-    Ok(out_pipe)
-}
-
-#[cfg(target_os = "windows")]
-use std::os::windows::{prelude::*, io::RawHandle};
-
-#[cfg(target_os = "windows")]
-use winapi::um::{
-    fileapi::{CreateFileW, OPEN_EXISTING},
-    handleapi::INVALID_HANDLE_VALUE,
-    namedpipeapi::CreateNamedPipeW,
-    winbase::{PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_WAIT},
-    winnt::{FILE_SHARE_READ, GENERIC_READ, GENERIC_WRITE, HANDLE},
-};
-
-
-#[cfg(target_os = "windows")]
-fn to_wstring(str: &str) -> Vec<u16> {
-    use std::{ffi::OsStr, os::windows::ffi::OsStrExt};
-
-    OsStr::new(str)
-        .encode_wide()
-        .chain(Some(0).into_iter())
-        .collect()
-}
-
-#[cfg(target_os = "windows")]
-fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
-    use std::{io::Error, ptr};
-
-    if !pipe.exists() {
-        let pipe_name_w = to_wstring(pipe.to_str().unwrap());
-
-        unsafe {
-            let handle = CreateNamedPipeW(
-                pipe_name_w.as_ptr(),
-                PIPE_ACCESS_DUPLEX,
-                PIPE_TYPE_BYTE | PIPE_WAIT,
-                1,               // Max instances
-                512,             // Output buffer size
-                512,             // Input buffer size
-                0,               // Default timeout
-                ptr::null_mut(), // Default security attributes
-            );
-
-            if handle == INVALID_HANDLE_VALUE {
-                return Err(anyhow!(Error::last_os_error()));
-            }
-        }
-    }
-    Ok(())
-}
-
-#[cfg(target_os = "windows")]
-fn open_out_pipe() -> anyhow::Result<File> {
-    create_pipe(&PathBuf::from(OUT_PIPE))?;
-
-    let pipe_name_w = to_wstring(&*OUT_PIPE);
-
-    unsafe {
-        let handle = CreateFileW(
-            pipe_name_w.as_ptr(),
-            GENERIC_READ,
-            0,
-            ptr::null_mut(),
-            OPEN_EXISTING,
-            0,
-            ptr::null_mut(),
-        );
-
-        if handle == INVALID_HANDLE_VALUE {
-            return Err(anyhow!(std::io::Error::last_os_error()));
-        }
-
-        Ok(File::from_raw_handle(handle as RawHandle))
-    }
-}
-
-#[cfg(target_os = "windows")]
-fn open_in_pipe() -> anyhow::Result<File> {
-    create_pipe(&PathBuf::from(IN_PIPE))?;
-
-    let pipe_name_w = to_wstring(&*IN_PIPE);
-
-    unsafe {
-        let handle = CreateFileW(
-            pipe_name_w.as_ptr(),
-            GENERIC_WRITE,
-            0,
-            ptr::null_mut(),
-            OPEN_EXISTING,
-            0,
-            ptr::null_mut(),
-        );
-
-        if handle == INVALID_HANDLE_VALUE {
-            return Err(anyhow!(std::io::Error::last_os_error()));
-        }
-
-        Ok(File::from_raw_handle(handle as RawHandle))
-    }
-
-}
+use hal::*;
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
@@ -246,10 +109,7 @@ fn main() {
     //let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
     // send hello message to pico8 process
-    let mut in_pipe = OpenOptions::new()
-        .write(true)
-        .open(&*IN_PIPE)
-        .expect("failed to open pipe {IN_PIPE}");
+    let mut in_pipe = open_in_pipe().expect("failed to open pipe {IN_PIPE}");
     writeln!(in_pipe, "E").expect("failed to write to pipe {IN_PIPE}");
     drop(in_pipe);
 
@@ -345,6 +205,7 @@ fn main() {
                 // TODO make this pipe writing stuff better (duplicate code)
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe {IN_PIPE}");
                 let joined_carts = carts.join(",");
+                println!("joined carts {joined_carts}");
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
                 drop(in_pipe);
             },

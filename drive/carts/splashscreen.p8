@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
+
 -- pex labs splash screen
 
 -- particle system
@@ -32,11 +34,13 @@ labs = [[
 ]]
 
 function _init()
- t = 0
- pex_y = -32 
- labs_y = 128  
- fade = 0
- start_time=time()
+  t = 0
+  pex_y = -32 
+  labs_y = 128  
+  fade = 0
+  start_time=time()
+
+  serial_hello()
 end
 
 function _update()

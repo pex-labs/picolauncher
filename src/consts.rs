@@ -5,18 +5,6 @@ use lazy_static::lazy_static;
 // root directory from perspective of pico8 process
 pub const DRIVE_DIR: &'static str = "drive";
 
-#[cfg(target_os = "linux")]
-pub const IN_PIPE: &'static str = "in_pipe";
-
-#[cfg(target_os = "linux")]
-pub const OUT_PIPE: &'static str = "out_pipe";
-
-#[cfg(target_os = "windows")]
-pub const IN_PIPE: &'static str = r"\\.\pipe\in_pipe";
-
-#[cfg(target_os = "windows")]
-pub const OUT_PIPE: &'static str = r"\\.\pipe\out_pipe";
-
 lazy_static! {
     pub static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
     pub static ref CART_DIR: PathBuf = PathBuf::from("drive/carts");

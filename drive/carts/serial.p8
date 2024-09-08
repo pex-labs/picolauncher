@@ -57,6 +57,7 @@ chan_buf_size=0x1000
 function serial_hello()
   serial_readline()
   serial_writeline('hello:')
+  printh('got hello message')
 end
 
 function serial_ls(dir)
@@ -103,7 +104,7 @@ end
 function serial_writeline(buf)
   -- TODO check length of buf to avoid overfloe
   -- TODO not super efficient
-  printh('output len '..#buf)
+  printh('output len '..#buf .. ' content ' .. buf)
   for i=1,#buf do
     b = ord(sub(buf, i, i))
     -- printh('copy: '..b)

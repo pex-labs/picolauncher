@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
 #include menu.p8
 #include tween.lua
 
@@ -16,6 +17,8 @@ app_menu=menu_new({
 
 function _init()
   app_cursor_y = target_app_cursor_y()
+
+  serial_hello()
 end
 
 function wait(a) for i = 1,a do flip() end end
