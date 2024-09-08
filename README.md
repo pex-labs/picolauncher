@@ -22,7 +22,7 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 - on screen keyboard (coming soon)
 - physical cartridges (coming soon)
 
-**PicoLauncher** is developed for the [PeX Console](https://pex-labs.com/) by PeX Labs, however in the future support may come for other devices.
+**PicoLauncher** is developed for the [PeX Console](https://pex-labs.com/) by PeX Labs, however in the future support may come for other devices. You can check current platform support [here](#supported-platforms).
 
 <div style="display: flex; justify-content: space-between;">
 <img src="media/pexsplore.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
@@ -32,6 +32,16 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 <img src="media/tunes.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
 <img src="media/settings.gif" alt="pexsplore" style="max-width: 100%; height: auto;">
 </div>
+
+## Supported platforms
+
+|platform|support|
+|---|---|
+|linux x86_64|✅|
+|linux armv7 (rpi)|✅|
+|windows (64-bit)|🚧|
+
+✅ - full support, 🚧 - WIP, ❌ - not (yet) supported
 
 ## Getting started
 
