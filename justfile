@@ -1,8 +1,8 @@
 
-default: pexos
+default: picolauncher
 
-pexos:
-    cargo run --bin pexos
+picolauncher:
+    cargo run --bin picolauncher
 
 util:
     cargo run --bin p8util

@@ -41,10 +41,10 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 
 Download the pre-compiled release for your platform and unzip it. You will then find executables for all supported platforms. The `drive/` directory will be where the PICO-8 data files will be stored. For now, you can only run **PicoLauncher** from the same directory as the executables.
 
-On windows, if your PICO-8 binary doesn't reside at the default location of `C:\\Program Files (x86)\\PICO-8\\pico8.exe`, you need to set the environment variable `PICO8_BINARY` before launching.
+On windows, if your PICO-8 binary doesn't reside at the default location of `C:\Program Files (x86)\PICO-8\pico8.exe`, you need to set the environment variable `PICO8_BINARY` before launching.
 ```sh
 set PICO8_BINARY=<path to pico8>
-./picolauncher.exe
+picolauncher.exe
 ```
 
 On linux, if PICO-8 is not in your PATH, you need to set the environment variable as well.
@@ -56,6 +56,14 @@ PICO8_BINARY=<path to pico8>
 ### Build from source
 
 To build from source, you need to have a [rust toolchain](https://www.rust-lang.org/tools/install) installed. To build **PicoLauncher** for all platforms, there is a provided build script at `dev/scripts/build_linux.sh` and `dev/scripts/build_windows.sh`. The built files are present in the `build_<platform>/` directory, as well as zipped up in `build_<platform>.zip`. This is the same build that is distributed in the pre-compiled release.
+
+## Adding custom games
+
+**p8tool** (name pending) is a utility cli that has a couple of useful functions to interact with cartridge files. The most useful of these is the ability for to add your own games to the launcher. It will generate metadata files and extract the music for the music app.
+
+```sh
+p8tool addcart <path to cart> --name <name of cart> --author <author of cart>
+```
 
 ## Contributing
 
@@ -72,5 +80,6 @@ Pre-bundled games
 - [oblivion eve](https://www.lexaloffle.com/bbs/?pid=142641)
 - [pico night punkin'](https://www.lexaloffle.com/bbs/?tid=42715)
 - [poom](https://www.lexaloffle.com/bbs/?pid=101541)
+- [suika game demake](https://www.lexaloffle.com/bbs/?tid=54642)
 - [swordfish](https://www.lexaloffle.com/bbs/?tid=31141)
 
