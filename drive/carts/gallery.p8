@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
 #include menu.p8
 #include utils.p8
 #include tween.lua
@@ -123,7 +124,7 @@ function draw_gallery()
           -- printh("lazy loading " .. path .. " to slot " .. new_slot)
           photo.slot = new_slot
         else
-          printh("no space left in thumbnail free queue")
+          printh("no space left in thumbnail free queue", log_file)
         end
       end
 

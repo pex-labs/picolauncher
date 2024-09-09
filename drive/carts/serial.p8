@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+log_file='logs/log_'..stat(90)..stat(91)..stat(92)..'_'..stat(93)..stat(94)..stat(95)..'.txt'
+
 -- table string library
 function table_from_string(str)
   local tab, is_key = {}, true
@@ -46,8 +48,8 @@ end
 
 -- serial interface with the underlying operating system
 
-stdin=0x806
-stdout=0x807
+stdin=0x804
+stdout=0x805
 
 chan_buf=0x4300
 chan_buf_size=0x1000
@@ -56,8 +58,9 @@ chan_buf_size=0x1000
 -- see https://github.com/nlordell/p8-controller for discussion on caveats with serial read and write
 function serial_hello()
   serial_readline()
+  printh('got hello message', log_file, true, true)
   serial_writeline('hello:')
-  printh('got hello message')
+  printh('responded to hello message', log_file, true, true)
 end
 
 function serial_ls(dir)
@@ -95,16 +98,16 @@ function serial_readline()
     end
   end
   if not got_newline then
-    printh('warning: newline was not received')
+    printh('warning: newline was not received', log_file)
   end
-  printh('result '..result)
+  printh('result '..result, log_file)
   return result
 end
 
 function serial_writeline(buf)
   -- TODO check length of buf to avoid overfloe
   -- TODO not super efficient
-  printh('output len '..#buf .. ' content ' .. buf)
+  printh('output len '..#buf .. ' content ' .. buf, log_file)
   for i=1,#buf do
     b = ord(sub(buf, i, i))
     -- printh('copy: '..b)

@@ -221,7 +221,7 @@ function _init()
   carts=menu_new(serial_ls(cart_dir))
   labels=ls(label_dir)
   for cart in all(carts.items) do
-    printh(tostring(cart))
+    printh(tostring(cart), log_file)
   end
 
   cart_tween_bobble()

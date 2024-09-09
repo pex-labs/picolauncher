@@ -8,7 +8,7 @@ use std::{
     fs::{read_dir, read_to_string, File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Command, Stdio},
     ptr,
     time::Duration,
 };
@@ -93,33 +93,47 @@ fn main() {
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
-    let pico8_process = Command::new(pico8_bin) // TODO this assumes pico8 is in path
+    let mut pico8_process = Command::new(pico8_bin) // TODO this assumes pico8 is in path
         .args(vec![
             "-home",
             DRIVE_DIR,
             "-run",
             "drive/carts/splashscreen.p8",
-            "-i",
-            "in_pipe",
-            "-o",
-            "out_pipe",
         ])
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
         .spawn()
         .expect("failed to spawn pico8 process");
+
+    let mut pico8_stdin = pico8_process
+        .stdin
+        .take()
+        .expect("failed to capture stdin of pico8 process");
+    let mut pico8_stdout = pico8_process
+        .stdout
+        .take()
+        .expect("failed to capture stdout of pico8 process");
+
     //let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
     // send hello message to pico8 process
+
+    /*
     let mut in_pipe = open_in_pipe().expect("failed to open pipe {IN_PIPE}");
     writeln!(in_pipe, "E").expect("failed to write to pipe {IN_PIPE}");
     drop(in_pipe);
+    */
 
-    let mut out_pipe = open_out_pipe().expect("failed to open pipe {OUT_PIPE}");
-    let mut reader = BufReader::new(out_pipe);
+    writeln!(pico8_stdin, "E").expect("failed to write to pipe {IN_PIPE}");
+    pico8_stdin.flush().unwrap();
+
+    // let mut out_pipe = open_out_pipe().expect("failed to open pipe {OUT_PIPE}");
+    let mut pico8_stdout = BufReader::new(pico8_stdout);
 
     // listen for commands from pico8 process
     loop {
         let mut line = String::new();
-        reader
+        pico8_stdout
             .read_line(&mut line)
             .expect("failed to read line from pipe");
         line = line.trim().to_string();
@@ -203,11 +217,17 @@ fn main() {
                 // TODO check efficiency for lots of files
 
                 // TODO make this pipe writing stuff better (duplicate code)
+                /*
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe {IN_PIPE}");
                 let joined_carts = carts.join(",");
                 println!("joined carts {joined_carts}");
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
                 drop(in_pipe);
+                */
+                let joined_carts = carts.join(",");
+                println!("joined carts {joined_carts}");
+                writeln!(pico8_stdin, "{}", joined_carts)
+                    .expect("failed to write to pipe {IN_PIPE}");
             },
             "label" => {
                 // fetch a label for a given cart, scaled to a given size
@@ -234,7 +254,9 @@ fn main() {
                 println!("debug:{}", data);
             },
             _ => {
-                println!("unhandled command");
+                // TODO ignore other stdin/stdout traffic for now
+                // bad practice since there is no restriction on carts if they use printh
+                //println!("unhandled command:{}" ,data);
             },
         }
 
