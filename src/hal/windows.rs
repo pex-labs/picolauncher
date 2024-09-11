@@ -103,6 +103,12 @@ pub fn open_in_pipe() -> anyhow::Result<File> {
     }
 }
 
+// search start menu for pico8.exe
+pub fn locate_pico8_binary() {
+    // TODO traverse start menu directory, find pico8.exe
+    // TODO resolve .lnk file to get actual location of pico8 binary
+}
+
 /*
 pub fn open_out_pipe() -> anyhow::Result<File> {
     let mut file = OpenOptions::new()

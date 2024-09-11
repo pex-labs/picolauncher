@@ -2,22 +2,21 @@ mod consts;
 mod hal;
 mod p8util;
 
-use std::process::Stdio;
 use std::thread; // TODO maybe switch to async
 use std::{
     collections::HashMap,
     fs::{read_dir, read_to_string, File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::{Child, Command},
+    process::{Child, Command, Stdio},
     ptr,
     time::Duration,
 };
-use log::{debug, error, warn, info};
 
 use anyhow::anyhow;
 use consts::*;
 use hal::*;
+use log::{debug, error, info, warn};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
@@ -76,7 +75,7 @@ fn screenshot_watcher() {
 
     info!("screenshot watcher registered");
 
-    loop {}
+    loop {} // TODO this might consume a lot of cpu?
 }
 
 /// Attempts to spawn pico8 binary by trying multiple potential binary names depending on the
@@ -106,11 +105,8 @@ pub fn launch_pico8_binary(bin_names: Vec<String>) -> anyhow::Result<Child> {
 }
 
 fn main() {
-
     // set up logger
-    env_logger::builder()
-        .format_timestamp(None)
-        .init();
+    env_logger::builder().format_timestamp(None).init();
 
     // set up screenshot watcher process
     let screenshot_handle = thread::spawn(|| {
@@ -264,7 +260,6 @@ fn main() {
             },
             "sys" => {
                 // Get system information like operating system, etc
-
             },
             _ => {
                 warn!("unhandled command");
