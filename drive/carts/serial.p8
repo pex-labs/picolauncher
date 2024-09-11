@@ -54,10 +54,16 @@ chan_buf_size=0x1000
 
 -- read init message (host os provides some information)
 -- see https://github.com/nlordell/p8-controller for discussion on caveats with serial read and write
+-- currently unused
 function serial_hello()
-  serial_readline()
-  serial_writeline('hello:')
-  printh('got hello message')
+  hello_msg=serial_readline()
+  -- we are using 'E' as the special placeholder message the os sends
+  if hello_msg != 'E' then
+    printh('got incorrect hello message') 
+  else
+    serial_writeline('hello:')
+    printh('got hello message')
+  end
 end
 
 function serial_ls(dir)

@@ -37,8 +37,6 @@ function cam_scroll_tween(v_start, v_end)
 end
 
 function _init()
-  serial_hello()
-
   categories:set_wrap(false)
   categories:add_hook(6, function(self)
     cam_scroll_tween(cam_y, 0)

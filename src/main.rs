@@ -2,17 +2,18 @@ mod consts;
 mod hal;
 mod p8util;
 
-use std::process::Child;
+use std::process::Stdio;
 use std::thread; // TODO maybe switch to async
 use std::{
     collections::HashMap,
     fs::{read_dir, read_to_string, File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
     path::{Path, PathBuf},
-    process::Command,
+    process::{Child, Command},
     ptr,
     time::Duration,
 };
+use log::{debug, error, warn, info};
 
 use anyhow::anyhow;
 use consts::*;
@@ -26,7 +27,7 @@ fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
     let table: Map<String, serde_json::Value> = serde_json::from_str(&content)?;
     let serialized = serialize_table(&table);
-    println!("serialized {serialized}");
+    debug!("serialized {serialized}");
     Ok(serialized)
 }
 
@@ -37,7 +38,7 @@ fn screenshot_watcher() {
             Ok(events) => {
                 for event in events.iter() {
                     if event.event.kind == EventKind::Create(CreateKind::File) {
-                        println!("{event:?}");
+                        debug!("{event:?}");
 
                         // TODO should do this for each path?
                         let screenshot_fullpath = event.event.paths.get(0).unwrap();
@@ -72,7 +73,8 @@ fn screenshot_watcher() {
         .watcher()
         .watch(Path::new("drive/screenshots"), RecursiveMode::Recursive)
         .unwrap();
-    println!("screenshot watcher registered");
+
+    info!("screenshot watcher registered");
 
     loop {}
 }
@@ -92,29 +94,43 @@ pub fn launch_pico8_binary(bin_names: Vec<String>) -> anyhow::Result<Child> {
                 "-o",
                 "out_pipe",
             ])
+            // .stdout(Stdio::piped())
             .spawn();
 
         match pico8_process {
             Ok(process) => return Ok(process),
-            Err(e) => eprintln!("failed launching {bin_name}: {e}"),
+            Err(e) => warn!("failed launching {bin_name}: {e}"),
         }
-
     }
     Err(anyhow!("failed to launch pico8"))
 }
 
 fn main() {
 
+    // set up logger
+    env_logger::builder()
+        .format_timestamp(None)
+        .init();
+
+    // set up screenshot watcher process
+    let screenshot_handle = thread::spawn(|| {
+        screenshot_watcher();
+    });
+
+    // launch pico8 binary
     let pico8_bin_override = std::env::var("PICO8_BINARY");
 
     #[cfg(target_os = "linux")]
     let mut pico8_bins: Vec<String> = vec!["pico8".into(), "pico8_64".into(), "pico8_dyn".into()];
 
     #[cfg(target_os = "windows")]
-    let mut pico8_bins = vec!["pico8.exe".into(), "C:\\Program Files (x86)\\PICO-8\\pico8.exe".into()];
+    let mut pico8_bins = vec![
+        "pico8.exe".into(),
+        "C:\\Program Files (x86)\\PICO-8\\pico8.exe".into(),
+    ];
 
     if let Ok(bin_override) = pico8_bin_override {
-        pico8_bins.insert(0, bin_override); 
+        pico8_bins.insert(0, bin_override);
     }
 
     // spawn pico8 process and setup pipes
@@ -122,18 +138,12 @@ fn main() {
     let pico8_process = launch_pico8_binary(pico8_bins).expect("failed to spawn pico8 process");
     //let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
-    // send hello message to pico8 process
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe {IN_PIPE}");
-    writeln!(in_pipe, "E").expect("failed to write to pipe {IN_PIPE}");
+    // need to drop the in_pipe (for some reason) for the pico8 process to start up
+    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
     drop(in_pipe);
 
-    let mut out_pipe = open_out_pipe().expect("failed to open pipe {OUT_PIPE}");
+    let mut out_pipe = open_out_pipe().expect("failed to open pipe");
     let mut reader = BufReader::new(out_pipe);
-
-    // set up environment
-    let screenshot_handle = thread::spawn(|| {
-        screenshot_watcher();
-    });
 
     // listen for commands from pico8 process
     loop {
@@ -153,7 +163,7 @@ fn main() {
         let mut split = line.splitn(2, ':');
         let cmd = split.next().unwrap_or("");
         let data = split.next().unwrap_or("");
-        println!("received cmd:{cmd} data:{data}");
+        debug!("received cmd:{cmd} data:{data}");
 
         match cmd {
             // TODO disable until we port this to windows and support launching external binaries
@@ -215,17 +225,17 @@ fn main() {
                         let metapath = METADATA_DIR.join(metapath);
                         match parse_metadata(&metapath) {
                             Ok(serialized) => carts.push(serialized),
-                            Err(e) => eprintln!("failed parsing metadata file: {e:?}"),
+                            Err(e) => warn!("failed parsing metadata file: {e:?}"),
                         }
                     }
                 }
                 // TODO check efficiency for lots of files
 
                 // TODO make this pipe writing stuff better (duplicate code)
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe {IN_PIPE}");
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 let joined_carts = carts.join(",");
-                println!("joined carts {joined_carts}");
-                writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe {IN_PIPE}");
+                debug!("joined carts {joined_carts}");
+                writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe");
                 drop(in_pipe);
             },
             "label" => {
@@ -247,13 +257,17 @@ fn main() {
             },
             */
             "hello" => {
-                println!("ack hello");
+                info!("hello message acknowledged - connection established to pico8 process");
             },
             "debug" => {
-                println!("debug:{}", data);
+                info!("debug:{}", data);
+            },
+            "sys" => {
+                // Get system information like operating system, etc
+
             },
             _ => {
-                println!("unhandled command");
+                warn!("unhandled command");
             },
         }
 

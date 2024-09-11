@@ -40,7 +40,7 @@ function _init()
   fade = 0
   start_time=time()
 
-  serial_hello()
+  -- serial_hello()
 end
 
 function _update()

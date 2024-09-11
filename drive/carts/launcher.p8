@@ -15,7 +15,6 @@ apps={
 
 select=0
 function _init()
-    serial_hello()
 end
 
 function _update()

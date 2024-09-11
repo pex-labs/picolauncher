@@ -101,7 +101,6 @@ carts=ls(cart_dir)
 labels=ls(label_dir)
 
 function _init()
-    serial_hello()
     load_label()
     poke(0x5f34,0x2) -- enabled inverted draw
 end

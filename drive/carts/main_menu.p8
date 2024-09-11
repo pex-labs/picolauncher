@@ -17,8 +17,6 @@ app_menu=menu_new({
 
 function _init()
   app_cursor_y = target_app_cursor_y()
-
-  serial_hello()
 end
 
 function wait(a) for i = 1,a do flip() end end

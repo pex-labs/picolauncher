@@ -216,8 +216,6 @@ function _init()
   --for i=0,15 do pal(i,i+128,2) end
   ----memset(0x5f78,0xff,8)
 
-  serial_hello()
-
   carts=menu_new(serial_ls(cart_dir))
   labels=ls(label_dir)
   for cart in all(carts.items) do
