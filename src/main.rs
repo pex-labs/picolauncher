@@ -2,6 +2,7 @@ mod consts;
 mod hal;
 mod p8util;
 
+use std::process::Child;
 use std::thread; // TODO maybe switch to async
 use std::{
     collections::HashMap,
@@ -76,36 +77,49 @@ fn screenshot_watcher() {
     loop {}
 }
 
+/// Attempts to spawn pico8 binary by trying multiple potential binary names depending on the
+/// platform
+pub fn launch_pico8_binary(bin_names: Vec<String>) -> anyhow::Result<Child> {
+    for bin_name in bin_names {
+        let pico8_process = Command::new(bin_name.clone())
+            .args(vec![
+                "-home",
+                DRIVE_DIR,
+                "-run",
+                "drive/carts/splashscreen.p8",
+                "-i",
+                "in_pipe",
+                "-o",
+                "out_pipe",
+            ])
+            .spawn();
+
+        match pico8_process {
+            Ok(process) => return Ok(process),
+            Err(e) => eprintln!("failed launching {bin_name}: {e}"),
+        }
+
+    }
+    Err(anyhow!("failed to launch pico8"))
+}
+
 fn main() {
+
+    let pico8_bin_override = std::env::var("PICO8_BINARY");
+
     #[cfg(target_os = "linux")]
-    let pico8_bin = std::env::var("PICO8_BINARY").unwrap_or("pico8".to_string());
+    let mut pico8_bins: Vec<String> = vec!["pico8".into(), "pico8_64".into(), "pico8_dyn".into()];
 
     #[cfg(target_os = "windows")]
-    let pico8_bin = std::env::var("PICO8_BINARY")
-        .unwrap_or("C:\\Program Files (x86)\\PICO-8\\pico8.exe".to_string());
+    let mut pico8_bins = vec!["pico8.exe".into(), "C:\\Program Files (x86)\\PICO-8\\pico8.exe".into()];
 
-    // set up environment
-
-    // spawn helper threads
-    let screenshot_handle = thread::spawn(|| {
-        screenshot_watcher();
-    });
+    if let Ok(bin_override) = pico8_bin_override {
+        pico8_bins.insert(0, bin_override); 
+    }
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
-    let pico8_process = Command::new(pico8_bin) // TODO this assumes pico8 is in path
-        .args(vec![
-            "-home",
-            DRIVE_DIR,
-            "-run",
-            "drive/carts/splashscreen.p8",
-            "-i",
-            "in_pipe",
-            "-o",
-            "out_pipe",
-        ])
-        .spawn()
-        .expect("failed to spawn pico8 process");
+    let pico8_process = launch_pico8_binary(pico8_bins).expect("failed to spawn pico8 process");
     //let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
     // send hello message to pico8 process
@@ -115,6 +129,11 @@ fn main() {
 
     let mut out_pipe = open_out_pipe().expect("failed to open pipe {OUT_PIPE}");
     let mut reader = BufReader::new(out_pipe);
+
+    // set up environment
+    let screenshot_handle = thread::spawn(|| {
+        screenshot_watcher();
+    });
 
     // listen for commands from pico8 process
     loop {
