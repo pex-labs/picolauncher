@@ -52,7 +52,7 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 
 <details>
 <summary>click to expand</summary>
-<div>
+
 Download the latest pre-compiled binary titled `picolauncher-linux-x86_64.zip`. The unzip and navigate to the directory
 ```sh
 unzip picolauncher-linux-x86_64.zip
@@ -63,6 +63,7 @@ Next, ensure that `pico8` is included in your path. In your `.bashrc` or equival
 ```sh
 export PATH="$PATH:<path to pico8 directory>"
 ```
+
 For example
 ```sh
 export PATH="$PATH:~/Downloads/pico-8/"
@@ -77,22 +78,24 @@ It is also possible to explicitly pass a binary to use to launch pico8 by settin
 ```sh
 PICO8_BINARY=<path to pico8 binary> ./picolauncher
 ```
+
 For example
 ```sh
 PICO8_BINARY=~/Downloads/pico-8/pico8 ./picolauncher
 ```
-</div>
+
 </details>
 
 ### Raspberry Pi
 
 <details>
 <summary>click to expand</summary>
-<div>
+
 First double check if you are running 64-bit or 32-bit Raspberry Pi OS.
 ```sh
 uname -m
 ```
+
 If the output of the above command is `aarch64`, you are 64-bit, and if the output is `armv7` or something similar, you are 32-bit. 
 
 In the case that you are 64-bit, you should download the latest pre-compiled binary titled `picolauncher-linux-aarch64.zip`. Otherwise, download `picolauncher-linux-armv7.zip`. Similar to the above instructions, unzip and enter the directory
@@ -107,7 +110,7 @@ export PATH="$PATH:<path to pico8 directory>"
 ```
 
 When launching **PicoLauncher** and supplying the binary explicitly, if you are on 64-bit Raspberry Pi, ensure that you are using the `pico8_64` binary.
-</div>
+
 </details>
 
 
@@ -115,7 +118,7 @@ When launching **PicoLauncher** and supplying the binary explicitly, if you are 
 
 <details>
 <summary>click to expand</summary>
-<div>
+
 Download the `picolauncher-windows.zip` zip file from the latest releases and unzip it. If your pico8 binary doesn't reside at the default location of `C:\Program Files (x86)\PICO-8\pico8.exe`, you need to set the environment variable `PICO8_BINARY` before launching.
 ```sh
 set PICO8_BINARY=<path to pico8>
@@ -123,15 +126,17 @@ picolauncher.exe
 ```
 
 You can also do this graphically. First search up 'Environment Variables' in your start menu.
-<img src="media/windows_install/step1.png" width=50%">
-Then in the 'System Properties' page, click the button titled 'Environment Variables...'
-<img src="media/windows_install/step2.png" width=50%">
-Locate the variable titled 'Path' and click the 'Edit' button.
-<img src="media/windows_install/step3.png" width=50%">
-Add a new path and set the value to the directory where you have installed pico8. If you used the windows installer for pico8, this should be set to `C:\Program Files (x86)\PICO-8\pico8.exe`
-<img src="media/windows_install/step4.png" width=50%">
+<img src="media/windows_install/step1.png" width=50%/>
 
-</div>
+Then in the 'System Properties' page, click the button titled 'Environment Variables...'
+<img src="media/windows_install/step2.png" width=50%/>
+
+Locate the variable titled 'Path' and click the 'Edit' button.
+<img src="media/windows_install/step3.png" width=50%/>
+
+Add a new path and set the value to the directory where you have installed pico8. If you used the windows installer for pico8, this should be set to `C:\Program Files (x86)\PICO-8\pico8.exe`
+<img src="media/windows_install/step4.png" width=50%/>
+
 </details>
 
 ### Build from source
