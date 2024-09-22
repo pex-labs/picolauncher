@@ -79,12 +79,16 @@ end
 -- TODO this is rly similar to serial_ls
 function serial_ls_exe()
   serial_writeline('ls_exe:')
-  serial_readline()
-  --split_files=split(files, ',', false)
-  --for k, v in pairs(split_files) do
-  --  split_files[k]=table_from_string(v)
-  --end
-  --return split_files
+  exes=serial_readline()
+  split_exes=split(exes, ',', false)
+  for k, v in pairs(split_exes) do
+    split_exes[k]=table_from_string(v)
+  end
+  return split_exes
+end
+
+function serial_spawn(path)
+  serial_writeline('spawn:'..path)
 end
 
 function serial_debug(msg)

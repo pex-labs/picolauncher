@@ -48,3 +48,9 @@ pub fn stop_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
     kill(pico8_pid, Signal::SIGSTOP)?;
     Ok(())
 }
+
+pub fn resume_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
+    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    kill(pico8_pid, Signal::SIGCONT)?;
+    Ok(())
+}

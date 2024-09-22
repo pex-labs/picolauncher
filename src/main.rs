@@ -171,7 +171,7 @@ fn main() {
 
                 // spawn an executable of given name
                 // TODO ensure no ../ escape
-                let exe_path = EXE_DIR.join(data).join(data); // TODO assume exe name is same as the directory name
+                let exe_path = EXE_DIR.join(data); // TODO assume exe name is same as the directory name
                 println!("spawning executable {exe_path:?}");
                 let mut child = Command::new(exe_path)
                     .args(vec!["-home", DRIVE_DIR]) // TODO when spawning should we override the config.txt?
@@ -183,7 +183,7 @@ fn main() {
 
                 // unsuspend when child finishes
                 child.wait().unwrap();
-                stop_pico8_process(&pico8_process);
+                resume_pico8_process(&pico8_process);
             },
             "spawnp" => {
                 // execute a pico8 cart as an external process
@@ -205,7 +205,7 @@ fn main() {
 
                 // unsuspend when child finishes
                 child.wait().unwrap();
-                stop_pico8_process(&pico8_process);
+                resume_pico8_process(&pico8_process);
             },
             "ls" => {
                 // fetch all carts in directory
@@ -244,6 +244,7 @@ fn main() {
                 // author=johanpeitz
                 // path=picocad/picocad
                 // ```
+                let mut exes = vec![];
                 for entry in read_dir(EXE_DIR.as_path()).unwrap() {
                     let entry = entry.unwrap().path();
                     if !entry.is_file() {
@@ -272,11 +273,13 @@ fn main() {
                         continue;
                     };
 
-                    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                    debug!("meta_string {meta_string}");
-                    writeln!(in_pipe, "{}", meta_string).expect("failed to write to pipe");
-                    drop(in_pipe);
+                    exes.push(meta_string);
                 }
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                let exes_joined = exes.join(",");
+                debug!("exes_joined {exes_joined}");
+                writeln!(in_pipe, "{}", exes_joined).expect("failed to write to pipe");
+                drop(in_pipe);
             },
             "label" => {
                 // fetch a label for a given cart, scaled to a given size
