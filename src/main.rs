@@ -1,7 +1,7 @@
 mod consts;
+mod exe;
 mod hal;
 mod p8util;
-mod exe;
 
 use std::thread; // TODO maybe switch to async
 use std::{
@@ -257,7 +257,9 @@ fn main() {
                         warn!("failed to read exe meta file {entry:?}");
                         continue;
                     };
-                    let meta = cart.get_section(SectionName::Meta("picolauncher".into())).join("\n");
+                    let meta = cart
+                        .get_section(SectionName::Meta("picolauncher".into()))
+                        .join("\n");
                     println!("{meta:?}");
 
                     let Ok(meta_parsed) = toml::from_str::<ExeMeta>(&meta) else {
@@ -267,7 +269,7 @@ fn main() {
 
                     println!("{meta_parsed:?}");
                 }
-            }
+            },
             "label" => {
                 // fetch a label for a given cart, scaled to a given size
             },

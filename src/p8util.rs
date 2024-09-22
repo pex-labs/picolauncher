@@ -39,9 +39,7 @@ lazy_static! {
     static ref META_RE: Regex = Regex::new(r"__meta:([a-zA-Z0-9]+)__").unwrap();
 }
 
-#[derive(
-    strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone
-)]
+#[derive(strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone)]
 pub enum SectionName {
     Lua,
     Gfx,
@@ -57,7 +55,7 @@ impl SectionName {
     pub fn header(&self) -> String {
         match self {
             SectionName::Meta(section) => format!("__meta:{section}__"),
-            _ => format!("__{}__", self.to_string().to_lowercase())
+            _ => format!("__{}__", self.to_string().to_lowercase()),
         }
     }
 }
