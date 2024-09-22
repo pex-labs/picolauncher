@@ -260,7 +260,6 @@ fn main() {
                     let meta = cart
                         .get_section(SectionName::Meta("picolauncher".into()))
                         .join("\n");
-                    println!("{meta:?}");
 
                     let Ok(meta_parsed) = toml::from_str::<ExeMeta>(&meta) else {
                         warn!("failed to parse metadata section of file {entry:?}");
@@ -268,6 +267,15 @@ fn main() {
                     };
 
                     println!("{meta_parsed:?}");
+                    let Ok(meta_string) = meta_parsed.to_lua_table() else {
+                        warn!("failed to serialize to lua table for meta file {entry:?}");
+                        continue;
+                    };
+
+                    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                    debug!("meta_string {meta_string}");
+                    writeln!(in_pipe, "{}", meta_string).expect("failed to write to pipe");
+                    drop(in_pipe);
                 }
             },
             "label" => {
