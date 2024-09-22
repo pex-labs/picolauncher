@@ -1,9 +1,13 @@
 use std::{
     fs::{File, OpenOptions},
-    path::{Path, PathBuf}, process::Child,
+    path::{Path, PathBuf},
+    process::Child,
 };
 
-use nix::{sys::signal::{kill, Signal}, unistd::Pid};
+use nix::{
+    sys::signal::{kill, Signal},
+    unistd::Pid,
+};
 
 pub const IN_PIPE: &'static str = "in_pipe";
 pub const OUT_PIPE: &'static str = "out_pipe";

@@ -6,6 +6,7 @@ __lua__
 #include menu.p8
 #include tween.lua
 
+-- TODO should make this menu scroll too
 app_menu=menu_new({
   {label='my games', icon=1, func=function()load('pexsplore.p8', 'back to menu')end},
   {label='apps', icon=6, func=function()load('apps.p8', 'back to menu')end},

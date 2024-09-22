@@ -1,6 +1,7 @@
 mod consts;
 mod hal;
 mod p8util;
+mod exe;
 
 use std::thread; // TODO maybe switch to async
 use std::{
@@ -21,6 +22,8 @@ use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
 use serde_json::Map;
+
+use crate::exe::ExeMeta;
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
@@ -87,7 +90,7 @@ pub fn launch_pico8_binary(bin_names: Vec<String>) -> anyhow::Result<Child> {
                 "-home",
                 DRIVE_DIR,
                 "-run",
-                "drive/carts/splashscreen.p8",
+                "drive/carts/apps.p8",
                 "-i",
                 "in_pipe",
                 "-o",
@@ -231,6 +234,40 @@ fn main() {
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            "ls_exe" => {
+                // fetch all exe that are registered
+                //
+                // executables metadata files are given by p8 files in drive/exe
+                // metadata is under the __meta:picolauncher__ section with the following properties
+                // ```
+                // name=picocad
+                // author=johanpeitz
+                // path=picocad/picocad
+                // ```
+                for entry in read_dir(EXE_DIR.as_path()).unwrap() {
+                    let entry = entry.unwrap().path();
+                    if !entry.is_file() {
+                        continue;
+                    }
+                    // TODO can this fail?
+                    if entry.extension().unwrap() != "p8" {
+                        continue;
+                    }
+                    let Ok(mut cart) = Cart::from_file(&entry) else {
+                        warn!("failed to read exe meta file {entry:?}");
+                        continue;
+                    };
+                    let meta = cart.get_section(SectionName::Meta("picolauncher".into())).join("\n");
+                    println!("{meta:?}");
+
+                    let Ok(meta_parsed) = toml::from_str::<ExeMeta>(&meta) else {
+                        warn!("failed to parse metadata section of file {entry:?}");
+                        continue;
+                    };
+
+                    println!("{meta_parsed:?}");
+                }
+            }
             "label" => {
                 // fetch a label for a given cart, scaled to a given size
             },
@@ -266,4 +303,3 @@ fn main() {
         // acknowledge the write
     }
 }
-

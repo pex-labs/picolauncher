@@ -76,6 +76,17 @@ function serial_ls(dir)
   return split_files
 end
 
+-- TODO this is rly similar to serial_ls
+function serial_ls_exe()
+  serial_writeline('ls_exe:')
+  serial_readline()
+  --split_files=split(files, ',', false)
+  --for k, v in pairs(split_files) do
+  --  split_files[k]=table_from_string(v)
+  --end
+  --return split_files
+end
+
 function serial_debug(msg)
   serial_writeline('debug:'..msg)
 end

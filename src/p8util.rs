@@ -13,6 +13,7 @@ use image::{GenericImageView, ImageReader, Pixel, Pixels};
 use lazy_static::lazy_static;
 use ndarray::{arr1, arr2, Array1, Array2};
 use pino_deref::{Deref, DerefMut};
+use regex::Regex;
 use serde_json::Map;
 use strum::IntoEnumIterator;
 
@@ -35,10 +36,11 @@ lazy_static! {
         [255, 119, 168],
         [255, 204, 170]
     ]);
+    static ref META_RE: Regex = Regex::new(r"__meta:([a-zA-Z0-9]+)__").unwrap();
 }
 
 #[derive(
-    strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone, Copy,
+    strum_macros::Display, strum_macros::EnumIter, Debug, Eq, PartialEq, Hash, Clone
 )]
 pub enum SectionName {
     Lua,
@@ -48,11 +50,15 @@ pub enum SectionName {
     Map,
     Sfx,
     Music,
+    Meta(String),
 }
 
 impl SectionName {
     pub fn header(&self) -> String {
-        format!("__{}__", self.to_string().to_lowercase())
+        match self {
+            SectionName::Meta(section) => format!("__meta:{section}__"),
+            _ => format!("__{}__", self.to_string().to_lowercase())
+        }
     }
 }
 
@@ -64,22 +70,6 @@ impl Section {
         Section(Vec::new())
     }
 }
-
-/*
-impl ToString for SectionName {
-    fn to_string(&self) -> String {
-        match self {
-            SectionName::Lua => "__lua__",
-            SectionName::Gfx => "__gfx__",
-            SectionName::Gff => "__gff__",
-            SectionName::Label => "__label__",
-            SectionName::Map => "__map__",
-            SectionName::Sfx => "__sfx__",
-            SectionName::Music => "__music__",
-        }.into()
-    }
-}
-*/
 
 // TODO super stupid impl currently, each section is just represented by the entire string
 pub struct Cart {
@@ -115,15 +105,23 @@ impl Cart {
         'line: for line in reader.lines() {
             let line = line?;
 
+            // check if a section name matches
             for section_name in SectionName::iter() {
                 if line == section_name.header() {
                     cur_section = Some(section_name);
                     continue 'line;
                 }
             }
+            // check if a metadata section is found
+            if let Some(capture) = META_RE.captures(&line) {
+                let meta_name = &capture[1];
+                println!("found meta section {meta_name}");
+                cur_section = Some(SectionName::Meta(meta_name.into()));
+                continue 'line;
+            }
 
-            if let Some(cur_section) = cur_section {
-                let sec = new_cart.get_section_mut(cur_section);
+            if let Some(ref cur_section) = cur_section {
+                let sec = new_cart.get_section_mut(cur_section.clone());
                 sec.push(line);
             }
         }
@@ -319,5 +317,12 @@ mod tests {
     fn test_screenshot2cart() -> anyhow::Result<()> {
         // let cart = screenshot2cart("drive/screenshots/birdswithguns-5_0.png")?;
         Ok(())
+    }
+
+    #[test]
+    fn test_sectionname() {
+        for section_name in SectionName::iter() {
+            println!("{section_name}");
+        }
     }
 }

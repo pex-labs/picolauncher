@@ -210,7 +210,7 @@ function make_transition_tween(cart)
   transition_tween:restart()
 end
 
-function _init()
+funct on _init()
   -- setup dual palette
   --poke(0x5f5f,0x10)
   --for i=0,15 do pal(i,i+128,2) end
