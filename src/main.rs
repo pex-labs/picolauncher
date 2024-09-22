@@ -132,7 +132,6 @@ fn main() {
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let pico8_process = launch_pico8_binary(pico8_bins).expect("failed to spawn pico8 process");
-    //let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
 
     // need to drop the in_pipe (for some reason) for the pico8 process to start up
     let mut in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -163,7 +162,6 @@ fn main() {
 
         match cmd {
             // TODO disable until we port this to windows and support launching external binaries
-            /*
             "spawn" => {
                 // TODO double check that the command to run is in the exec directory (to avoid
                 // arbitrary code execution)
@@ -178,11 +176,11 @@ fn main() {
                     .unwrap();
 
                 // suspend current pico8 process and swap with newly spawned process
-                kill(pico8_pid, Signal::SIGSTOP).expect("failed to send SIGSTOP to pico8 process");
+                stop_pico8_process(&pico8_process);
 
                 // unsuspend when child finishes
                 child.wait().unwrap();
-                kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process");
+                stop_pico8_process(&pico8_process);
             },
             "spawnp" => {
                 // execute a pico8 cart as an external process
@@ -200,13 +198,12 @@ fn main() {
                     .unwrap();
 
                 // suspend current pico8 process and swap with newly spawned process
-                kill(pico8_pid, Signal::SIGSTOP).expect("failed to send SIGSTOP to pico8 process");
+                stop_pico8_process(&pico8_process);
 
                 // unsuspend when child finishes
                 child.wait().unwrap();
-                kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process");
+                stop_pico8_process(&pico8_process);
             },
-            */
             "ls" => {
                 // fetch all carts in directory
                 let dir = (&*CART_DIR).join(data); // TODO watch out for path traversal
@@ -269,3 +266,4 @@ fn main() {
         // acknowledge the write
     }
 }
+

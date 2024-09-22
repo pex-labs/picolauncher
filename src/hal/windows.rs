@@ -109,6 +109,10 @@ pub fn locate_pico8_binary() {
     // TODO resolve .lnk file to get actual location of pico8 binary
 }
 
+pub fn stop_pico8_process(pico8_process: Child) -> anyhow::Result<()> {
+    todo!()
+}
+
 /*
 pub fn open_out_pipe() -> anyhow::Result<File> {
     let mut file = OpenOptions::new()

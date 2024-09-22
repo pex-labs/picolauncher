@@ -1,7 +1,9 @@
 use std::{
     fs::{File, OpenOptions},
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, process::Child,
 };
+
+use nix::{sys::signal::{kill, Signal}, unistd::Pid};
 
 pub const IN_PIPE: &'static str = "in_pipe";
 pub const OUT_PIPE: &'static str = "out_pipe";
@@ -35,4 +37,10 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
     let out_pipe = OpenOptions::new().read(true).open(&*OUT_PIPE)?;
 
     Ok(out_pipe)
+}
+
+pub fn stop_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
+    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    kill(pico8_pid, Signal::SIGSTOP)?;
+    Ok(())
 }
