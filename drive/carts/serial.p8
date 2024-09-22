@@ -91,6 +91,14 @@ function serial_spawn(path)
   serial_writeline('spawn:'..path)
 end
 
+function serial_spawn_pico8()
+  serial_writeline('spawn_pico8:')
+end
+
+function serial_spawn_splore()
+  serial_writeline('spawn_splore:')
+end
+
 function serial_debug(msg)
   serial_writeline('debug:'..msg)
 end

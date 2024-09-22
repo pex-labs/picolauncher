@@ -81,21 +81,22 @@ fn screenshot_watcher() {
     loop {} // TODO this might consume a lot of cpu?
 }
 
+/// Suspend the pico8 process until child process exits
+pub fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
+    // suspend current pico8 process and swap with newly spawned process
+    stop_pico8_process(pico8_process);
+
+    // unsuspend when child finishes
+    child.wait().unwrap();
+    resume_pico8_process(pico8_process);
+}
+
 /// Attempts to spawn pico8 binary by trying multiple potential binary names depending on the
 /// platform
-pub fn launch_pico8_binary(bin_names: Vec<String>) -> anyhow::Result<Child> {
+pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::Result<Child> {
     for bin_name in bin_names {
         let pico8_process = Command::new(bin_name.clone())
-            .args(vec![
-                "-home",
-                DRIVE_DIR,
-                "-run",
-                "drive/carts/apps.p8",
-                "-i",
-                "in_pipe",
-                "-o",
-                "out_pipe",
-            ])
+            .args(args.clone())
             // .stdout(Stdio::piped())
             .spawn();
 
@@ -134,7 +135,20 @@ fn main() {
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
-    let pico8_process = launch_pico8_binary(pico8_bins).expect("failed to spawn pico8 process");
+    let pico8_process = launch_pico8_binary(
+        &pico8_bins,
+        vec![
+            "-home",
+            DRIVE_DIR,
+            "-run",
+            "drive/carts/apps.p8",
+            "-i",
+            "in_pipe",
+            "-o",
+            "out_pipe",
+        ],
+    )
+    .expect("failed to spawn pico8 process");
 
     // need to drop the in_pipe (for some reason) for the pico8 process to start up
     let mut in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -178,12 +192,18 @@ fn main() {
                     .spawn()
                     .unwrap();
 
-                // suspend current pico8 process and swap with newly spawned process
-                stop_pico8_process(&pico8_process);
+                pico8_to_bg(&pico8_process, child);
+            },
+            "spawn_pico8" => {
+                let mut child = launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR]).unwrap();
 
-                // unsuspend when child finishes
-                child.wait().unwrap();
-                resume_pico8_process(&pico8_process);
+                pico8_to_bg(&pico8_process, child);
+            },
+            "spawn_splore" => {
+                let mut child =
+                    launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR, "-splore"]).unwrap();
+
+                pico8_to_bg(&pico8_process, child);
             },
             "spawnp" => {
                 // execute a pico8 cart as an external process
@@ -200,12 +220,7 @@ fn main() {
                     .spawn()
                     .unwrap();
 
-                // suspend current pico8 process and swap with newly spawned process
-                stop_pico8_process(&pico8_process);
-
-                // unsuspend when child finishes
-                child.wait().unwrap();
-                resume_pico8_process(&pico8_process);
+                pico8_to_bg(&pico8_process, child);
             },
             "ls" => {
                 // fetch all carts in directory
@@ -284,21 +299,6 @@ fn main() {
             "label" => {
                 // fetch a label for a given cart, scaled to a given size
             },
-            /*
-            "splore" => {
-                let mut child = Command::new("pico8") // TODO absolute path to pico8?
-                    .args(vec!["-home", DRIVE_DIR, "-splore"])
-                    .spawn()
-                    .unwrap();
-
-                // suspend current pico8 process and swap with newly spawned process
-                kill(pico8_pid, Signal::SIGSTOP).expect("failed to send SIGSTOP to pico8 process");
-
-                // unsuspend when child finishes
-                child.wait().unwrap();
-                kill(pico8_pid, Signal::SIGCONT).expect("failed to send SIGCONT to pico8 process");
-            },
-            */
             "hello" => {
                 info!("hello message acknowledged - connection established to pico8 process");
             },

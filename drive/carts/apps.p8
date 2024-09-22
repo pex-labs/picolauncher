@@ -10,8 +10,20 @@ __lua__
 bg_color=129
 bar_color_1=8
 
+function launch_exe(path)
+  return function()
+    serial_spawn(path)
+  end
+end
+
 function _init()
-  exe_menu=menu_new(serial_ls_exe())
+  exes=serial_ls_exe()
+  for i, exe in ipairs(exes) do
+    exes[i].cmd=launch_exe(exes[i].path)
+  end
+  add(exes, {name="pico8", author="zep", path=nil, cmd=function()serial_spawn_pico8()end}, 1)
+  add(exes, {name="splore", author="zep", path=nil, cmd=function()serial_spawn_splore()end}, 2)
+  exe_menu=menu_new(exes)
 end
 
 function _update()
@@ -20,7 +32,7 @@ function _update()
   elseif btnp(3) then
     exe_menu:down()
   elseif btnp(5) then
-    serial_spawn(exe_menu:cur().path)
+    exe_menu:cur().cmd()
   end
 end
 
