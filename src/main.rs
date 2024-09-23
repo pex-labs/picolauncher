@@ -63,7 +63,7 @@ fn main() -> ! {
             "-home",
             DRIVE_DIR,
             "-run",
-            "drive/carts/pexsplore_bbs.p8",
+            "drive/carts/pexsplore_home.p8",
             "-i",
             "in_pipe",
             "-o",

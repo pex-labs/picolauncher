@@ -217,7 +217,8 @@ menuitem = {
   cart = 0, -- a standard cartridge
   load = 1  -- a loading page
 }
-loaded_pages=0   -- number of pages (of 32 games) have been loaded so far
+loaded_pages=0   -- number of pages (of 30 games) have been loaded so far
+carts_per_page=30
 
 pending_bbs_load=false
 
@@ -289,6 +290,7 @@ function _update60()
     -- printh('serial response '..tostring(resp))
     if resp ~= nil then
       build_new_cart_menu(resp)
+      carts:set_index((loaded_pages-1)*carts_per_page+1) -- set the correct position of the menu
       load_label(carts:cur(), 0)
       pending_bbs_load=false
     end
