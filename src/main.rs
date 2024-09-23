@@ -327,39 +327,47 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
 
     // generate p8 file from p8.png file
     let mut dest_path = GAMES_DIR.join(filestem);
-    dest_path.set_extension("p8");
-    pico8_export(pico8_bins, path, &dest_path)
-        .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
+    if !dest_path.exists() {
+        dest_path.set_extension("p8");
+        pico8_export(pico8_bins, path, &dest_path)
+            .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
+    }
 
     // generate label file
-    let label_cart = cart2label(&dest_path)
-        .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
 
     let mut label_path = LABEL_DIR.join(filestem);
     label_path.set_extension("64.p8");
-    let mut label_file = File::create(label_path.clone())
-        .map_err(|e| anyhow!("failed to create label file {label_path:?}: {e:?}"))?;
+    if !label_path.exists() {
+        let label_cart = cart2label(&dest_path)
+            .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
 
-    label_cart
-        .write(&mut label_file)
-        .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
+        let mut label_file = File::create(label_path.clone())
+            .map_err(|e| anyhow!("failed to create label file {label_path:?}: {e:?}"))?;
+
+        label_cart
+            .write(&mut label_file)
+            .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
+    }
 
     // generate metadata file
-    let metadata = Metadata {
-        name: cart.title.clone(),
-        filename: filestem.to_owned(),
-        author: cart.author.clone(),
-        tags: cart.tags.join(","),
-    };
-
-    let metadata_serialized = serde_json::to_string_pretty(&metadata).unwrap();
-
     let mut metadata_path = METADATA_DIR.clone().join(filestem);
     metadata_path.set_extension("json");
-    let mut metadata_file = File::create(metadata_path.clone()).unwrap();
-    metadata_file
-        .write_all(metadata_serialized.as_bytes())
-        .unwrap();
+    if !metadata_path.exists() {
+        // TODO we don't need metadata file anymore (i think?)
+        let metadata = Metadata {
+            name: cart.title.clone(),
+            filename: filestem.to_owned(),
+            author: cart.author.clone(),
+            tags: cart.tags.join(","),
+        };
+
+        let metadata_serialized = serde_json::to_string_pretty(&metadata).unwrap();
+
+        let mut metadata_file = File::create(metadata_path.clone()).unwrap();
+        metadata_file
+            .write_all(metadata_serialized.as_bytes())
+            .unwrap();
+    }
 
     Ok(())
 }

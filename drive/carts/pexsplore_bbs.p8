@@ -288,10 +288,10 @@ function _update60()
   -- query for response from bbs load
   if pending_bbs_load == true then
     resp = serial_bbs_response()
-    printh('serial response '..tostring(resp))
+    -- printh('serial response '..tostring(resp))
     if resp ~= nil then
-      printh('finished loading from bbs')
       build_new_cart_menu(resp)
+      load_label(carts:cur(), 0)
       pending_bbs_load=false
     end
   end
@@ -334,6 +334,9 @@ function _draw()
   rectfill(0, 0, 128, 8, bar_color_1)
   print("★", 2, 2, 10)
   print("my games", 12, 2, 7)
+
+  -- transition
+  circfill(64, 128, transition_radius, 0)
 end
 
 function draw_carts_menu()
@@ -359,7 +362,7 @@ function draw_carts_menu()
   -- draw menu
   menu_x=36
   menu_y=-10
-  print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)+menu_y-10+cart_y_ease, 14)
+  print(tostring(carts:cur().title), menu_x, -(#cart_options.items*7)+menu_y-10+cart_y_ease, 14)
   print('by ' .. tostring(carts:cur().author), menu_x, -(#cart_options.items*7)+menu_y-3+cart_y_ease, 15)
   line_y=-(#cart_options.items*7)+menu_y+3+cart_y_ease
   line(menu_x, line_y, 88, line_y, 6)
@@ -375,8 +378,6 @@ function draw_carts_menu()
     print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
   end
 
-  -- transition
-  circfill(64, 128, transition_radius, 0)
 end
 
 __gfx__

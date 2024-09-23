@@ -130,7 +130,7 @@ function serial_readline()
   while true do
     -- also use the argument space to receive the result
     size = serial(stdin, chan_buf, chan_buf_size)
-    if (size == 0) then break end
+    if (size == 0) then return result end
     -- printh('size: ' .. size)
     for i=0,size do
       b = peek(chan_buf+i)

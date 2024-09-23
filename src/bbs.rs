@@ -30,6 +30,7 @@ pub struct CartData {
     pub download_url: String,
     pub description: String,
     pub thumb_url: String,
+    pub filename: String,
 }
 
 impl CartData {
@@ -42,6 +43,7 @@ impl CartData {
             Value::String(self.download_url.clone()),
         );
         prop_map.insert("tags".into(), Value::String(self.tags.join(",")));
+        prop_map.insert("filename".into(), Value::String(self.filename.clone()));
 
         serialize_table(&prop_map)
     }
@@ -181,6 +183,11 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
         thumb_url.unwrap_or_else(|| "No Thumbnail URL".to_string())
     };
 
+    // can extract filename from the download url
+    let filename = filename_from_url(&cart_download_url).unwrap();
+    let mut split = filename.splitn(2, ".");
+    let filestem = split.next().unwrap();
+
     Ok(CartData {
         title,
         author,
@@ -190,6 +197,7 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
         download_url: cart_download_url,
         description,
         thumb_url,
+        filename: filestem.to_string(),
     })
 }
 
