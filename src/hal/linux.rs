@@ -136,3 +136,22 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
     }
     Err(anyhow!("failed to launch pico8"))
 }
+
+/// Use the pico8 binary to export games from *.p8.png to *.p8
+pub fn pico8_export(
+    bin_names: &Vec<String>,
+    in_file: &Path,
+    out_file: &Path,
+) -> anyhow::Result<()> {
+    let mut pico8_process = launch_pico8_binary(
+        bin_names,
+        vec![
+            "-x",
+            in_file.to_str().unwrap(),
+            "-export",
+            out_file.to_str().unwrap(),
+        ],
+    )?;
+    pico8_process.wait()?;
+    Ok(())
+}

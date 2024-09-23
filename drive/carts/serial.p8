@@ -101,6 +101,12 @@ end
 
 function serial_bbs(page, query)
   serial_writeline('bbs:'..page..','..query)
+  carts=serial_readline()
+  split_carts=split(carts, ',', false)
+  for k, v in pairs(carts_files) do
+    split_carts[k]=table_from_string(v)
+  end
+  return split_carts
 end
 
 function serial_debug(msg)

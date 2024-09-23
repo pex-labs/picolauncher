@@ -9,6 +9,7 @@ use std::{
     collections::HashMap,
     fs::{read_dir, read_to_string, File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
+    ops::ControlFlow,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     ptr,
@@ -36,7 +37,7 @@ fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     Ok(serialized)
 }
 
-fn main() {
+fn main() -> ! {
     // set up logger
     let crate_name = env!("CARGO_PKG_NAME");
     env_logger::builder()
@@ -73,7 +74,7 @@ fn main() {
             "-home",
             DRIVE_DIR,
             "-run",
-            "drive/carts/pexsplore_home.p8",
+            "drive/carts/pexsplore.p8",
             "-i",
             "in_pipe",
             "-o",
@@ -262,6 +263,7 @@ fn main() {
                 // TODO use trace to log async
 
                 // download these carts if not in games/ directory
+                let pico8_bins = pico8_bins.clone();
                 runtime.block_on(async move {
                     let mut tasks = vec![];
 
@@ -274,31 +276,28 @@ fn main() {
                         };
 
                         // download if we don't have a copy of it in our games dir
-                        let path = GAMES_DIR.join(filename);
+                        let path = BBS_CART_DIR.join(filename);
                         if !path.exists() {
                             info!("download cart from bbs: {}", cart.download_url);
+                            let path = path.clone();
                             let task = tokio::spawn(async move {
                                 // TODO kinda lmao how we need to make a new client here
                                 let client = reqwest::Client::new();
-                                download_cart(client, cart.download_url, path)
+                                if let Err(e) =
+                                    download_cart(client, cart.download_url, &path).await
+                                {
+                                    warn!("failed to download cart {path:?}: {e:?}");
+                                }
                             });
                             tasks.push(task);
                         }
-                    }
 
-                    let results = join_all(tasks).await;
-                    for result in results {
-                        let Ok(result) = result else {
-                            warn!("failed to join");
+                        if let Err(e) = postprocess_cart(&pico8_bins, &path) {
+                            warn!("{e:?}");
                             continue;
-                        };
-
-                        if let Err(e) = result.await {
-                            // TODO should wrap the error with some context to identify the failed
-                            // cart download
-                            warn!("failed to download cart");
                         }
                     }
+                    let _ = join_all(tasks).await;
                 });
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -327,4 +326,26 @@ fn main() {
 
         // acknowledge the write
     }
+}
+
+fn postprocess_cart(pico8_bins: &Vec<String>, path: &Path) -> anyhow::Result<()> {
+    let filestem = path.file_stem().unwrap();
+    let mut dest_path = CART_DIR.join(filestem);
+    dest_path.set_extension("p8");
+    pico8_export(pico8_bins, path, &dest_path)
+        .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
+
+    let label_cart = cart2label(&dest_path)
+        .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
+
+    let mut label_path = LABEL_DIR.join(filestem);
+    label_path.set_extension("64.p8");
+    let mut label_file = File::create(label_path.clone())
+        .map_err(|e| anyhow!("failed to create label file {label_path:?}: {e:?}"))?;
+
+    label_cart
+        .write(&mut label_file)
+        .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
+
+    Ok(())
 }

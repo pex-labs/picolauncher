@@ -266,7 +266,7 @@ pub async fn crawl_bbs(client: &Client, url: &str) -> Result<Vec<CartData>> {
 }
 
 /// Downloads file from url to given directory
-pub async fn download_cart(client: Client, url: String, dest: PathBuf) -> anyhow::Result<()> {
+pub async fn download_cart(client: Client, url: String, dest: &Path) -> anyhow::Result<()> {
     let res = client.get(url).send().await?;
     let bytes = res.bytes().await?;
     let mut file = OpenOptions::new()
