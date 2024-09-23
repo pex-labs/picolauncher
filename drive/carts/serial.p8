@@ -56,7 +56,7 @@ chan_buf_size=0x1000
 -- see https://github.com/nlordell/p8-controller for discussion on caveats with serial read and write
 -- currently unused
 function serial_hello()
-  hello_msg=serial_readline()
+  local hello_msg=serial_readline()
   -- we are using 'E' as the special placeholder message the os sends
   if hello_msg != 'E' then
     printh('got incorrect hello message') 
@@ -68,8 +68,8 @@ end
 
 function serial_ls(dir)
   serial_writeline('ls:'..dir)
-  files=serial_readline()
-  split_files=split(files, ',', false)
+  local files=serial_readline()
+  local split_files=split(files, ',', false)
   for k, v in pairs(split_files) do
     split_files[k]=table_from_string(v)
   end
@@ -79,8 +79,8 @@ end
 -- TODO this is rly similar to serial_ls
 function serial_ls_exe()
   serial_writeline('ls_exe:')
-  exes=serial_readline()
-  split_exes=split(exes, ',', false)
+  local exes=serial_readline()
+  local split_exes=split(exes, ',', false)
   for k, v in pairs(split_exes) do
     split_exes[k]=table_from_string(v)
   end
@@ -99,11 +99,20 @@ function serial_spawn_splore()
   serial_writeline('spawn_splore:')
 end
 
+-- send request for page from bbs
 function serial_bbs(page, query)
   serial_writeline('bbs:'..page..','..query)
-  carts=serial_readline()
-  split_carts=split(carts, ',', false)
-  for k, v in pairs(carts_files) do
+end
+
+-- query for response from bbs
+function serial_bbs_response()
+  local new_carts=serial_readline()
+  if #new_carts == 0 then
+    return nil
+  end
+  printh('response from serial_bbs '..new_carts)
+  local split_carts=split(new_carts, ',', false)
+  for k, v in pairs(split_carts) do
     split_carts[k]=table_from_string(v)
   end
   return split_carts
@@ -116,8 +125,8 @@ end
 -- read from input file until a newline is reached
 -- TODO this can be refactored into a coroutine?
 function serial_readline()
-  result=''
-  got_newline=false
+  local result=''
+  local got_newline=false
   while true do
     -- also use the argument space to receive the result
     size = serial(stdin, chan_buf, chan_buf_size)

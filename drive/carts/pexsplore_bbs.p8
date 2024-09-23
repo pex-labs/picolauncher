@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+-- copy of pexsplore.p8 but supports loading games from bbs
+
 #include serial.p8
 #include menu.p8
 #include utils.p8
@@ -13,7 +15,8 @@ bar_color_2=-4
 
 cart_dir='games'
 label_dir='labels'
-carts={}
+loaded_carts={} -- list of all carts that can be displayed in the menu
+carts={}        -- menu for pexsplore ui
 labels={}
 
 -- menu for each cartridge
@@ -34,6 +37,8 @@ cart_options=menu_new({
 
 -- load label into slot into memory
 function load_label(cart, slot)
+  if cart == nil then return end
+
   -- load cartridge art of current cartridge into memory
   label_name=tostring(cart.filename) .. '.64.p8'
   if tcontains(labels, label_name) then
@@ -210,13 +215,16 @@ function make_transition_tween(cart)
   transition_tween:restart()
 end
 
-function _init()
-  -- setup dual palette
-  --poke(0x5f5f,0x10)
-  --for i=0,15 do pal(i,i+128,2) end
-  ----memset(0x5f78,0xff,8)
+menuitem = {
+  cart = 0, -- a standard cartridge
+  load = 1  -- a loading page
+}
+loaded_pages=0   -- number of pages (of 32 games) have been loaded so far
 
-  carts=menu_new(serial_ls(cart_dir))
+pending_bbs_load=false
+
+function _init()
+  carts=menu_new({{menuitem=menuitem.load}})
   labels=ls(label_dir)
   for cart in all(carts.items) do
     printh(tostring(cart))
@@ -240,10 +248,24 @@ function _update60()
       carts:down()
       make_cart_swipe_tween(-1)
     elseif btnp(5) then
-      sfx(2)
-      cart_bobble_tween:remove()
-      cart_tween_down()
-      cart_tween_state = -1
+      if carts:cur().menuitem == menuitem.load then
+
+        -- only ask for new page if previous page has been loaded
+        if pending_bbs_load == false then
+          -- request load from bbs
+          loaded_pages=loaded_pages+1
+          printh('requesting page from bbs '..loaded_pages)
+          serial_bbs(loaded_pages, '')
+
+          pending_bbs_load=true
+        end
+
+      else
+        sfx(2)
+        cart_bobble_tween:remove()
+        cart_tween_down()
+        cart_tween_state = -1
+      end
     end
   else
     if btnp(2) then
@@ -261,6 +283,36 @@ function _update60()
       cart_options:cur().func()
     end
   end
+
+  -- TODO can poll periodically instead of every update
+  -- query for response from bbs load
+  if pending_bbs_load == true then
+    resp = serial_bbs_response()
+    printh('serial response '..tostring(resp))
+    if resp ~= nil then
+      printh('finished loading from bbs')
+      build_new_cart_menu(resp)
+      pending_bbs_load=false
+    end
+  end
+end
+
+function build_new_cart_menu(resp)
+  -- TODO can this be done all at once?
+  for _, item in ipairs(resp) do
+    add(loaded_carts, item)
+    printh('loaded '..tostring(item))
+  end
+
+  -- create a new menu after loading carts
+  -- TODO very dumb that we are making a new copy of the menu items
+  new_menuitems = {}
+  for _, item in ipairs(loaded_carts) do
+    item.menuitem = menuitem.cart
+    add(new_menuitems, item)
+  end
+  add(new_menuitems, {menuitem=menuitem.load})
+  carts=menu_new(new_menuitems)
 end
 
 function draw_menuitem(w, y, text, sel)
@@ -276,28 +328,35 @@ end
 function _draw()
   cls(bg_color)
 
-  if carts:len() == 0 then
-    line1="it's empty in here"
-    print(line1, 64-#line1*2, 60, 6)
-    line2="🐱 "
-    print(line2, 64-#line2*2, 68, 6)
-  else
-    draw_carts_menu()
-  end
+  draw_carts_menu()
+
+  -- top bar
+  rectfill(0, 0, 128, 8, bar_color_1)
+  print("★", 2, 2, 10)
+  print("my games", 12, 2, 7)
 end
 
 function draw_carts_menu()
   -- draw the cartridge
-  -- draw_cart(-16, 64.5, -1)
-  -- draw_cart(128+16, 64.5, -1)
-  draw_cart(cart_x_swipe, 64.5+cart_y_ease+cart_y_bob, 0)
-  str="❎view"
-  print(str, 64-#str*2, 117+cart_y_ease+cart_y_bob, 7)
+  if carts:cur().menuitem == menuitem.load then
+    if pending_bbs_load then
+      local str="loading..."
+      print(str, 64-#str*2, 72, 7)
+    else
+      local str="❎ load more carts"
+      print(str, 64-#str*2, 64, 7) 
+    end 
+  else
+    draw_cart(cart_x_swipe, 64.5+cart_y_ease+cart_y_bob, 0)
+    local str="❎view"
+    print(str, 64-#str*2, 117+cart_y_ease+cart_y_bob, 7)
+  end
   if cart_tween_state > 0 then
     print("⬅️", 3, 64, 7)
     print("➡️", 118, 64, 7)
   end
 
+  -- draw menu
   menu_x=36
   menu_y=-10
   print(tostring(carts:cur().name), menu_x, -(#cart_options.items*7)+menu_y-10+cart_y_ease, 14)
@@ -315,23 +374,6 @@ function draw_carts_menu()
     end
     print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
   end
-
-  -- selection menu
-  -- for i, cart in ipairs(carts.items) do
-  --   is_sel=carts:index() == i
-  --   if is_sel then w=60 else w=50 end
-  --   draw_menuitem(w, 10+15*i, tostring(cart.name), is_sel)
-  -- end
-  -- print(carts.select)
-
-  -- top bar
-  rectfill(0, 0, 128, 8, bar_color_1)
-  print("★", 2, 2, 10)
-  print("my games", 12, 2, 7)
-
-
-  --for i=0,#carts do
-  --end
 
   -- transition
   circfill(64, 128, transition_radius, 0)
