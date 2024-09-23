@@ -36,85 +36,13 @@ fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     Ok(serialized)
 }
 
-// Watch screenshot directory for new screenshots and then convert to a cartridge + downscale
-fn screenshot_watcher() {
-    let mut debouncer = new_debouncer(Duration::from_secs(2), None, |res: DebounceEventResult| {
-        match res {
-            Ok(events) => {
-                for event in events.iter() {
-                    if event.event.kind == EventKind::Create(CreateKind::File) {
-                        debug!("{event:?}");
-
-                        // TODO should do this for each path?
-                        let screenshot_fullpath = event.event.paths.get(0).unwrap();
-
-                        // TODO don't use unwrap
-                        let cart_name = screenshot_fullpath.file_stem().unwrap().to_string_lossy();
-
-                        // preprocess newly created screenshot and downscale to png
-                        let mut cart_128 = screenshot2cart(screenshot_fullpath).unwrap();
-                        let cart_32 = format_label(&mut cart_128, 32).unwrap();
-
-                        let mut out_128_file = File::create(PathBuf::from(format!(
-                            "{SCREENSHOT_PATH}/{cart_name}.128.p8"
-                        )))
-                        .unwrap();
-                        let mut out_32_file = File::create(PathBuf::from(format!(
-                            "{SCREENSHOT_PATH}/{cart_name}.32.p8"
-                        )))
-                        .unwrap();
-
-                        cart_128.write(&mut out_128_file);
-                        cart_32.write(&mut out_32_file);
-                    }
-                }
-            },
-            Err(errors) => errors.iter().for_each(|error| println!("{error:?}")),
-        }
-    })
-    .unwrap();
-
-    debouncer
-        .watcher()
-        .watch(Path::new("drive/screenshots"), RecursiveMode::Recursive)
-        .unwrap();
-
-    info!("screenshot watcher registered");
-
-    loop {} // TODO this might consume a lot of cpu?
-}
-
-/// Suspend the pico8 process until child process exits
-pub fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
-    // suspend current pico8 process and swap with newly spawned process
-    stop_pico8_process(pico8_process);
-
-    // unsuspend when child finishes
-    child.wait().unwrap();
-    resume_pico8_process(pico8_process);
-}
-
-/// Attempts to spawn pico8 binary by trying multiple potential binary names depending on the
-/// platform
-pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::Result<Child> {
-    for bin_name in bin_names {
-        let pico8_process = Command::new(bin_name.clone())
-            .args(args.clone())
-            // .stdout(Stdio::piped())
-            .spawn();
-
-        match pico8_process {
-            Ok(process) => return Ok(process),
-            Err(e) => warn!("failed launching {bin_name}: {e}"),
-        }
-    }
-    Err(anyhow!("failed to launch pico8"))
-}
-
 fn main() {
     // set up logger
     let crate_name = env!("CARGO_PKG_NAME");
-    // env_logger::builder().format_timestamp(None).filter(Some(crate_name), log::LevelFilter::Debug).init();
+    env_logger::builder()
+        .format_timestamp(None)
+        .filter(Some(crate_name), log::LevelFilter::Debug)
+        .init();
 
     // set up screenshot watcher process
     let screenshot_handle = thread::spawn(|| {
@@ -312,7 +240,7 @@ fn main() {
                 let mut split = data.splitn(2, ",");
                 let page = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
                 let query = split.next();
-                println!("bbs command {page}, {query:?}");
+                info!("bbs command {page}, {query:?}");
 
                 let url = build_bbs_url(
                     Sub::Releases,
@@ -321,7 +249,7 @@ fn main() {
                     None,
                     Some(OrderBy::Featured),
                 );
-                println!("querying {url}");
+                info!("querying {url}");
                 let client = reqwest::Client::new();
                 let res = runtime.block_on(bbs::crawl_bbs(&client, &url)).unwrap();
 
@@ -338,7 +266,7 @@ fn main() {
                     let mut tasks = vec![];
 
                     for cart in res {
-                        println!("{}", cart.to_lua_table());
+                        // println!("{}", cart.to_lua_table());
 
                         let Some(filename) = filename_from_url(&cart.download_url) else {
                             warn!("could not extract filename from url: {}", cart.download_url);
@@ -372,7 +300,6 @@ fn main() {
                         }
                     }
                 });
-                println!("done");
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");

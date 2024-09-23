@@ -2,7 +2,7 @@
 default: picolauncher
 
 picolauncher:
-    RUST_LOG=debug cargo run --bin picolauncher
+    RUST_LOG=picolauncher=debug cargo run --bin picolauncher
 
 util:
     cargo run --bin p8util
