@@ -7,6 +7,9 @@ use log::warn;
 use regex::Regex;
 use reqwest::{Client, Url};
 use scraper::{Html, Selector};
+use serde_json::{Map, Value};
+
+use crate::serialize_table;
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
@@ -22,6 +25,21 @@ pub struct CartData {
     pub cart_download_url: String,
     pub description: String,
     pub thumb_url: String,
+}
+
+impl CartData {
+    pub fn to_lua_table(&self) -> String {
+        let mut prop_map = Map::<String, Value>::new();
+        prop_map.insert("title".into(), Value::String(self.title.clone()));
+        prop_map.insert("author".into(), Value::String(self.author.clone()));
+        prop_map.insert(
+            "cart_download_url".into(),
+            Value::String(self.cart_download_url.clone()),
+        );
+        prop_map.insert("tags".into(), Value::String(self.tags.join(",")));
+
+        serialize_table(&prop_map)
+    }
 }
 
 /// Subsection of BBS
@@ -141,6 +159,7 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
                 if src.contains("thumbs") {
                     let base_url = Url::parse("https://www.lexaloffle.com/").unwrap();
                     thumb_url = Some(base_url.join(src).unwrap().to_string());
+                    println!("thumb {thumb_url:?}");
                     break;
                 }
             }
@@ -167,6 +186,16 @@ pub fn build_bbs_url(
     tag: Option<String>,
     orderby: Option<OrderBy>,
 ) -> String {
+    // cat=7 : refers to pico8 carts (6 is voxatron, 7 is picotron)
+    // carts_tab=1 : pagination
+    // sub=2 : carts (1 chat, 2 releases, 3 work in progress, 4 collaboration, 5 workshop, 6 bugs, 7 blog,
+    // 8 jam, 9 code snippets, 10 :: (?), 11 :: (?), 12 tutorials, 13 (?), 14 gfx snippets, 15 sfx
+    //   snippets, 16 gif stream, 17 VOB, 18 :: (?), onwards not used)
+    // mode=carts : show cartridges
+    // orderby=featured, orderby=ts, orderby=favourites
+    // cc4=1 : filter by CC4 license
+    // search= : filter by some term
+    // tag= : include tag
     let mut url = format!(
         "https://www.lexaloffle.com/bbs/?cat=7&carts_tab={}#mode=carts&sub={}",
         page, sub as i32
@@ -202,7 +231,7 @@ pub async fn crawl_bbs(client: &Client, url: &str) -> Result<Vec<CartData>> {
     let mut cartdatas = vec![];
     for cap in GALLERY_RE.captures_iter(&content) {
         let pid = cap.get(1).unwrap().as_str();
-        println!("Found href: {:?}", pid);
+        // println!("Found href: {:?}", pid);
         let cart_url = format!("https://www.lexaloffle.com/bbs/?pid={pid}");
         let Ok(cartdata) = scrape_cart(&client, &cart_url).await else {
             warn!("failed to scrape cart {cart_url}");

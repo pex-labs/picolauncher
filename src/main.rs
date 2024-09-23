@@ -324,9 +324,18 @@ fn main() {
                 println!("querying {url}");
                 let res = runtime.block_on(scrape::crawl_bbs(&client, &url)).unwrap();
 
-                for cart in res {
-                    println!("{}", cart.title);
-                }
+                // for cart in res {
+                //     println!("{}", cart.to_lua_table());
+                // }
+                let cartdatas = res
+                    .into_iter()
+                    .map(|cart| cart.to_lua_table())
+                    .collect::<Vec<_>>()
+                    .join(",");
+
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");
+                drop(in_pipe);
             },
             "download" => {
                 // Download a cart from the bbs
