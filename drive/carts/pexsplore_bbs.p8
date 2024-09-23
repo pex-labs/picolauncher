@@ -41,9 +41,7 @@ function load_label(cart, slot)
 
   -- load cartridge art of current cartridge into memory
   label_name=tostring(cart.filename) .. '.64.p8'
-  if tcontains(labels, label_name) then
-    reload(slot*0x1000, 0x0000, 0x1000, label_dir .. '/' .. label_name)
-  end
+  reload(slot*0x1000, 0x0000, 0x1000, label_dir .. '/' .. label_name)
 end
 
 -- can pass -1 to slot to skip label

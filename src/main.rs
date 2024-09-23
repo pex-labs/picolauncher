@@ -253,10 +253,11 @@ fn main() -> ! {
 
                 // download these carts if not in games/ directory
                 let pico8_bins = pico8_bins.clone();
+                let res_cloned = res.clone();
                 runtime.block_on(async move {
                     let mut tasks = vec![];
 
-                    for cart in res {
+                    for cart in res_cloned {
                         // println!("{}", cart.to_lua_table());
 
                         let Some(filename) = filename_from_url(&cart.download_url) else {
@@ -274,21 +275,33 @@ fn main() -> ! {
                                 // TODO kinda lmao how we need to make a new client here
                                 let client = reqwest::Client::new();
                                 if let Err(e) =
-                                    download_cart(client, cart.download_url, &path).await
+                                    download_cart(client, cart.download_url.clone(), &path).await
                                 {
                                     warn!("failed to download cart {path:?}: {e:?}");
                                 }
                             });
                             tasks.push(task);
                         }
-
-                        if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path) {
-                            warn!("{e:?}");
-                            continue;
-                        }
                     }
                     let _ = join_all(tasks).await;
                 });
+
+                for cart in res {
+                    // TODO some of this code is duplicated
+
+                    let Some(filename) = filename_from_url(&cart.download_url) else {
+                        warn!("could not extract filename from url: {}", cart.download_url);
+                        continue;
+                    };
+
+                    // download if we don't have a copy of it in our games dir
+                    let path = BBS_CART_DIR.join(filename);
+
+                    if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path) {
+                        warn!("failed to postprocess cart {e:?}");
+                        continue;
+                    }
+                }
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");

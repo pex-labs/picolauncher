@@ -219,7 +219,7 @@ pub fn build_bbs_url(
     // search= : filter by some term
     // tag= : include tag
     let mut url = format!(
-        "https://www.lexaloffle.com/bbs/?cat=7&carts_tab={}#mode=carts&sub={}",
+        "https://www.lexaloffle.com/bbs/?cat=7#page={}&mode=carts&sub={}",
         page, sub as i32
     );
     if let Some(search) = search {
