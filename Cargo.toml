@@ -34,6 +34,7 @@ reqwest = { version = "0.11", features = ["blocking", "native-tls-vendored"] }
 headless_chrome = "1"
 urlencoding = "2.1"
 scraper = "0.19"
+futures = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { version = "0.29", features = ["fs", "process", "signal"] }

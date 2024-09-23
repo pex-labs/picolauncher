@@ -1,4 +1,7 @@
-use std::sync::Arc;
+use std::{
+    path::{Path, PathBuf},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use headless_chrome::{Browser, LaunchOptions, Tab};
@@ -8,6 +11,7 @@ use regex::Regex;
 use reqwest::{Client, Url};
 use scraper::{Html, Selector};
 use serde_json::{Map, Value};
+use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
 use crate::serialize_table;
 
@@ -22,7 +26,7 @@ pub struct CartData {
     pub likes: u32,
     pub tags: Vec<String>,
     pub lid: String,
-    pub cart_download_url: String,
+    pub download_url: String,
     pub description: String,
     pub thumb_url: String,
 }
@@ -34,7 +38,7 @@ impl CartData {
         prop_map.insert("author".into(), Value::String(self.author.clone()));
         prop_map.insert(
             "cart_download_url".into(),
-            Value::String(self.cart_download_url.clone()),
+            Value::String(self.download_url.clone()),
         );
         prop_map.insert("tags".into(), Value::String(self.tags.join(",")));
 
@@ -159,7 +163,6 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
                 if src.contains("thumbs") {
                     let base_url = Url::parse("https://www.lexaloffle.com/").unwrap();
                     thumb_url = Some(base_url.join(src).unwrap().to_string());
-                    println!("thumb {thumb_url:?}");
                     break;
                 }
             }
@@ -173,7 +176,7 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
         likes,
         tags,
         lid,
-        cart_download_url,
+        download_url: cart_download_url,
         description,
         thumb_url,
     })
@@ -260,4 +263,25 @@ pub async fn crawl_bbs(client: &Client, url: &str) -> Result<Vec<CartData>> {
     */
 
     Ok(cartdatas)
+}
+
+/// Downloads file from url to given directory
+pub async fn download_cart(client: Client, url: String, dest: PathBuf) -> anyhow::Result<()> {
+    let res = client.get(url).send().await?;
+    let bytes = res.bytes().await?;
+    let mut file = OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(dest)
+        .await?;
+    file.write_all(&bytes).await?;
+
+    Ok(())
+}
+
+/// Extract the filename of the file to be downloaded from a given url
+pub fn filename_from_url(url: &str) -> Option<String> {
+    let parsed = Url::parse(url).ok()?;
+    let segments = parsed.path_segments()?;
+    segments.last().map(|name| name.to_string())
 }

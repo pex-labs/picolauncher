@@ -1,8 +1,8 @@
+mod bbs;
 mod consts;
 mod exe;
 mod hal;
 mod p8util;
-mod scrape;
 
 use std::thread; // TODO maybe switch to async
 use std::{
@@ -16,13 +16,14 @@ use std::{
 };
 
 use anyhow::anyhow;
+use bbs::*;
 use consts::*;
+use futures::future::join_all;
 use hal::*;
 use log::{debug, error, info, warn};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
-use scrape::*;
 use serde_json::Map;
 
 use crate::exe::ExeMeta;
@@ -313,7 +314,6 @@ fn main() {
                 let query = split.next();
                 println!("bbs command {page}, {query:?}");
 
-                let client = reqwest::Client::new();
                 let url = build_bbs_url(
                     Sub::Releases,
                     page,
@@ -322,16 +322,57 @@ fn main() {
                     Some(OrderBy::Featured),
                 );
                 println!("querying {url}");
-                let res = runtime.block_on(scrape::crawl_bbs(&client, &url)).unwrap();
+                let client = reqwest::Client::new();
+                let res = runtime.block_on(bbs::crawl_bbs(&client, &url)).unwrap();
 
-                // for cart in res {
-                //     println!("{}", cart.to_lua_table());
-                // }
                 let cartdatas = res
-                    .into_iter()
+                    .iter()
                     .map(|cart| cart.to_lua_table())
                     .collect::<Vec<_>>()
                     .join(",");
+
+                // TODO use trace to log async
+
+                // download these carts if not in games/ directory
+                runtime.block_on(async move {
+                    let mut tasks = vec![];
+
+                    for cart in res {
+                        println!("{}", cart.to_lua_table());
+
+                        let Some(filename) = filename_from_url(&cart.download_url) else {
+                            warn!("could not extract filename from url: {}", cart.download_url);
+                            continue;
+                        };
+
+                        // download if we don't have a copy of it in our games dir
+                        let path = GAMES_DIR.join(filename);
+                        if !path.exists() {
+                            info!("download cart from bbs: {}", cart.download_url);
+                            let task = tokio::spawn(async move {
+                                // TODO kinda lmao how we need to make a new client here
+                                let client = reqwest::Client::new();
+                                download_cart(client, cart.download_url, path)
+                            });
+                            tasks.push(task);
+                        }
+                    }
+
+                    let results = join_all(tasks).await;
+                    for result in results {
+                        let Ok(result) = result else {
+                            warn!("failed to join");
+                            continue;
+                        };
+
+                        if let Err(e) = result.await {
+                            // TODO should wrap the error with some context to identify the failed
+                            // cart download
+                            warn!("failed to download cart");
+                        }
+                    }
+                });
+                println!("done");
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");
