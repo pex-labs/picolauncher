@@ -10,16 +10,17 @@ use log::warn;
 use regex::Regex;
 use reqwest::{Client, Url};
 use scraper::{Html, Selector};
+use serde::Serialize;
 use serde_json::{Map, Value};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::serialize_table;
+use crate::p8util::serialize_table;
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Clone)]
 pub struct CartData {
     pub title: String,
     pub author: String,
@@ -44,6 +45,16 @@ impl CartData {
 
         serialize_table(&prop_map)
     }
+}
+
+/// The schema for the metadata json files present in drive/carts/metadata
+// TODO should combine this with CartData struct
+#[derive(Serialize)]
+pub struct Metadata {
+    pub name: String,
+    pub filename: String,
+    pub author: String,
+    pub tags: String,
 }
 
 /// Subsection of BBS
@@ -242,25 +253,6 @@ pub async fn crawl_bbs(client: &Client, url: &str) -> Result<Vec<CartData>> {
         };
         cartdatas.push(cartdata);
     }
-    /*
-    // Old browser agent method
-    let mut cart_urls: Vec<String> = vec![];
-    for elem in tab.find_elements(r#"div[id^="pdat_"]"#)? {
-        let link_elem = elem.find_element(r#"a[href^="/bbs/?pid="]"#)?;
-        let cart_path = link_elem.get_attribute_value("href")?.unwrap();
-        let cart_url = format!("https://www.lexaloffle.com{}", cart_path);
-        cart_urls.push(cart_url);
-    }
-
-    for cart_url in cart_urls {
-        println!("scraping {cart_url}");
-        let Ok(cartdata) = scrape_cart(&client, &cart_url).await else {
-            warn!("failed to scrape cart {cart_url}");
-            continue;
-        };
-        cartdatas.push(cartdata);
-    }
-    */
 
     Ok(cartdatas)
 }

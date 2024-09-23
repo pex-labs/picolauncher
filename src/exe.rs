@@ -4,7 +4,7 @@ use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
-use crate::serialize_table;
+use crate::p8util::serialize_table;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ExeMeta {

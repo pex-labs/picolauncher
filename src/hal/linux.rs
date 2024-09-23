@@ -14,7 +14,10 @@ use nix::{
 };
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 
-use crate::{consts::*, format_label, screenshot2cart};
+use crate::{
+    consts::*,
+    p8util::{format_label, screenshot2cart},
+};
 
 pub const IN_PIPE: &'static str = "in_pipe";
 pub const OUT_PIPE: &'static str = "out_pipe";

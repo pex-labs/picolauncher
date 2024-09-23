@@ -1,9 +1,3 @@
-mod bbs;
-mod consts;
-mod exe;
-mod hal;
-mod p8util;
-
 use std::thread; // TODO maybe switch to async
 use std::{
     collections::HashMap,
@@ -17,17 +11,12 @@ use std::{
 };
 
 use anyhow::anyhow;
-use bbs::*;
-use consts::*;
 use futures::future::join_all;
-use hal::*;
 use log::{debug, error, info, warn};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
-use p8util::*;
+use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::Map;
-
-use crate::exe::ExeMeta;
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
@@ -252,7 +241,7 @@ fn main() -> ! {
                 );
                 info!("querying {url}");
                 let client = reqwest::Client::new();
-                let res = runtime.block_on(bbs::crawl_bbs(&client, &url)).unwrap();
+                let res = runtime.block_on(crawl_bbs(&client, &url)).unwrap();
 
                 let cartdatas = res
                     .iter()
@@ -280,6 +269,7 @@ fn main() -> ! {
                         if !path.exists() {
                             info!("download cart from bbs: {}", cart.download_url);
                             let path = path.clone();
+                            let cart = cart.clone();
                             let task = tokio::spawn(async move {
                                 // TODO kinda lmao how we need to make a new client here
                                 let client = reqwest::Client::new();
@@ -292,7 +282,7 @@ fn main() -> ! {
                             tasks.push(task);
                         }
 
-                        if let Err(e) = postprocess_cart(&pico8_bins, &path) {
+                        if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path) {
                             warn!("{e:?}");
                             continue;
                         }
@@ -328,13 +318,17 @@ fn main() -> ! {
     }
 }
 
-fn postprocess_cart(pico8_bins: &Vec<String>, path: &Path) -> anyhow::Result<()> {
-    let filestem = path.file_stem().unwrap();
-    let mut dest_path = CART_DIR.join(filestem);
+// TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
+fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> anyhow::Result<()> {
+    let filestem = path.file_prefix().unwrap();
+
+    // generate p8 file from p8.png file
+    let mut dest_path = GAMES_DIR.join(filestem);
     dest_path.set_extension("p8");
     pico8_export(pico8_bins, path, &dest_path)
         .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
 
+    // generate label file
     let label_cart = cart2label(&dest_path)
         .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
 
@@ -346,6 +340,23 @@ fn postprocess_cart(pico8_bins: &Vec<String>, path: &Path) -> anyhow::Result<()>
     label_cart
         .write(&mut label_file)
         .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
+
+    // generate metadata file
+    let metadata = Metadata {
+        name: cart.title.clone(),
+        filename: filestem.to_str().unwrap().to_owned(),
+        author: cart.author.clone(),
+        tags: cart.tags.join(","),
+    };
+
+    let metadata_serialized = serde_json::to_string_pretty(&metadata).unwrap();
+
+    let mut metadata_path = METADATA_DIR.clone().join(filestem);
+    metadata_path.set_extension("json");
+    let mut metadata_file = File::create(metadata_path.clone()).unwrap();
+    metadata_file
+        .write_all(metadata_serialized.as_bytes())
+        .unwrap();
 
     Ok(())
 }

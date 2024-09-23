@@ -1,6 +1,3 @@
-mod consts;
-mod p8util;
-
 use std::{
     fs,
     fs::File,
@@ -11,6 +8,8 @@ use std::{
 
 use clap::{Parser, Subcommand};
 use consts::*;
+
+use crate::bbs::Metadata;
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -38,15 +37,6 @@ enum Commands {
 struct Cli {
     #[command(subcommand)]
     command: Commands,
-}
-
-// TODO this does not belong here
-#[derive(serde::Serialize)]
-struct Metadata {
-    name: String,
-    filename: String,
-    author: String,
-    tags: String,
 }
 
 fn main() {

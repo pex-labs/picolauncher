@@ -239,6 +239,9 @@ function _update60()
       sfx(0)
       carts:down()
       make_cart_swipe_tween(-1)
+    elseif btnp(2) then
+      -- TEMP
+      serial_bbs(1, '')
     elseif btnp(5) then
       sfx(2)
       cart_bobble_tween:remove()
