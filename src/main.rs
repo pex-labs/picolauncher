@@ -320,7 +320,10 @@ fn main() -> ! {
 
 // TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
 fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> anyhow::Result<()> {
-    let filestem = path.file_prefix().unwrap();
+    // TODO: since path.file_prefix is still unstable, we need to split on the first period
+    let filename = path.file_name().unwrap().to_str().unwrap();
+    let mut split = filename.splitn(2, ".");
+    let filestem = split.next().unwrap();
 
     // generate p8 file from p8.png file
     let mut dest_path = GAMES_DIR.join(filestem);
@@ -344,7 +347,7 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
     // generate metadata file
     let metadata = Metadata {
         name: cart.title.clone(),
-        filename: filestem.to_str().unwrap().to_owned(),
+        filename: filestem.to_owned(),
         author: cart.author.clone(),
         tags: cart.tags.join(","),
     };
