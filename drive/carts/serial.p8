@@ -99,6 +99,10 @@ function serial_spawn_splore()
   serial_writeline('spawn_splore:')
 end
 
+function serial_bbs(page, query)
+  serial_writeline('bbs:'..page..','..query)
+end
+
 function serial_debug(msg)
   serial_writeline('debug:'..msg)
 end

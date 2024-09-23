@@ -2,6 +2,7 @@ mod consts;
 mod exe;
 mod hal;
 mod p8util;
+mod scrape;
 
 use std::thread; // TODO maybe switch to async
 use std::{
@@ -21,6 +22,7 @@ use log::{debug, error, info, warn};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use p8util::*;
+use scrape::*;
 use serde_json::Map;
 
 use crate::exe::ExeMeta;
@@ -110,7 +112,8 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
 
 fn main() {
     // set up logger
-    env_logger::builder().format_timestamp(None).init();
+    let crate_name = env!("CARGO_PKG_NAME");
+    // env_logger::builder().format_timestamp(None).filter(Some(crate_name), log::LevelFilter::Debug).init();
 
     // set up screenshot watcher process
     let screenshot_handle = thread::spawn(|| {
@@ -141,7 +144,7 @@ fn main() {
             "-home",
             DRIVE_DIR,
             "-run",
-            "drive/carts/apps.p8",
+            "drive/carts/pexsplore_home.p8",
             "-i",
             "in_pipe",
             "-o",
@@ -176,6 +179,12 @@ fn main() {
         let cmd = split.next().unwrap_or("");
         let data = split.next().unwrap_or("");
         debug!("received cmd:{cmd} data:{data}");
+
+        // TODO: tokio runtime here, maybe convert entire main to tokio::main in future
+        let runtime = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
 
         match cmd {
             // TODO disable until we port this to windows and support launching external binaries
@@ -295,6 +304,32 @@ fn main() {
                 debug!("exes_joined {exes_joined}");
                 writeln!(in_pipe, "{}", exes_joined).expect("failed to write to pipe");
                 drop(in_pipe);
+            },
+            "bbs" => {
+                // Query the bbs
+                // args: page, query (optional)
+                let mut split = data.splitn(2, ",");
+                let page = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let query = split.next();
+                println!("bbs command {page}, {query:?}");
+
+                let client = reqwest::Client::new();
+                let url = build_bbs_url(
+                    Sub::Releases,
+                    page,
+                    query.map(|x| x.to_string()),
+                    None,
+                    Some(OrderBy::Featured),
+                );
+                println!("querying {url}");
+                let res = runtime.block_on(scrape::crawl_bbs(&client, &url)).unwrap();
+
+                for cart in res {
+                    println!("{}", cart.title);
+                }
+            },
+            "download" => {
+                // Download a cart from the bbs
             },
             "label" => {
                 // fetch a label for a given cart, scaled to a given size

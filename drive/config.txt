@@ -19,7 +19,9 @@ show_fps 0 // Draw frames per second in the corner
 windowed 1 // 1 to start up in windowed mode
 window_position -1 -1 // x and y position of window (-1, -1 to let the window manager decide)
 frameless 0 // 1 to use a window with no frame
-fullscreen_method 1 // 0 maximized window (linux)  1 borderless desktop-sized window  2 fullscreen
+fullscreen_method 1 // 0 maximized window (linux)  1 borderless desktop-sized window  2 hardware fullscreen (warning: erratic behaviour under some drivers)
+blit_method 0  // 0 auto  1 software (slower but sometimes more reliable)  2 hardware (can do filtered scaling) 
+
 
 
 // :: System Settings
@@ -28,13 +30,16 @@ foreground_sleep_ms 2 // number of milliseconds to sleep each frame. Try 10 to c
 
 background_sleep_ms 10 // number of milliseconds to sleep each frame when running in the background
 
-sessions 49 // number of times program has been run
+sessions 58 // number of times program has been run
 
 // (scancode) hold this key down and left-click to simulate right-click
 rmb_key 0 // 0 for none  226 for LALT
 
 // Desktop for saving screenshots etc. Defaults to $HOME/Desktop
 desktop_path drive/screenshots/
+
+// 1 to allow controller input even when application is in background
+read_controllers_in_background 0
 
 
 
@@ -49,9 +54,18 @@ music_volume 256 // 0..256
 mix_buffer_size 1024
 
 
-// :: 
+// :: map scancodes. Format: 44=47,80=89,..  (scancode a, scancode b -- when press a, generates b)
+// run the program with -scancodes to determine which scancodes to use
+map_scancodes 
 
-version 0.2.2c6
+
+use_wget 0 // (Linux) 1 to use wget for downloads instead of libcurl (must be installed)
+
+
+
+// :: pico-8 
+
+version 0.2.6b
 
 // audio volume: 0..256 
 volume 256
@@ -69,8 +83,13 @@ cdata_path drive/cdata/
 joystick_index 0
 
 
-// Custom keyboard scancodes for buttons. player0 0..6, player1 0..5
-button_keys 0 0 0 0 0 0 0 0 0 0 0 0 0 
+// Treat the first n controllers as if they were a single merged controller
+// e.g. merge_joysticks 2 --> P0 gets controllers 0,1, P1 gets controller 2..
+merge_joysticks 0
+
+
+// Custom keyboard scancodes for buttons. player0 0..6, player1 0..5, menu_button, player2 0..5, player3 0..5
+button_keys 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 
 
 // Play notes as they are plotted in frequency mode
 live_notes 0
@@ -91,7 +110,7 @@ gif_len 16
 // when 1, reset the recording when pressing ctrl-9 (useful for creating a non-overlapping sequence)
 gif_reset_mode 0
 
-// 0 for off. 1 to allow control of a cart's framerate due to host machine's cpu capacity (recommended)
+// 0 for off. 1 for auto. 2 to allow control of a cart's framerate due to host machine's cpu capacity
 host_framerate_control 1
 
 // filter splore cartridges
@@ -112,4 +131,29 @@ allow_function_keys 1
 
 // 0 off 1 on: automatically check for a newer version of a BBS cart each time it is run.
 check_for_cart_updates 1
+
+// hide mouse cursor for n seconds when typing.
+auto_hide_mouse_cursor 5
+
+// 0 off 1 on: backup with a new timestamped filename on every run
+// normally not needed -- was used for debugging crash-on-run
+aggressive_backups 0
+
+// back up cartridge in editor every n minutes when not idle (0 for no periodic backups)
+periodic_backups 20
+
+// global screen transformations:
+//  129 flip horizontally
+//  130 flip vertically
+//  133 rotate CW 90 degrees
+//  134 rotate CW 180 degrees
+//  135 rotate CW 270 degrees
+transform_screen 0
+
+// 0 off  > 1: colour to draw pixel grid in the gfx editor at zoom:8 and zoom:4 (16 for black)
+gfx_grid_lines 0
+
+// file naming for screenshot / gif / wav captures
+// 0 sequential (foo_0.png, foo_1.png)    1 timestamp (foo_20240115_120823.png)
+capture_timestamps 0
 

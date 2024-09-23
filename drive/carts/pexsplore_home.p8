@@ -58,6 +58,8 @@ function _update60()
     categories:up()
   elseif btnp(3) then
     categories:down()
+  elseif btnp(5) then
+    serial_bbs(1, '')
   end
 end
 

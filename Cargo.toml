@@ -10,7 +10,6 @@ repository = ""
 [features]
 
 [dependencies]
-reqwest = { version = "0.11", features = ["blocking", "native-tls-vendored"] }
 notify = "6.1"
 notify-debouncer-full = "0.3"
 image = "0.25"
@@ -28,6 +27,13 @@ serde_json = "1.0"
 toml = "0.8"
 log = "0.4"
 env_logger = "0.11"
+
+# temp dependencies for scraper functionality
+tokio = { version = "1.37", features = ["full"] }
+reqwest = { version = "0.11", features = ["blocking", "native-tls-vendored"] }
+headless_chrome = "1"
+urlencoding = "2.1"
+scraper = "0.19"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { version = "0.29", features = ["fs", "process", "signal"] }
