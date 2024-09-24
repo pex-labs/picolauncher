@@ -7,15 +7,22 @@ __lua__
 #include utils.p8
 #include tween.lua
 
--- temp, include a color for the box
+-- launch pexsplore with given games category
+function pexsplore_category(category)
+  return function()
+    load('pexsplore_bbs.p8', 'back', category)
+  end
+end
+
+-- TODO should move each category into some sort of enum that can be shared with pesplore_bbs.p8
 categories=menu_new({
-    {label='featured',c1=12,c2=0},
-    {label='shooter',c1=9,c2=0},
-    {label='puzzle',c1=11,c2=0},
-    {label='platformer',c1=8,c2=0},
-    {label='co-op',c1=14,c2=0},
-    {label='arcade',c1=10,c2=0},
-    {label='different menu'}
+    {label='featured',c1=12,c2=0,icon=1,cmd=pexsplore_category('featured')},
+    {label='platformer',c1=9,c2=0,icon=2,cmd=pexsplore_category('platformer')},
+    {label='new',c1=11,c2=0,icon=3,cmd=pexsplore_category('new')},
+    {label='arcade',c1=8,c2=0,icon=4,cmd=pexsplore_category('arcade')},
+    {label='action',c1=14,c2=0,icon=5,cmd=pexsplore_category('action')},
+    {label='puzzle',c1=10,c2=0,icon=6,cmd=pexsplore_category('puzzle')},
+    {label='different menu',cmd=function()end},
 })
 
 cam_y=0
@@ -58,6 +65,8 @@ function _update60()
     categories:up()
   elseif btnp(3) then
     categories:down()
+  elseif btnp(5) then
+    categories:cur().cmd()
   end
 end
 
@@ -83,9 +92,10 @@ function _draw()
     x = (i-1) % 3
     y = ((i-1)\3)
     -- print(item.label .. ' ' .. x .. ' ' .. y)
-    rectfill(cat_x+x*(cat_w+8), cat_y+y*(cat_h+8), cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h, item.c1)
+    --rectfill(cat_x+x*(cat_w+8), cat_y+y*(cat_h+8), cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h+2, item.c2)
+    sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+8), cat_y+y*(cat_h+8))
     if categories:index() == i then
-      rect(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)-1, cat_x+x*(cat_w+8)+cat_w+1, cat_y+y*(cat_h+8)+cat_h+1, 7)
+      rect(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)-1, cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h, 7)
     end
   end
 

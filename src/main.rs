@@ -229,16 +229,13 @@ fn main() -> ! {
                 // args: page, query (optional)
                 let mut split = data.splitn(2, ",");
                 let page = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
-                let query = split.next();
-                info!("bbs command {page}, {query:?}");
+                let query = split.next().unwrap_or_default();
+                let query = query
+                    .parse::<PexsploreCategory>()
+                    .unwrap_or(PexsploreCategory::Featured);
+                info!("bbs command {page}, {query}");
 
-                let url = build_bbs_url(
-                    Sub::Releases,
-                    page,
-                    query.map(|x| x.to_string()),
-                    None,
-                    Some(OrderBy::Featured),
-                );
+                let url = bbs_url_for_category(query, page);
                 info!("querying {url}");
                 let client = reqwest::Client::new();
                 let res = runtime.block_on(crawl_bbs(&client, &url)).unwrap();
@@ -328,6 +325,38 @@ fn main() -> ! {
         }
 
         // acknowledge the write
+    }
+}
+
+#[derive(strum_macros::Display, strum_macros::EnumString)]
+#[strum(serialize_all = "lowercase")]
+enum PexsploreCategory {
+    Featured,
+    Platformer,
+    New,
+    Arcade,
+    Action,
+    Puzzle,
+}
+
+fn bbs_url_for_category(category: PexsploreCategory, page: u32) -> String {
+    match category {
+        PexsploreCategory::Featured => {
+            build_bbs_url(Sub::Releases, page, None, None, Some(OrderBy::Featured))
+        },
+        PexsploreCategory::New => {
+            build_bbs_url(Sub::Releases, page, None, None, Some(OrderBy::New))
+        },
+        PexsploreCategory::Platformer
+        | PexsploreCategory::Arcade
+        | PexsploreCategory::Action
+        | PexsploreCategory::Puzzle => build_bbs_url(
+            Sub::Releases,
+            page,
+            Some(category.to_string()),
+            None,
+            Some(OrderBy::Featured),
+        ),
     }
 }
 

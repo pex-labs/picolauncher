@@ -223,6 +223,13 @@ carts_per_page=30
 pending_bbs_load=false
 
 function _init()
+  games_category=stat(6)
+  -- fallback incase of invalid category
+  if games_category == nil or games_category == '' then
+    printh('invalid games category')
+    games_category='featured'
+  end
+
   carts=menu_new({{menuitem=menuitem.load}})
   labels=ls(label_dir)
   for cart in all(carts.items) do
@@ -254,7 +261,7 @@ function _update60()
           -- request load from bbs
           loaded_pages=loaded_pages+1
           printh('requesting page from bbs '..loaded_pages)
-          serial_bbs(loaded_pages, '')
+          serial_bbs(loaded_pages, games_category)
 
           pending_bbs_load=true
         end
@@ -333,7 +340,7 @@ function _draw()
   -- top bar
   rectfill(0, 0, 128, 8, bar_color_1)
   print("★", 2, 2, 10)
-  print("my games", 12, 2, 7)
+  print('pexsplore>'..games_category, 12, 2, 7)
 
   -- transition
   circfill(64, 128, transition_radius, 0)
