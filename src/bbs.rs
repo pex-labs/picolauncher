@@ -1,12 +1,13 @@
 use std::{
     path::{Path, PathBuf},
     sync::Arc,
+    time::Instant,
 };
 
 use anyhow::Result;
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use lazy_static::lazy_static;
-use log::warn;
+use log::{debug, warn};
 use regex::Regex;
 use reqwest::{Client, Url};
 use scraper::{Html, Selector};
@@ -236,16 +237,14 @@ pub fn build_bbs_url(
     url
 }
 
-pub async fn crawl_bbs(client: &Client, url: &str) -> Result<Vec<CartData>> {
-    let options = LaunchOptions::default_builder()
-        .build()
-        .expect("Could not find chrome-executable");
-
-    let browser = Browser::new(options)?;
-
-    let tab = browser.new_tab()?;
+pub async fn crawl_bbs(tab: &Tab, client: &Client, url: &str) -> Result<Vec<CartData>> {
+    let start = Instant::now();
     tab.navigate_to(url)?;
+    debug!("navigate took: {:?}", start.elapsed());
+
+    let start = Instant::now();
     tab.wait_for_element(r#"div[id^="pdat_"]"#)?;
+    debug!("wait for element took: {:?}", start.elapsed());
 
     // TODO maybe use regex to find pdat to improve speed
     let content = tab.get_content()?;

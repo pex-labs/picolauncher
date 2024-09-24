@@ -1,4 +1,4 @@
-use std::thread; // TODO maybe switch to async
+// TODO maybe switch to async
 use std::{
     collections::HashMap,
     fs::{read_dir, read_to_string, File, OpenOptions},
@@ -9,9 +9,11 @@ use std::{
     ptr,
     time::Duration,
 };
+use std::{ffi::OsStr, thread, time::Instant};
 
 use anyhow::anyhow;
 use futures::future::join_all;
+use headless_chrome::{Browser, LaunchOptions};
 use log::{debug, error, info, warn};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
@@ -79,6 +81,40 @@ fn main() -> ! {
     let mut out_pipe = open_out_pipe().expect("failed to open pipe");
     let mut reader = BufReader::new(out_pipe);
 
+    // TODO: tokio runtime here, maybe convert entire main to tokio::main in future
+    let runtime = tokio::runtime::Builder::new_current_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    // TODO don't crash if browser fails to launch - just disable bbs functionality?
+    // spawn browser and create tab for crawling
+    let chrome_args = vec![
+        "--disable-gpu",
+        "--disable-images",
+        "--disable-css",
+        "--no-sandbox",
+        "--disable-software-rasterizer",
+        "--disable-dev-shm-usage",
+    ];
+    let options = LaunchOptions::default_builder()
+        .args(chrome_args.iter().map(|s| OsStr::new(s)).collect())
+        .build()
+        .expect("Could not find chrome-executable");
+
+    let start = Instant::now();
+    let browser = Browser::new(options).unwrap();
+    debug!("browser new took: {:?}", start.elapsed());
+
+    let start = Instant::now();
+    let tab = browser.new_tab().unwrap();
+    debug!("new tab took: {:?}", start.elapsed());
+    tab.disable_debugger();
+    tab.disable_fetch();
+    tab.disable_log();
+    tab.disable_profiler();
+    tab.disable_runtime();
+
     // listen for commands from pico8 process
     loop {
         let mut line = String::new();
@@ -98,12 +134,6 @@ fn main() -> ! {
         let cmd = split.next().unwrap_or("");
         let data = split.next().unwrap_or("");
         debug!("received cmd:{cmd} data:{data}");
-
-        // TODO: tokio runtime here, maybe convert entire main to tokio::main in future
-        let runtime = tokio::runtime::Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
 
         match cmd {
             // TODO disable until we port this to windows and support launching external binaries
@@ -238,7 +268,7 @@ fn main() -> ! {
                 let url = bbs_url_for_category(query, page);
                 info!("querying {url}");
                 let client = reqwest::Client::new();
-                let res = runtime.block_on(crawl_bbs(&client, &url)).unwrap();
+                let res = runtime.block_on(crawl_bbs(&tab, &client, &url)).unwrap();
 
                 let cartdatas = res
                     .iter()
@@ -369,14 +399,13 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
 
     // generate p8 file from p8.png file
     let mut dest_path = GAMES_DIR.join(filestem);
+    dest_path.set_extension("p8");
     if !dest_path.exists() {
-        dest_path.set_extension("p8");
         pico8_export(pico8_bins, path, &dest_path)
             .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
     }
 
     // generate label file
-
     let mut label_path = LABEL_DIR.join(filestem);
     label_path.set_extension("64.p8");
     if !label_path.exists() {
