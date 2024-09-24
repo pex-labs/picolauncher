@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::Result;
+use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use lazy_static::lazy_static;
 use log::{debug, warn};
@@ -237,7 +238,7 @@ pub fn build_bbs_url(
     url
 }
 
-pub async fn crawl_bbs(tab: &Tab, client: &Client, url: &str) -> Result<Vec<CartData>> {
+pub async fn crawl_bbs(tab: &Tab, url: &str) -> Result<Vec<CartData>> {
     let start = Instant::now();
     tab.navigate_to(url)?;
     debug!("navigate took: {:?}", start.elapsed());
@@ -249,17 +250,35 @@ pub async fn crawl_bbs(tab: &Tab, client: &Client, url: &str) -> Result<Vec<Cart
     // TODO maybe use regex to find pdat to improve speed
     let content = tab.get_content()?;
 
-    let mut cartdatas = vec![];
+    // TODO this loop is the bottleneck - it needs to visit every page and grab the cartdata
+    // either grab all the carts in parallel or make wrapper microservice that scrapes bbs every so often
+    let mut tasks = vec![];
     for cap in GALLERY_RE.captures_iter(&content) {
+        // TODO not great that we are making a new client for each request
+        let client = reqwest::Client::new();
+
         let pid = cap.get(1).unwrap().as_str();
         // println!("Found href: {:?}", pid);
         let cart_url = format!("https://www.lexaloffle.com/bbs/?pid={pid}");
-        let Ok(cartdata) = scrape_cart(&client, &cart_url).await else {
-            warn!("failed to scrape cart {cart_url}");
-            continue;
-        };
-        cartdatas.push(cartdata);
+        let task = tokio::spawn(async move {
+            let start = Instant::now();
+            let cartdata = scrape_cart(&client, &cart_url).await;
+            debug!("scrape cart {:?} took: {:?}", &cart_url, start.elapsed());
+            cartdata
+        });
+        tasks.push(task);
     }
+
+    let start = Instant::now();
+    let results = join_all(tasks).await;
+    debug!("scrape each cart page took: {:?}", start.elapsed());
+
+    // TODO could add some log if any cards were dropped due to errors?
+    let cartdatas = results
+        .into_iter()
+        .filter_map(|x| x.ok())
+        .filter_map(|x| x.ok())
+        .collect();
 
     Ok(cartdatas)
 }

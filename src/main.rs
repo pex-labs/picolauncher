@@ -1,15 +1,15 @@
 // TODO maybe switch to async
 use std::{
     collections::HashMap,
+    ffi::OsStr,
     fs::{read_dir, read_to_string, File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
     ops::ControlFlow,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    ptr,
-    time::Duration,
+    ptr, thread,
+    time::{Duration, Instant},
 };
-use std::{ffi::OsStr, thread, time::Instant};
 
 use anyhow::anyhow;
 use futures::future::join_all;
@@ -114,6 +114,10 @@ fn main() -> ! {
     tab.disable_log();
     tab.disable_profiler();
     tab.disable_runtime();
+    // only accept text to save on bandwidth
+    let mut tab_headers = HashMap::new();
+    tab_headers.insert("Accept", "text/html");
+    tab.set_extra_http_headers(tab_headers);
 
     // listen for commands from pico8 process
     loop {
@@ -267,8 +271,7 @@ fn main() -> ! {
 
                 let url = bbs_url_for_category(query, page);
                 info!("querying {url}");
-                let client = reqwest::Client::new();
-                let res = runtime.block_on(crawl_bbs(&tab, &client, &url)).unwrap();
+                let res = runtime.block_on(crawl_bbs(&tab, &url)).unwrap();
 
                 let cartdatas = res
                     .iter()
