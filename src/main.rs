@@ -57,7 +57,7 @@ fn main() {
     });
 
     if let Err(e) = create_dirs() {
-        warn!("failed to create directories: {e:?}");
+        warn!("failed to create directories: {e:?}")
     }
 
     // launch pico8 binary

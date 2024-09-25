@@ -7,9 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use consts::*;
-
-use crate::bbs::Metadata;
+use picolauncher::{bbs::Metadata, consts::*, p8util};
 
 #[derive(Subcommand, Debug)]
 enum Commands {
