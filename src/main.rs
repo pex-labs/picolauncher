@@ -111,7 +111,7 @@ fn main() {
         .expect("Could not find chrome-executable");
 
     let start = Instant::now();
-    let browser = Browser::new(options).unwrap();
+    let browser = Browser::new(options).expect("\x1b[31mFailed to launch chrome, do you have it installed?\nInstall on raspberry pi: sudo apt-get install chromium-browser\x1b[0m\n");
     debug!("browser new took: {:?}", start.elapsed());
 
     let start = Instant::now();
