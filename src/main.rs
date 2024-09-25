@@ -2,7 +2,7 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
-    fs::{read_dir, read_to_string, File, OpenOptions},
+    fs::{create_dir_all, read_dir, read_to_string, File, OpenOptions},
     io::{BufRead, BufReader, Read, Write},
     ops::ControlFlow,
     path::{Path, PathBuf},
@@ -30,6 +30,19 @@ fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     Ok(serialized)
 }
 
+fn create_dirs() -> anyhow::Result<()> {
+    create_dir_all(EXE_DIR.as_path())?;
+    create_dir_all(CART_DIR.as_path())?;
+    create_dir_all(GAMES_DIR.as_path())?;
+    create_dir_all(MUSIC_DIR.as_path())?;
+    create_dir_all(LABEL_DIR.as_path())?;
+    create_dir_all(METADATA_DIR.as_path())?;
+    create_dir_all(BBS_CART_DIR.as_path())?;
+    create_dir_all(RAW_SCREENSHOT_PATH)?;
+    create_dir_all(SCREENSHOT_PATH)?;
+    Ok(())
+}
+
 fn main() {
     // set up logger
     let crate_name = env!("CARGO_PKG_NAME");
@@ -42,6 +55,10 @@ fn main() {
     let screenshot_handle = thread::spawn(|| {
         screenshot_watcher();
     });
+
+    if let Err(e) = create_dirs() {
+        warn!("failed to create directories: {e:?}");
+    }
 
     // launch pico8 binary
     let pico8_bin_override = std::env::var("PICO8_BINARY");
