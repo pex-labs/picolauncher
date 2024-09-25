@@ -22,7 +22,7 @@ categories=menu_new({
     {label='arcade',c1=8,c2=0,icon=4,cmd=pexsplore_category('arcade')},
     {label='action',c1=14,c2=0,icon=5,cmd=pexsplore_category('action')},
     {label='puzzle',c1=10,c2=0,icon=6,cmd=pexsplore_category('puzzle')},
-    {label='different menu',cmd=function()end},
+    -- {label='different menu',cmd=function()end},
 })
 
 cam_y=0
@@ -57,15 +57,22 @@ function _update60()
   tween_machine:update()
   camera(0, cam_y) 
 
-  if btnp(0) then
+  local menu1_w = 3
+  local menu1_h = 2
+  if 1 <= categories:index() and categories:index() <= 6 then
+    local cur_index = categories:index()
+    if btnp(0) then
+      categories:up()
+    elseif btnp(1) then
+      categories:down()
+    elseif btnp(2) then
+      categories:set_index(cur_index-menu1_w)
+    elseif btnp(3) then
+      categories:set_index(cur_index+menu1_w)
+    end
+  end
 
-  elseif btnp(1) then
-
-  elseif btnp(2) then
-    categories:up()
-  elseif btnp(3) then
-    categories:down()
-  elseif btnp(5) then
+  if btnp(5) then
     categories:cur().cmd()
   end
 end
@@ -78,11 +85,11 @@ function _draw()
   print('EXsplore', 90, 48, 7)
 
   -- categories section
-  print('categories', 8, 60, 6)
-  line(8, 68, 120, 68, 6)
+  print('categories', 8, 64, 6)
+  line(8, 72, 120, 72, 6)
 
   cat_x = 8
-  cat_y = 72
+  cat_y = 78
   cat_w = 32
   cat_h = 16
   for i, item in ipairs(categories.items) do
@@ -92,16 +99,21 @@ function _draw()
     x = (i-1) % 3
     y = ((i-1)\3)
     -- print(item.label .. ' ' .. x .. ' ' .. y)
-    --rectfill(cat_x+x*(cat_w+8), cat_y+y*(cat_h+8), cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h+2, item.c2)
-    sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+8), cat_y+y*(cat_h+8))
     if categories:index() == i then
-      rect(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)-1, cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h, 7)
+      c1=7
+      press_offset=2
+    else
+      c1=5
+      press_offset=0
     end
+    rectfill(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)+cat_h+1, cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h+2, 0)
+    rect(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)-1+press_offset, cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h+press_offset, c1)
+    sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+8), cat_y+y*(cat_h+8)+press_offset)
   end
 
   -- featured carts section
-  print('featured', 8, 116, 6)
-  line(8, 124, 120, 124, 6)
+  -- print('featured', 8, 116, 6)
+  -- line(8, 124, 120, 124, 6)
 
 
 end
