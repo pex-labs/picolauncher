@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
 #include menu.p8
 #include utils.p8
 #include tween.lua
@@ -86,6 +87,8 @@ function update_gallery()
     current_photo = min(tsize(photos), current_photo + 1)
     scroll_to()
     sfx(0)
+  elseif btnp(4) then
+    os_back()
   elseif btnp(5) then  -- x button
     load_full_photo()
     is_fullscreen = true

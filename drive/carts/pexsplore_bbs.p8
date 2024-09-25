@@ -208,7 +208,7 @@ function make_transition_tween(cart)
   end)
   transition_tween:register_finished_callback(function(tween)
     tween:remove()
-    load(cart_dir .. '/' .. tostring(cart.filename) .. '.p8', 'back to games')
+    os_load(cart_dir .. '/' .. tostring(cart.filename) .. '.p8', 'back to games')
   end)
   transition_tween:restart()
 end
@@ -265,6 +265,8 @@ function _update60()
         carts:down()
         make_cart_swipe_tween(-1)
       end
+    elseif btnp(4) then
+      os_back()
     elseif btnp(5) then
       if carts:cur().menuitem == menuitem.load then
 

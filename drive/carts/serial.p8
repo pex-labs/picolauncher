@@ -178,6 +178,30 @@ function serial_shutdown()
   serial_writeline('shutdown:')
 end
 
+-- load a cart, use this to load carts while perserving history
+function os_load(path, breadcrumb, param)
+  if path == nil or #path == 0 then
+    printh('WARNING: path passed to os_load was nil')
+    return
+  end
+  if breadcrumb == nil then breadcrumb = '' end
+  if param == nil then param = '' end
+
+  serial_writeline('pushcart:'..path..','..breadcrumb..','..param)
+  load(path, breadcrumb, param)
+end
+
+-- return to the previous cart
+-- no-op if previous cart doesn't exist
+function os_back()
+  serial_writeline('popcart:')
+  local prev_cart=serial_readline()
+  if prev_cart ~= nil or #prev_cart > 0 then
+    -- TODO doesn't preserve menu items and params
+    load(prev_cart)
+  end
+end
+
 -- carts={}
 -- function _init()
 --   cls(0)

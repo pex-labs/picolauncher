@@ -10,7 +10,7 @@ __lua__
 -- launch pexsplore with given games category
 function pexsplore_category(category)
   return function()
-    load('pexsplore_bbs.p8', 'back', category)
+    os_load('pexsplore_bbs.p8', 'back', category)
   end
 end
 
@@ -72,7 +72,9 @@ function _update60()
     end
   end
 
-  if btnp(5) then
+  if btnp(4) then
+    os_back()
+  elseif btnp(5) then
     categories:cur().cmd()
   end
 end

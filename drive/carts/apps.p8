@@ -31,6 +31,8 @@ function _update()
     exe_menu:up()
   elseif btnp(3) then
     exe_menu:down()
+  elseif btnp(4) then
+    os_back()
   elseif btnp(5) then
     exe_menu:cur().cmd()
   end

@@ -59,13 +59,14 @@ fn main() {
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
+    let init_cart = "main_menu.p8";
     let mut pico8_process = launch_pico8_binary(
         &pico8_bins,
         vec![
             "-home",
             DRIVE_DIR,
             "-run",
-            "drive/carts/main_menu.p8",
+            &format!("drive/carts/{init_cart}"),
             "-i",
             "in_pipe",
             "-o",
@@ -118,6 +119,11 @@ fn main() {
     let mut tab_headers = HashMap::new();
     tab_headers.insert("Accept", "text/html");
     tab.set_extra_http_headers(tab_headers);
+
+    // TODO theres a lot of state in main.rs, should abstract into own state struct or something
+    // cart stack
+    let mut cartstack = Vec::<String>::new();
+    cartstack.push(init_cart.into());
 
     // listen for commands from pico8 process
     loop {
@@ -364,6 +370,19 @@ fn main() {
             },
             "sys" => {
                 // Get system information like operating system, etc
+            },
+            "pushcart" => {
+                // when loading a new cart, can push the current cart and use as breadcrumb
+                cartstack.push(data.into());
+            },
+            "popcart" => {
+                // remove latest cart from stack
+                let _ = cartstack.pop();
+                let topcart = cartstack.last().cloned().unwrap_or_default();
+
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "{}", topcart).expect("failed to write to pipe");
+                drop(in_pipe);
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process

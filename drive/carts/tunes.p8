@@ -2,6 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
 #include utils.p8
 #include menu.p8
 #include tween.lua
@@ -118,8 +119,10 @@ function _update60()
       song_menu:down()
     end
     on_song_change()
-  elseif btnp(4) then -- shuffle
-    shuffle = not shuffle
+  -- elseif btnp(4) then -- shuffle
+  --  shuffle = not shuffle
+  elseif btnp(4) then
+    os_back()
   elseif btnp(5) then -- pause/play
     play_state = not play_state
     if play_state then
@@ -165,11 +168,11 @@ function _draw()
 
   -- draw help text
   print('❎pause/play', 3, 120, 6)
-  if shuffle then
-    shuffle_text='on'
-  else
-    shuffle_text='off'
-  end
-    
-  print('🅾️shuffle ' .. shuffle_text, 74, 120, 6)
+
+  -- if shuffle then
+  --   shuffle_text='on'
+  -- else
+  --   shuffle_text='off'
+  -- end
+  -- print('🅾️shuffle ' .. shuffle_text, 74, 120, 6)
 end

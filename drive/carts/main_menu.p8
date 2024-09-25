@@ -8,11 +8,11 @@ __lua__
 
 -- TODO should make this menu scroll too
 app_menu=menu_new({
-  {label='pexsplore', icon=1, func=function()load('pexsplore_home.p8', 'back to menu')end},
-  {label='apps', icon=6, func=function()load('apps.p8', 'back to menu')end},
-  {label='photos', icon=2, func=function()load('gallery.p8', 'back to menu')end},
-  {label='tunes', icon=3, func=function()load('tunes.p8', 'back to menu')end},
-  {label='settings', icon=4, func=function()load('settings.p8', 'back to menu')end},
+  {label='pexsplore', icon=1, func=function()os_load('pexsplore_home.p8', 'back to menu')end},
+  {label='apps', icon=6, func=function()os_load('apps.p8', 'back to menu')end},
+  {label='photos', icon=2, func=function()os_load('gallery.p8', 'back to menu')end},
+  {label='tunes', icon=3, func=function()os_load('tunes.p8', 'back to menu')end},
+  {label='settings', icon=4, func=function()os_load('settings.p8', 'back to menu')end},
   -- TODO: only quits to prompt if not in exported binary
   {label='power off', icon=5, func=function()serial_shutdown()end},
 })

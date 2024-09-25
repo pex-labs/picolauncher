@@ -2,6 +2,8 @@ pico-8 cartridge // http://www.pico-8.com
 version 42
 __lua__
 
+#include serial.p8
+
 local screen_width = 128
 local screen_height = 128
 local menu_start_y = 20
@@ -90,6 +92,8 @@ function update_main_menu()
     current_item = current_item % menu_size + 1
     sfx(0)
     update_scroll()
+  elseif btnp(4) then
+    os_back()
   elseif btnp(5) then
     current_screen = menu_items[current_item]
     current_item = 1
