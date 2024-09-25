@@ -62,12 +62,16 @@ function _update60()
   if 1 <= categories:index() and categories:index() <= 6 then
     local cur_index = categories:index()
     if btnp(0) then
+      sfx(0)
       categories:up()
     elseif btnp(1) then
+      sfx(0)
       categories:down()
     elseif btnp(2) then
+      sfx(0)
       categories:set_index(cur_index-menu1_w)
     elseif btnp(3) then
+      sfx(0)
       categories:set_index(cur_index+menu1_w)
     end
   end
@@ -168,3 +172,6 @@ eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000000000000000000000000000000000000000000000000000
 eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa0000000000000000000000000000000000000000000000000000000000000000
+__sfx__
+000300000d7500d7500d7500840008400084000c4000c4000c4000b40012400074000a40008400034000630000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000200002705026050260502605022100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
