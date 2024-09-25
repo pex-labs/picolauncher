@@ -188,6 +188,7 @@ function os_load(path, breadcrumb, param)
   if param == nil then param = '' end
 
   serial_writeline('pushcart:'..path..','..breadcrumb..','..param)
+  serial_readline() -- empty response
   load(path, breadcrumb, param)
 end
 
@@ -196,9 +197,11 @@ end
 function os_back()
   serial_writeline('popcart:')
   local prev_cart=serial_readline()
+  printh('got prevcart '..prev_cart)
   if prev_cart ~= nil or #prev_cart > 0 then
-    -- TODO doesn't preserve menu items and params
-    load(prev_cart)
+    -- split to get previous path and breadcrumb too
+    parts=split(prev_cart, ',', false)
+    load(parts[1], parts[2], parts[3])
   end
 end
 

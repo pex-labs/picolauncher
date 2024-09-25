@@ -391,6 +391,7 @@ fn main() {
                 // remove latest cart from stack
                 let _ = cartstack.pop();
                 let topcart = cartstack.last().cloned().unwrap_or_default();
+                debug!("popcart topcart is {topcart}");
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", topcart).expect("failed to write to pipe");

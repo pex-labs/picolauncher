@@ -10,7 +10,7 @@ __lua__
 -- launch pexsplore with given games category
 function pexsplore_category(category)
   return function()
-    os_load('pexsplore_bbs.p8', 'back', category)
+    os_load('pexsplore_bbs.p8', '', category)
   end
 end
 
