@@ -69,6 +69,14 @@ For example
 export PATH="$PATH:~/Downloads/pico-8/"
 ```
 
+Chromium/Google chrome is now a dependency (temporarily), you can install it with
+```sh
+# Debian/Ubuntu
+sudo apt-get install chromium-browser
+# Arch
+sudo pacman -S chromium
+```
+
 You can now run **PicoLauncher**:
 ```sh
 ./picolauncher
@@ -109,6 +117,11 @@ Once again, add the pico8 directory to your PATH environment variables in your `
 export PATH="$PATH:<path to pico8 directory>"
 ```
 
+Chromium/Google chrome is now a dependency (temporarily), you can install it with
+```sh
+sudo apt-get install chromium-browser
+```
+
 When launching **PicoLauncher** and supplying the binary explicitly, if you are on 64-bit Raspberry Pi, ensure that you are using the `pico8_64` binary.
 
 </details>
@@ -116,7 +129,8 @@ When launching **PicoLauncher** and supplying the binary explicitly, if you are 
 
 ### Windows
 
-<details>
+⚠ Support co️ming in future ⚠
+<!--details>
 <summary>click to expand</summary>
 
 Download the `picolauncher-windows.zip` zip file from the latest releases and unzip it. If your pico8 binary doesn't reside at the default location of `C:\Program Files (x86)\PICO-8\pico8.exe`, you need to set the environment variable `PICO8_BINARY` before launching.
@@ -137,7 +151,7 @@ Locate the variable titled 'Path' and click the 'Edit' button.
 Add a new path and set the value to the directory where you have installed pico8. If you used the windows installer for pico8, this should be set to `C:\Program Files (x86)\PICO-8\pico8.exe`
 <img src="media/windows_install/step4.png" width=50%/>
 
-</details>
+</details-->
 
 ### Build from source
 
