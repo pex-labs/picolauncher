@@ -238,12 +238,20 @@ pub fn build_bbs_url(
     url
 }
 
-pub async fn crawl_bbs(tab: &Tab, url: &str) -> Result<Vec<CartData>> {
+pub async fn crawl_bbs(tab: Arc<Tab>, url: &str) -> Result<Vec<CartData>> {
+    let browser_context_id = tab.get_browser_context_id().unwrap();
+    debug!("browser context id for tab: {:?}", browser_context_id);
+
     let start = Instant::now();
     tab.navigate_to(url)?;
     debug!("navigate took: {:?}", start.elapsed());
 
     let start = Instant::now();
+    tab.wait_until_navigated()?;
+    debug!("wait until navigated took: {:?}", start.elapsed());
+
+    let start = Instant::now();
+    // TODO maybe employ a timeout/retry mechanic here?
     tab.wait_for_element(r#"div[id^="pdat_"]"#)?;
     debug!("wait for element took: {:?}", start.elapsed());
 

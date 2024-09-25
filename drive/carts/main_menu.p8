@@ -154,7 +154,7 @@ function _draw()
   rect(cursor_x, cursor_y, cursor_x+17, cursor_y+19, 7)
 
   if queued_fn != nil then
-    circfill(28+8, 16+8+20*(queued_fn-1), transition_radius, 0)
+    circfill(40, 64, transition_radius, 0)
     if time()-queued_fn_time > 0.5 then
       app_menu.items[queued_fn].func()
     end

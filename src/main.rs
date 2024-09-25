@@ -7,7 +7,9 @@ use std::{
     ops::ControlFlow,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
-    ptr, thread,
+    ptr,
+    sync::Arc,
+    thread,
     time::{Duration, Instant},
 };
 
@@ -100,6 +102,11 @@ fn main() {
     ];
     let options = LaunchOptions::default_builder()
         .args(chrome_args.iter().map(|s| OsStr::new(s)).collect())
+        .sandbox(false)
+        .devtools(false)
+        .enable_gpu(false)
+        .enable_logging(false)
+        .idle_browser_timeout(Duration::from_secs(u64::MAX))
         .build()
         .expect("Could not find chrome-executable");
 
@@ -110,15 +117,15 @@ fn main() {
     let start = Instant::now();
     let tab = browser.new_tab().unwrap();
     debug!("new tab took: {:?}", start.elapsed());
-    tab.disable_debugger();
-    tab.disable_fetch();
-    tab.disable_log();
-    tab.disable_profiler();
-    tab.disable_runtime();
+    tab.disable_debugger().unwrap();
+    tab.disable_fetch().unwrap();
+    tab.disable_log().unwrap();
+    tab.disable_profiler().unwrap();
+    //tab.disable_runtime().unwrap();
     // only accept text to save on bandwidth
     let mut tab_headers = HashMap::new();
     tab_headers.insert("Accept", "text/html");
-    tab.set_extra_http_headers(tab_headers);
+    tab.set_extra_http_headers(tab_headers).unwrap();
 
     // TODO theres a lot of state in main.rs, should abstract into own state struct or something
     // cart stack
@@ -283,7 +290,12 @@ fn main() {
 
                 let url = bbs_url_for_category(query, page);
                 info!("querying {url}");
-                let res = runtime.block_on(crawl_bbs(&tab, &url)).unwrap();
+                let res = runtime
+                    .block_on(async {
+                        let tab_clone = Arc::clone(&tab);
+                        crawl_bbs(tab_clone, &url).await
+                    })
+                    .unwrap();
 
                 let cartdatas = res
                     .iter()
