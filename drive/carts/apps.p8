@@ -41,17 +41,21 @@ end
 function _draw()
   cls(bg_color)
   
+  print("external apps", 10, 14, 6)
+  line(10, 22, 118, 22, 6)
   -- draw menu items
-  x_offset=20
+  x_offset=12
   y_offset=20
   for i, menuitem in ipairs(exe_menu.items) do
     is_sel=exe_menu:index() == i
     if is_sel then
       c = 7
+      x_shift=-2
     else
       c = 6
+      x_shift=0
     end
-    print(menuitem.name, x_offset, y_offset+i*7, c)
+    print(menuitem.name, x_offset+x_shift, y_offset+i*7, c)
   end
 
   -- draw top bar

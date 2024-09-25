@@ -84,7 +84,7 @@ function _draw()
   rectfill(0, 0, 128, 56, 12)
   -- TODO scale text
   -- https://www.lexaloffle.com/bbs/?tid=29612
-  print('EXsplore', 90, 48, 7)
+  print('PEXsplore', 86, 48, 7)
 
   -- categories section
   print('categories', 8, 64, 6)

@@ -110,7 +110,16 @@ function _draw()
   cls(1)
 
   -- top bar
-  print(stat(93)..":"..stat(94), 7, 4, 7)
+  local hour = tostr(stat(93))
+  if #hour < 2 then 
+    hour = "0"..hour
+  end
+  local minute = tostr(stat(94))
+  if #minute < 2 then 
+    minute = "0"..minute
+  end
+
+  print(hour..":"..minute, 7, 4, 7)
   draw_wifi_icon(83, 4)
   draw_bat_icon(94, 4)
   print('42%', 108, 4, 7)
