@@ -90,8 +90,10 @@ function update_gallery()
   elseif btnp(4) then
     os_back()
   elseif btnp(5) then  -- x button
-    load_full_photo()
-    is_fullscreen = true
+    if #photos > 0 then
+      load_full_photo()
+      is_fullscreen = true
+    end
   end
 end
 
