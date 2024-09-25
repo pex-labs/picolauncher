@@ -165,6 +165,19 @@ To build from source, you need to have a [rust toolchain](https://www.rust-lang.
 p8tool addcart <path to cart> --name <name of cart> --author <author of cart>
 ```
 
+## Adding custom external apps
+
+**picolauncher** now supports launcher arbritrary external applications. Simply create `drive/exe` directory, and place a cart file with the following contents:
+```p8
+pico-8 cartridge // http://www.pico-8.com
+version 42
+__meta:picolauncher__
+name="curse of the lich king"
+author="johanpeitz"
+path="cotlk/cotlk"
+```
+Where `path` points to the location of the executable you wish to launch (relative to `drive/exe` directory).
+
 ## Contributing
 
 Please see [CONTRIBUTING.md](CONTRIBUTING.md) for more details! Don't hesitate to report bugs and post feature requests!

@@ -207,17 +207,19 @@ fn main() {
                 // fetch all carts in directory
                 let dir = (&*CART_DIR).join(data); // TODO watch out for path traversal
                 let mut carts = vec![];
-                for entry in read_dir(dir).unwrap() {
-                    let entry = entry.unwrap().path();
-                    if entry.is_file() {
-                        // for each file read metadata and pack into table string
-                        let filename = entry.file_name().unwrap();
-                        let mut metapath = PathBuf::from(filename);
-                        metapath.set_extension("json");
-                        let metapath = METADATA_DIR.join(metapath);
-                        match parse_metadata(&metapath) {
-                            Ok(serialized) => carts.push(serialized),
-                            Err(e) => warn!("failed parsing metadata file: {e:?}"),
+                if let Ok(read_dir) = read_dir(dir) {
+                    for entry in read_dir {
+                        let entry = entry.unwrap().path();
+                        if entry.is_file() {
+                            // for each file read metadata and pack into table string
+                            let filename = entry.file_name().unwrap();
+                            let mut metapath = PathBuf::from(filename);
+                            metapath.set_extension("json");
+                            let metapath = METADATA_DIR.join(metapath);
+                            match parse_metadata(&metapath) {
+                                Ok(serialized) => carts.push(serialized),
+                                Err(e) => warn!("failed parsing metadata file: {e:?}"),
+                            }
                         }
                     }
                 }
@@ -241,35 +243,37 @@ fn main() {
                 // path=picocad/picocad
                 // ```
                 let mut exes = vec![];
-                for entry in read_dir(EXE_DIR.as_path()).unwrap() {
-                    let entry = entry.unwrap().path();
-                    if !entry.is_file() {
-                        continue;
+                if let Ok(read_dir) = read_dir(EXE_DIR.as_path()) {
+                    for entry in read_dir {
+                        let entry = entry.unwrap().path();
+                        if !entry.is_file() {
+                            continue;
+                        }
+                        // TODO can this fail?
+                        if entry.extension().unwrap() != "p8" {
+                            continue;
+                        }
+                        let Ok(mut cart) = Cart::from_file(&entry) else {
+                            warn!("failed to read exe meta file {entry:?}");
+                            continue;
+                        };
+                        let meta = cart
+                            .get_section(SectionName::Meta("picolauncher".into()))
+                            .join("\n");
+
+                        let Ok(meta_parsed) = toml::from_str::<ExeMeta>(&meta) else {
+                            warn!("failed to parse metadata section of file {entry:?}");
+                            continue;
+                        };
+
+                        println!("{meta_parsed:?}");
+                        let Ok(meta_string) = meta_parsed.to_lua_table() else {
+                            warn!("failed to serialize to lua table for meta file {entry:?}");
+                            continue;
+                        };
+
+                        exes.push(meta_string);
                     }
-                    // TODO can this fail?
-                    if entry.extension().unwrap() != "p8" {
-                        continue;
-                    }
-                    let Ok(mut cart) = Cart::from_file(&entry) else {
-                        warn!("failed to read exe meta file {entry:?}");
-                        continue;
-                    };
-                    let meta = cart
-                        .get_section(SectionName::Meta("picolauncher".into()))
-                        .join("\n");
-
-                    let Ok(meta_parsed) = toml::from_str::<ExeMeta>(&meta) else {
-                        warn!("failed to parse metadata section of file {entry:?}");
-                        continue;
-                    };
-
-                    println!("{meta_parsed:?}");
-                    let Ok(meta_string) = meta_parsed.to_lua_table() else {
-                        warn!("failed to serialize to lua table for meta file {entry:?}");
-                        continue;
-                    };
-
-                    exes.push(meta_string);
                 }
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 let exes_joined = exes.join(",");

@@ -80,6 +80,9 @@ end
 function serial_ls_exe()
   serial_writeline('ls_exe:')
   local exes=serial_readline()
+  if #exes == 0 then
+    return {}
+  end
   local split_exes=split(exes, ',', false)
   for k, v in pairs(split_exes) do
     split_exes[k]=table_from_string(v)
