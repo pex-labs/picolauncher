@@ -246,9 +246,9 @@ pub async fn crawl_bbs(tab: Arc<Tab>, url: &str) -> Result<Vec<CartData>> {
     tab.navigate_to(url)?;
     debug!("navigate took: {:?}", start.elapsed());
 
-    let start = Instant::now();
-    tab.wait_until_navigated()?;
-    debug!("wait until navigated took: {:?}", start.elapsed());
+    //let start = Instant::now();
+    //tab.wait_until_navigated()?;
+    //debug!("wait until navigated took: {:?}", start.elapsed());
 
     let start = Instant::now();
     // TODO maybe employ a timeout/retry mechanic here?

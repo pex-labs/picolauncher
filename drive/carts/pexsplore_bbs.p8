@@ -208,7 +208,7 @@ function make_transition_tween(cart)
   end)
   transition_tween:register_finished_callback(function(tween)
     tween:remove()
-    os_load(cart_dir .. '/' .. tostring(cart.filename) .. '.p8', 'back to games')
+    load(cart_dir .. '/' .. tostring(cart.filename) .. '.p8', 'back to games')
   end)
   transition_tween:restart()
 end
