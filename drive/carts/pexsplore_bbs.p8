@@ -231,6 +231,7 @@ function _init()
   end
 
   carts=menu_new({{menuitem=menuitem.load}})
+  carts:set_wrap(false)
   labels=ls(label_dir)
   for cart in all(carts.items) do
     printh(tostring(cart))
@@ -246,13 +247,21 @@ function _update60()
 
   if cart_tween_state > 0 then
     if btnp(0) then
-      sfx(0)
-      carts:up()
-      make_cart_swipe_tween(1)
+      if carts:index() == 1 then
+        sfx(1)
+      else
+        sfx(0)
+        carts:up()
+        make_cart_swipe_tween(1)
+      end
     elseif btnp(1) then
-      sfx(0)
-      carts:down()
-      make_cart_swipe_tween(-1)
+      if carts:index() == carts:len() then
+        sfx(1)
+      else
+        sfx(0)
+        carts:down()
+        make_cart_swipe_tween(-1)
+      end
     elseif btnp(5) then
       if carts:cur().menuitem == menuitem.load then
 
@@ -296,8 +305,9 @@ function _update60()
     resp = serial_bbs_response()
     -- printh('serial response '..tostring(resp))
     if resp ~= nil then
+      local old_index = carts:index()
       build_new_cart_menu(resp)
-      carts:set_index((loaded_pages-1)*carts_per_page+1) -- set the correct position of the menu
+      carts:set_index(old_index) -- set the correct position of the menu
       load_label(carts:cur(), 0)
       pending_bbs_load=false
     end
@@ -320,6 +330,7 @@ function build_new_cart_menu(resp)
   end
   add(new_menuitems, {menuitem=menuitem.load})
   carts=menu_new(new_menuitems)
+  carts:set_wrap(false)
 end
 
 function draw_menuitem(w, y, text, sel)
@@ -351,10 +362,11 @@ function draw_carts_menu()
   if carts:cur().menuitem == menuitem.load then
     if pending_bbs_load then
       local str="loading..."
-      print(str, 64-#str*2, 72, 7)
+      --print(str, 64-#str*2, 64, 7)
+      print(str, cart_x_swipe-#str*2, 64, 7)
     else
       local str="❎ load more carts"
-      print(str, 64-#str*2, 64, 7) 
+      print(str, cart_x_swipe-#str*2, 64, 7) 
     end 
   else
     draw_cart(cart_x_swipe, 64.5+cart_y_ease+cart_y_bob, 0)
@@ -362,8 +374,12 @@ function draw_carts_menu()
     print(str, 64-#str*2, 117+cart_y_ease+cart_y_bob, 7)
   end
   if cart_tween_state > 0 then
-    print("⬅️", 3, 64, 7)
-    print("➡️", 118, 64, 7)
+    if carts:index() > 1 then
+      print("⬅️", 3, 64, 7)
+    end
+    if carts:index() < carts:len()then
+      print("➡️", 118, 64, 7)
+    end
   end
 
   -- draw menu

@@ -275,7 +275,14 @@ fn main() -> ! {
 
                 let cartdatas = res
                     .iter()
-                    .map(|cart| cart.to_lua_table())
+                    .map(|cart| {
+                        // TODO this is weird code
+                        let mut cart = cart.clone();
+                        // make all cart names uppercase (either this or invert the case)
+                        cart.title = cart.title.to_ascii_lowercase();
+                        cart.author = cart.author.to_ascii_lowercase();
+                        cart.to_lua_table()
+                    })
                     .collect::<Vec<_>>()
                     .join(",");
 
