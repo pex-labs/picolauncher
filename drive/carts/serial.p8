@@ -174,6 +174,10 @@ function serial_fetch_carts()
   serial(stdout, chan_buf, 2) 
 end
 
+function serial_shutdown()
+  serial_writeline('shutdown:')
+end
+
 -- carts={}
 -- function _init()
 --   cls(0)

@@ -53,6 +53,12 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
     Ok(out_pipe)
 }
 
+pub fn kill_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
+    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    kill(pico8_pid, Signal::SIGKILL)?;
+    Ok(())
+}
+
 pub fn stop_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
     let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
     kill(pico8_pid, Signal::SIGSTOP)?;

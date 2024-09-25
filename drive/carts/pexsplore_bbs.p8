@@ -222,6 +222,9 @@ carts_per_page=30
 
 pending_bbs_load=false
 
+loading_anim_timer=0 -- timer used for loading animation
+loading_state=0
+
 function _init()
   games_category=stat(6)
   -- fallback incase of invalid category
@@ -311,6 +314,13 @@ function _update60()
       load_label(carts:cur(), 0)
       pending_bbs_load=false
     end
+
+    -- update loading animation
+    curtime=time()
+    if curtime-loading_anim_timer > 1 then
+      loading_anim_timer=curtime
+      loading_state=(loading_state+1)%4
+    end
   end
 end
 
@@ -361,8 +371,10 @@ function draw_carts_menu()
   -- draw the cartridge
   if carts:cur().menuitem == menuitem.load then
     if pending_bbs_load then
-      local str="loading..."
-      --print(str, 64-#str*2, 64, 7)
+      local str="loading"
+      for i=1,loading_state do
+        str=str..'.'
+      end
       print(str, cart_x_swipe-#str*2, 64, 7)
     else
       local str="❎ load more carts"

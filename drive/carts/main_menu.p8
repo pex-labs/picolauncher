@@ -14,7 +14,7 @@ app_menu=menu_new({
   {label='tunes', icon=3, func=function()load('tunes.p8', 'back to menu')end},
   {label='settings', icon=4, func=function()load('settings.p8', 'back to menu')end},
   -- TODO: only quits to prompt if not in exported binary
-  {label='power off', icon=5, func=function()extcmd('shutdown')end},
+  {label='power off', icon=5, func=function()serial_shutdown()end},
 })
 
 function _init()

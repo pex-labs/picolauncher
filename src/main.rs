@@ -28,7 +28,7 @@ fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     Ok(serialized)
 }
 
-fn main() -> ! {
+fn main() {
     // set up logger
     let crate_name = env!("CARGO_PKG_NAME");
     env_logger::builder()
@@ -59,13 +59,13 @@ fn main() -> ! {
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
-    let pico8_process = launch_pico8_binary(
+    let mut pico8_process = launch_pico8_binary(
         &pico8_bins,
         vec![
             "-home",
             DRIVE_DIR,
             "-run",
-            "drive/carts/pexsplore_home.p8",
+            "drive/carts/main_menu.p8",
             "-i",
             "in_pipe",
             "-o",
@@ -121,6 +121,12 @@ fn main() -> ! {
 
     // listen for commands from pico8 process
     loop {
+        // check if pico8 process has exited
+        if let Some(status) = pico8_process.try_wait().unwrap() {
+            info!("pico8 process exited with status {status}");
+            break;
+        }
+
         let mut line = String::new();
         reader
             .read_line(&mut line)
@@ -358,6 +364,10 @@ fn main() -> ! {
             },
             "sys" => {
                 // Get system information like operating system, etc
+            },
+            "shutdown" => {
+                // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
+                kill_pico8_process(&pico8_process).unwrap();
             },
             _ => {
                 warn!("unhandled command");
