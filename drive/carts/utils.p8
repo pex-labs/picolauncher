@@ -50,3 +50,12 @@ end
 function ends_with(str, suffix)
   return sub(str, -#suffix) == suffix
 end
+
+-- concats all stringified elements in table with comma
+function tconcat(table)
+  local res = ""
+  for _, v in ipairs(table) do
+    res = res .. tostring(v) .. ","
+  end
+  return res
+end

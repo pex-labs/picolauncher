@@ -3,6 +3,8 @@ version 42
 __lua__
 
 #include serial.p8
+#include utils.p8
+#include timer.p8
 
 local screen_width = 128
 local screen_height = 128
@@ -43,7 +45,15 @@ local joycon_controls = {
 local control_names = {"up", "down", "left", "right", "a", "b"}
 local current_control = 1
 
+wifi_list={}
+
 function _init()
+  init_timers()
+  new_loadable('wifi_list', function(resp)
+    local split_wifi=split(resp, ',', false)
+    serial_debug('resp'..tostring(resp))
+    wifi_list=resp
+  end, 1)
 end
 
 function _update()
@@ -56,6 +66,7 @@ function _update()
   else
     update_generic_menu()
   end
+  update_loadables()
 end
 
 function _draw()
@@ -142,9 +153,10 @@ function update_wifi_menu()
     current_item = min(menu_size, current_item + 1)
     sfx(0)
   elseif btnp(5) then
-    if current_item == 2 then
-      airplane_mode = not airplane_mode
-    end
+    request_loadable('wifi_list')
+    -- if current_item == 2 then
+    --   airplane_mode = not airplane_mode
+    -- end
   elseif btnp(4) then
     current_screen = "main"
     current_item = 1

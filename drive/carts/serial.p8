@@ -121,6 +121,24 @@ function serial_bbs_response()
   return split_carts
 end
 
+function serial_wifi_list()
+  serial_writeline('wifi_list:')
+end
+
+-- TODO this is very similar to bbs_resposne, maybe abstract this
+function serial_wifi_list_response()
+  local wifi_list=serial_readline()
+  if #wifi_list == 0 then
+    return nil
+  end
+  printh('response from wifi_list '..wifi_list)
+  local split_wifi=split(wifi_list, ',', false)
+  for k, v in pairs(split_wifi) do
+    split_wifi[k]=table_from_string(v)
+  end
+  return split_wifi
+end
+
 function serial_debug(msg)
   serial_writeline('debug:'..msg)
 end

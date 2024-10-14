@@ -14,11 +14,16 @@ use std::{
 };
 
 use anyhow::anyhow;
+use dbus::blocking::Connection;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions};
 use log::{debug, error, info, warn};
+use networkmanager::{
+    devices::{Any, Device, Wired, Wireless},
+    NetworkManager,
+};
 use notify::event::CreateKind;
-use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
+use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::Map;
 
@@ -56,6 +61,11 @@ fn main() {
         screenshot_watcher();
     });
 
+    // set up dbus connection and network manager
+    let dbus_connection = Connection::new_system().expect("failed to establish dbus connection");
+    let nm = NetworkManager::new(&dbus_connection);
+
+    // create necessary directories
     if let Err(e) = create_dirs() {
         warn!("failed to create directories: {e:?}")
     }
@@ -418,6 +428,15 @@ fn main() {
                 writeln!(in_pipe, "{}", topcart).expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            "wifi_list" => {
+                // scan for networks
+                let networks = impl_wifi_list(&nm).unwrap();
+                println!("found networks {}", networks.join(","));
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "{}", networks.join(",")).expect("failed to write to pipe");
+                drop(in_pipe);
+            },
+            "wifi_connect" => {},
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -514,4 +533,28 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
     }
 
     Ok(())
+}
+
+// implementation for specific functions
+fn impl_wifi_list(nm: &NetworkManager<'_>) -> Result<Vec<String>, networkmanager::Error> {
+    // TODO give each indexed access point a unique id (just index is fine?) so the
+    // user is able to perform operations on the specific network
+    let mut networks = vec![]; // TODO this should be some global state?
+    let devices = nm.get_devices()?;
+    for dev in devices {
+        match dev {
+            Device::WiFi(x) => {
+                if let Ok(access_points) = x.access_points() {
+                    let access_points = access_points
+                        .into_iter()
+                        .filter_map(|x| x.ssid().ok())
+                        .collect::<Vec<_>>();
+                    networks.extend(access_points);
+                }
+            },
+            _ => {},
+        }
+    }
+
+    return Ok(networks);
 }
