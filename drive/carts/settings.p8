@@ -6,6 +6,7 @@ __lua__
 #include utils.p8
 #include timer.p8
 #include menu.p8
+#include vkeyboard.p8
 
 local screen_width = 128
 local screen_height = 128
@@ -17,6 +18,12 @@ local c_selected = 7
 local c_banner = 14
 
 local current_screen = "main"
+
+-- virtual keyboard
+local show_keyboard = false
+local keyboard = Keyboard:new(7, 0, 8, 14, 78, function()
+  show_keyboard=false
+end)
 
 -- main menu
 local main_menu = menu_new({
@@ -36,7 +43,9 @@ function new_wifi_menu(networks)
     --{label="airplane mode", func=function()airplane_mode=not airplane_mode}
   }
   for i, network in ipairs(networks) do
-    add(wifi_menu_items, {label=network.ssid, strength=network.strength, func=function()end})
+    add(wifi_menu_items, {ssid=network.ssid, strength=network.strength, func=function()
+      show_keyboard=true
+    end})
   end
   local _wifi_menu = menu_new(wifi_menu_items)
   _wifi_menu.wrap = false
@@ -75,16 +84,20 @@ function _init()
 end
 
 function _update()
-  if current_screen == "main" then
-    update_main_menu()
-  elseif current_screen == "wifi" then
-    update_wifi_menu()
-  elseif current_screen == "controls" then
-    update_controls_menu()
-  else
-    update_generic_menu()
-  end
   update_loadables()
+  if show_keyboard then
+    keyboard:input()
+  else
+    if current_screen == "main" then
+      update_main_menu()
+    elseif current_screen == "wifi" then
+      update_wifi_menu()
+    elseif current_screen == "controls" then
+      update_controls_menu()
+    else
+      update_generic_menu()
+    end
+  end
 end
 
 function _draw()
@@ -100,6 +113,9 @@ function _draw()
   else
     draw_generic_menu()
   end
+  if show_keyboard then
+    keyboard:draw()
+  end
 end
 
 function draw_banner()
@@ -111,6 +127,7 @@ function draw_banner()
   print(breadcrumb, 2, 2, c_selected)
 end
 
+-- main menu
 function update_main_menu()
   if btnp(2) then
     main_menu:up()
@@ -146,6 +163,7 @@ function draw_main_menu()
   print("model      pex one", 10, sysinfo_y_offset+18, c_text)
 end
 
+-- wifi menu
 function update_wifi_menu()
   if btnp(2) then
     wifi_menu:up()
@@ -161,7 +179,6 @@ function update_wifi_menu()
 end
 
 function draw_wifi_menu()
-  
   if wifi_menu:index() == 1 then c=c_selected else c=c_text end
   print("[scan]", 10, menu_start_y, c)
 
@@ -177,6 +194,8 @@ function draw_wifi_menu()
   print("networks", 10, menu_start_y + 25, c_text)
   line(10, menu_start_y + 33, screen_width - 10, menu_start_y + 33, c_text)
 
+  -- TODO scrolling
+  -- TODO wifi strength level
   for i, network in ipairs(wifi_menu.items) do
     -- skip the non network menu items
     if i > 1 then
@@ -197,8 +216,16 @@ function draw_wifi_menu()
       end
     end
   end
+
+  -- TODO don't really like tying the wifi menu password screen with show_keyboard state
+  if show_keyboard then
+    rectfill(10, 32, 118, 42, 5)
+    rectfill(9, 31, 119, 43, 6)
+    print(keyboard.text, 12, 34, 7)
+  end
 end
 
+-- controls menu
 function update_controls_menu()
   if btnp(2) then
     current_control = max(1, current_control - 1)
@@ -273,7 +300,6 @@ function draw_controls_menu()
     print(joycon_controls[control], 30, y, color)
   end
 end
-
 
 function wait_for_button_press()
   while true do
