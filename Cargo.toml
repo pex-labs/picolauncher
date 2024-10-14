@@ -28,7 +28,7 @@ toml = "0.8"
 log = "0.4"
 env_logger = "0.11"
 
-networkmanager = "0.4"
+network-manager = { version = "0.13.3", git = "https://github.com/balena-io-modules/network-manager" }
 dbus = "0.9"
 
 # temp dependencies for scraper functionality
