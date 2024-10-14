@@ -111,7 +111,7 @@ function Keyboard:draw()
     rect(shift_x0,shift_y0,shift_x1,shift_y1,self.border_color)
     palt(7,true)
     palt(0,false)
-    spr(1,shift_x0+self.key_width/2,shift_y0)
+    -- spr(1,shift_x0+self.key_width/2,shift_y0)
     palt()
 
     local switch_x0 = self.x+self.key_width*2
@@ -166,6 +166,7 @@ function Keyboard:current_char(keys)
 end
 
 function Keyboard:input()
+    -- TODO a lot of this code is garbage
     if btnp(0) then
         if self.ky ~= 5 then
             self.kx = self.kx-1
@@ -191,33 +192,44 @@ function Keyboard:input()
                 self.ry=3
             end
         else
-        self.ky = self.ky-1
-        if self.ky==0 then
-            self.ky=5
-            if self.kx<=2 then
-                self.bx=1
-            elseif self.kx<=4 then
-                self.bx=2
-            else self.bx=3
+            self.ky = self.ky-1
+            if self.ky==0 then
+                self.ky=5
+                if self.kx<=2 then
+                    self.bx=1
+                elseif self.kx<=4 then
+                    self.bx=2
+                else
+                    self.bx=3
+                end
             end
         end
-    end
     elseif btnp(3) then
-        self.ky = self.ky%5+1
-        if self.ky==5 then
-            if self.kx<=2 then
-                self.bx=1
-            elseif self.kx<=4 then
-                self.bx=2
-            else self.bx=3
+        if self.kx>11 then
+            self.ry = self.ry+1
+            if self.ry==4 then
+                self.ry=0
+            end
+        else
+            self.ky = self.ky%5+1
+            if self.ky==5 then
+                if self.kx<=2 then
+                    self.bx=1
+                elseif self.kx<=4 then
+                    self.bx=2
+                else
+                    self.bx=3
+                end
             end
         end
     elseif btnp(5) then
-
         -- TODO make this less stupid
         if self.kx>11 then
             if self.ry==1 then
                 -- backspace
+                if #self.text > 0 then
+                    self.text = sub(self.text, 1, #self.text - 1) 
+                end
             elseif self.ry==2 then
                 -- return
             else
@@ -244,22 +256,25 @@ function Keyboard:input()
     end
 end
 
-local keyboard = Keyboard:new(7, 0, 8, 0,0,100, 50)
-function _update()
-    keyboard:input()
-end
+-- local keyboard = Keyboard:new(7, 0, 8, 0,0,100, 50)
+-- function _update()
+--     keyboard:input()
+-- end
 
-function _draw()
-    cls()
-    keyboard:draw()
-    print(keyboard.text, 60,90,8)
-end
-__gfx__
-00000000777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000777007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000770000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000700000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000700000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000777007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000777007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- function _draw()
+--     cls()
+--     keyboard:draw()
+--     print(keyboard.text, 60,90,8)
+-- end
+
+-- TODO can't use gfx since we are using vkeyboard as a library
+-- __gfx__
+-- 00000000777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000777777770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000777007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000770000770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000700000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000700000070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000777007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 00000000777007770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+-- 

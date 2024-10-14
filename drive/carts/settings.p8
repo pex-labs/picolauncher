@@ -5,6 +5,7 @@ __lua__
 #include serial.p8
 #include utils.p8
 #include timer.p8
+#include menu.p8
 
 local screen_width = 128
 local screen_height = 128
@@ -15,17 +16,38 @@ local c_text = 6
 local c_selected = 7
 local c_banner = 14
 
-local menu_items = {"theme", "wifi", "bluetooth", "controls"}
-local current_item = 1
-local scroll_offset = 0
-local wifi_status = "connected"
-
-local wifi_networks = {}
-
 local current_screen = "main"
 
+-- main menu
+local main_menu = menu_new({
+  {label="theme",func=function()current_screen="theme"end},
+  {label="wifi",func=function()current_screen="wifi"end},
+  {label="bluetooth",func=function()current_screen="bluetooth"end},
+  {label="controls",func=function()current_screen="controls"end}
+})
+local scroll_offset = 0
+
+-- wifi related
+
+-- create new wifi menu
+function new_wifi_menu(networks)
+  wifi_menu_items = {
+    {label="[scan]", func=function()request_loadable('wifi_list')end},
+    --{label="airplane mode", func=function()airplane_mode=not airplane_mode}
+  }
+  for i, network in ipairs(networks) do
+    add(wifi_menu_items, {label=network.ssid, strength=network.strength, func=function()end})
+  end
+  local _wifi_menu = menu_new(wifi_menu_items)
+  _wifi_menu.wrap = false
+  return _wifi_menu
+end
+
+local wifi_menu = new_wifi_menu({})
+local wifi_status = "connected"
 local airplane_mode = false
 
+-- controller menu
 local joycon_controls = {
   up = 2,
   down = 3,
@@ -34,12 +56,12 @@ local joycon_controls = {
   a = 4,
   b = 5
 }
-
 local control_names = {"up", "down", "left", "right", "a", "b"}
 local current_control = 1
 
 function _init()
   init_timers()
+
   new_loadable('wifi_list', function(resp)
     serial_debug('resp'..tostring(resp))
     local split_wifi=split(resp, ',', false)
@@ -47,8 +69,9 @@ function _init()
       split_wifi[k]=table_from_string(v)
       split_wifi[k].strength=tonum(split_wifi[k].strength)
     end
-    wifi_networks=split_wifi
+    wifi_menu=new_wifi_menu(split_wifi)
   end, 1)
+
 end
 
 function _update()
@@ -89,45 +112,29 @@ function draw_banner()
 end
 
 function update_main_menu()
-  local menu_size = #menu_items
   if btnp(2) then
-    current_item = (current_item - 2 + menu_size) % menu_size + 1
+    main_menu:up()
     sfx(0)
-    update_scroll()
   elseif btnp(3) then
-    current_item = current_item % menu_size + 1
+    main_menu:down()
     sfx(0)
-    update_scroll()
   elseif btnp(4) then
     os_back()
   elseif btnp(5) then
-    current_screen = menu_items[current_item]
-    current_item = 1
-    scroll_offset = 0
-  end
-end
-
-function update_scroll()
-  if current_item - scroll_offset > items_visible then
-    scroll_offset = current_item - items_visible
-  elseif current_item <= scroll_offset then
-    scroll_offset = current_item - 1
+    main_menu:cur().func()
   end
 end
 
 function draw_main_menu()
-  for i = 1, min(items_visible, #menu_items) do
-    local item_index = i + scroll_offset
+  local curitem = main_menu:index()
+  for i, menuitem in ipairs(main_menu.items) do
     local y = menu_start_y + (i-1) * 8
-    local color = (item_index == current_item) and c_selected or c_text
-
-    if item_index == current_item then
+    local color = (i == curitem) and c_selected or c_text
+    if i == curitem then
       print("▶", 4, y, color)
     end
-
-    print(menu_items[item_index], 10, y, color)
-
-    if menu_items[item_index] == "wifi" then
+    print(menuitem.label, 10, y, color)
+    if menuitem.label == "wifi" then
       print(wifi_status, 70, y, 3)
     end
   end
@@ -140,54 +147,53 @@ function draw_main_menu()
 end
 
 function update_wifi_menu()
-  local menu_size = #wifi_networks + 2  -- +2 for [scan] and airplane mode
   if btnp(2) then
-    current_item = max(1, current_item - 1)
+    wifi_menu:up()
     sfx(0)
   elseif btnp(3) then
-    current_item = min(menu_size, current_item + 1)
+    wifi_menu:down()
     sfx(0)
   elseif btnp(5) then
-    request_loadable('wifi_list')
-    -- if current_item == 2 then
-    --   airplane_mode = not airplane_mode
-    -- end
+    wifi_menu:cur().func()
   elseif btnp(4) then
     current_screen = "main"
-    current_item = 1
-    scroll_offset = 0
   end
 end
 
 function draw_wifi_menu()
-  print("[scan]", 10, menu_start_y, c_text)
+  
+  if wifi_menu:index() == 1 then c=c_selected else c=c_text end
+  print("[scan]", 10, menu_start_y, c)
 
-  local airplane_y = menu_start_y + 10
-  if current_item == 2 then
-    rectfill(0, airplane_y, screen_width, airplane_y + 9, c_selected)
-    print("airplane mode", 10, airplane_y + 2, 0)
-  else
-    print("airplane mode", 10, airplane_y + 2, c_text)
-  end
-  print(airplane_mode and "on" or "off", screen_width - 20, airplane_y + 2, airplane_mode and 11 or 8)
+  -- local airplane_y = menu_start_y + 10
+  -- if current_item == 2 then
+  --   rectfill(0, airplane_y, screen_width, airplane_y + 9, c_selected)
+  --   print("airplane mode", 10, airplane_y + 2, 0)
+  -- else
+  --   print("airplane mode", 10, airplane_y + 2, c_text)
+  -- end
+  -- print(airplane_mode and "on" or "off", screen_width - 20, airplane_y + 2, airplane_mode and 11 or 8)
 
   print("networks", 10, menu_start_y + 25, c_text)
   line(10, menu_start_y + 33, screen_width - 10, menu_start_y + 33, c_text)
 
-  for i, network in ipairs(wifi_networks) do
-    local y = menu_start_y + 35 + (i-1) * 10
-    local is_selected = (i + 2 == current_item)
+  for i, network in ipairs(wifi_menu.items) do
+    -- skip the non network menu items
+    if i > 1 then
+      local y = menu_start_y + 35 + (i-1) * 10
+      local is_selected = (i == wifi_menu:index())
 
-    if is_selected then
-      rectfill(0, y, screen_width, y + 9, c_selected)
-      print(network.ssid, 10, y + 2, 0)
-    else
-      print(network.ssid, 10, y + 2, c_text)
-    end
+      if is_selected then
+        rectfill(0, y, screen_width, y + 9, c_selected)
+        print(network.ssid, 10, y + 2, 0)
+      else
+        print(network.ssid, 10, y + 2, c_text)
+      end
 
-    for j = 1, 4 do
-      if j <= network.strength then
-        line(screen_width - 16 + j*2, y + 9 - j*2, screen_width - 16 + j*2, y + 8, c_text)
+      for j = 1, 4 do
+        if j <= network.strength then
+          line(screen_width - 16 + j*2, y + 9 - j*2, screen_width - 16 + j*2, y + 8, c_text)
+        end
       end
     end
   end
@@ -207,6 +213,7 @@ function update_controls_menu()
     current_item = 1
   end
 end
+
 function draw_accurate_joycon()
   local x, y = 10, 20  -- starting position
   local w, h = 110, 70  -- width and height
