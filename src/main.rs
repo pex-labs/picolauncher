@@ -25,7 +25,7 @@ use networkmanager::{
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
-use serde_json::Map;
+use serde_json::{Map, Value};
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
@@ -431,6 +431,10 @@ fn main() {
             "wifi_list" => {
                 // scan for networks
                 let networks = impl_wifi_list(&nm).unwrap();
+                let networks = networks
+                    .into_iter()
+                    .map(|x| x.to_lua_table())
+                    .collect::<Vec<_>>();
                 println!("found networks {}", networks.join(","));
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", networks.join(",")).expect("failed to write to pipe");
@@ -535,8 +539,22 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
     Ok(())
 }
 
+pub struct WifiNetwork {
+    pub ssid: String,
+    pub strength: u8,
+}
+
+impl WifiNetwork {
+    pub fn to_lua_table(&self) -> String {
+        let mut prop_map = Map::<String, Value>::new();
+        prop_map.insert("ssid".into(), Value::String(self.ssid.clone()));
+        prop_map.insert("strength".into(), Value::String(self.strength.to_string()));
+        serialize_table(&prop_map)
+    }
+}
+
 // implementation for specific functions
-fn impl_wifi_list(nm: &NetworkManager<'_>) -> Result<Vec<String>, networkmanager::Error> {
+fn impl_wifi_list(nm: &NetworkManager<'_>) -> Result<Vec<WifiNetwork>, networkmanager::Error> {
     // TODO give each indexed access point a unique id (just index is fine?) so the
     // user is able to perform operations on the specific network
     let mut networks = vec![]; // TODO this should be some global state?
@@ -547,7 +565,19 @@ fn impl_wifi_list(nm: &NetworkManager<'_>) -> Result<Vec<String>, networkmanager
                 if let Ok(access_points) = x.access_points() {
                     let access_points = access_points
                         .into_iter()
-                        .filter_map(|x| x.ssid().ok())
+                        .filter_map(|x| {
+                            let Some(ssid) = x.ssid().ok() else {
+                                return None;
+                            };
+                            let Some(strength) = x.strength().ok() else {
+                                return None;
+                            };
+
+                            Some(WifiNetwork {
+                                ssid: ssid.to_ascii_lowercase(),
+                                strength,
+                            })
+                        })
                         .collect::<Vec<_>>();
                     networks.extend(access_points);
                 }

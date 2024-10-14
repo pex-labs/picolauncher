@@ -20,14 +20,7 @@ local current_item = 1
 local scroll_offset = 0
 local wifi_status = "connected"
 
-local wifi_networks = {
-  {name="myphone", strength=3},
-  {name="yourhome", strength=2},
-  {name="router1", strength=3},
-  {name="router2", strength=1},
-  {name="karatsurf", strength=1},
-  {name="network", strength=1}
-}
+local wifi_networks = {}
 
 local current_screen = "main"
 
@@ -45,14 +38,16 @@ local joycon_controls = {
 local control_names = {"up", "down", "left", "right", "a", "b"}
 local current_control = 1
 
-wifi_list={}
-
 function _init()
   init_timers()
   new_loadable('wifi_list', function(resp)
-    local split_wifi=split(resp, ',', false)
     serial_debug('resp'..tostring(resp))
-    wifi_list=resp
+    local split_wifi=split(resp, ',', false)
+    for k, v in pairs(split_wifi) do
+      split_wifi[k]=table_from_string(v)
+      split_wifi[k].strength=tonum(split_wifi[k].strength)
+    end
+    wifi_networks=split_wifi
   end, 1)
 end
 
@@ -185,9 +180,9 @@ function draw_wifi_menu()
 
     if is_selected then
       rectfill(0, y, screen_width, y + 9, c_selected)
-      print(network.name, 10, y + 2, 0)
+      print(network.ssid, 10, y + 2, 0)
     else
-      print(network.name, 10, y + 2, c_text)
+      print(network.ssid, 10, y + 2, c_text)
     end
 
     for j = 1, 4 do
