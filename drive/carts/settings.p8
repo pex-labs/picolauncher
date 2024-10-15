@@ -90,6 +90,11 @@ function _init()
     serial_debug('resp'..tostring(resp))
   end, 1)
 
+  new_loadable('wifi_status', function(resp)
+    serial_debug('resp'..tostring(resp))
+  end, 1)
+
+  request_loadable('wifi_status')
 end
 
 function _update()

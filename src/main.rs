@@ -18,7 +18,9 @@ use dbus::blocking::Connection;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions};
 use log::{debug, error, info, warn};
-use network_manager::{AccessPoint, AccessPointCredentials, Device, DeviceType, NetworkManager};
+use network_manager::{
+    AccessPoint, AccessPointCredentials, Device, DeviceType, NetworkManager, ServiceState,
+};
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
@@ -60,6 +62,15 @@ fn main() {
 
     // set up dbus connection and network manager
     // TODO linux specific currently
+    // start network manager if not started
+    NetworkManager::start_service(1000).expect("unable to start network manager service");
+    let nm_state =
+        NetworkManager::get_service_state().expect("unable to get network manager state");
+    if nm_state != ServiceState::Active {
+        // TODO maybe implement retry loop to attempt starting nm multiple times
+        error!("failed to start network manager");
+        return;
+    }
     let nm = NetworkManager::new();
     let mut access_points: Vec<AccessPoint> = vec![];
 
@@ -457,6 +468,13 @@ fn main() {
                 writeln!(in_pipe, "{}", res.is_ok().to_string()).expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            "wifi_status" => {
+                // Get if wifi is connected or not, the current network, and the strength of connection
+                let status = impl_wifi_status(&nm);
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "{}", status.to_string()).expect("failed to write to pipe");
+                drop(in_pipe);
+            },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -635,6 +653,37 @@ fn impl_wifi_connect(
     }
 
     Ok(())
+}
+
+// just return the serialized lua string directly
+fn impl_wifi_status(nm: &NetworkManager) -> String {
+    let mut prop_map = Map::<String, Value>::new();
+    prop_map.insert("state".into(), Value::String("unknown".into()));
+
+    let conns = nm.get_active_connections().unwrap();
+    for conn in conns {
+        let settings = conn.settings();
+        // TODO double check this is the right string for all wireless
+        if settings.kind == "802-11-wireless" {
+            let ssid = settings.ssid.as_str().unwrap().to_string();
+            let state = conn.get_state().unwrap();
+            println!("wifi_status ssid={:?} state={state:?}", conn.settings());
+            prop_map.insert("ssid".into(), Value::String(ssid));
+            // TODO just doing the tostring impl here lol
+            let state_str = match state {
+                network_manager::ConnectionState::Unknown => "unknown",
+                network_manager::ConnectionState::Activating => "activating",
+                network_manager::ConnectionState::Activated => "activated",
+                network_manager::ConnectionState::Deactivating => "deactivating",
+                network_manager::ConnectionState::Deactivated => "deaactivated",
+            };
+            prop_map.insert("state".into(), Value::String(state_str.into()));
+            break;
+        }
+    }
+
+    warn!("wifi interface not found");
+    serialize_table(&prop_map)
 }
 
 fn find_device(manager: &NetworkManager) -> anyhow::Result<Device> {
