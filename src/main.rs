@@ -61,6 +61,7 @@ fn main() {
     // set up dbus connection and network manager
     // TODO linux specific currently
     let nm = NetworkManager::new();
+    let mut access_points: Vec<AccessPoint> = vec![];
 
     // create necessary directories
     if let Err(e) = create_dirs() {
@@ -427,7 +428,7 @@ fn main() {
             },
             "wifi_list" => {
                 // scan for networks
-                let networks = impl_wifi_list(&nm).unwrap();
+                let networks = impl_wifi_list(&nm, &mut access_points).unwrap();
                 let networks = networks
                     .into_iter()
                     .map(|x| x.to_lua_table())
@@ -440,11 +441,22 @@ fn main() {
                 writeln!(in_pipe, "{}", networks.join(",")).expect("failed to write to pipe");
                 drop(in_pipe);
             },
-            "wifi_connect" => {},
-            // Grab password and connect to wifi, returning success or failure info
-            // TODO any security concerns with
+            "wifi_connect" => {
+                // Grab password and connect to wifi, returning success or failure info
+                // TODO any security concerns with
 
-            // TODO use hw_address as unique id?
+                // TODO use hw_address as unique id?
+                let mut split = data.splitn(2, ",");
+                let ssid = split.next().unwrap_or_default();
+                let psk = split.next().unwrap_or_default();
+
+                let res = impl_wifi_connect(&nm, &mut access_points, ssid, psk);
+                println!("wifi connection result {res:?}");
+
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "{}", res.is_ok().to_string()).expect("failed to write to pipe");
+                drop(in_pipe);
+            },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -545,6 +557,7 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
 
 pub struct WifiNetwork {
     pub ssid: String,
+    pub name: String, // Display name of SSID
     pub strength: u32,
 }
 
@@ -552,36 +565,76 @@ impl WifiNetwork {
     pub fn to_lua_table(&self) -> String {
         let mut prop_map = Map::<String, Value>::new();
         prop_map.insert("ssid".into(), Value::String(self.ssid.clone()));
+        prop_map.insert("name".into(), Value::String(self.name.clone()));
         prop_map.insert("strength".into(), Value::String(self.strength.to_string()));
         serialize_table(&prop_map)
     }
 }
 
 // implementation for specific functions
-fn impl_wifi_list(nm: &NetworkManager) -> anyhow::Result<Vec<WifiNetwork>> {
+fn impl_wifi_list(
+    nm: &NetworkManager,
+    access_points: &mut Vec<AccessPoint>,
+) -> anyhow::Result<Vec<WifiNetwork>> {
     // TODO give each indexed access point a unique id (just index is fine?) so the
     // user is able to perform operations on the specific network
     let mut networks = vec![]; // TODO this should be some global state?
+
+    // need to run find device inside here since WiFiDevice is not exported :(
     let wifi_device = find_device(nm)?;
     let wifi_device = wifi_device.as_wifi_device().unwrap();
-    if let Ok(access_points) = wifi_device.get_access_points() {
-        let access_points = access_points
-            .into_iter()
-            .filter_map(|x| {
-                let Ok(ssid) = x.ssid().as_str() else {
-                    return None;
-                };
 
-                Some(WifiNetwork {
-                    ssid: ssid.to_ascii_lowercase(),
-                    strength: x.strength,
-                })
+    // store the queried access points in global state
+    let mut _access_points = wifi_device.get_access_points().unwrap();
+    access_points.clear();
+    access_points.extend(_access_points.drain(..));
+
+    let wifi_networks = access_points
+        .into_iter()
+        .filter_map(|x| {
+            let Ok(ssid) = x.ssid().as_str() else {
+                return None;
+            };
+
+            Some(WifiNetwork {
+                ssid: ssid.to_string(),
+                name: ssid.to_ascii_lowercase(),
+                strength: x.strength,
             })
-            .collect::<Vec<_>>();
-        networks.extend(access_points);
-    }
+        })
+        .collect::<Vec<_>>();
+    networks.extend(wifi_networks);
 
     return Ok(networks);
+}
+
+fn impl_wifi_connect(
+    nm: &NetworkManager,
+    access_points: &mut Vec<AccessPoint>,
+    ssid: &str,
+    psk: &str,
+) -> anyhow::Result<()> {
+    let wifi_device = find_device(nm)?;
+    let wifi_device = wifi_device.as_wifi_device().unwrap();
+
+    // TODO seems like we need to disconnect from existing network before connecting to a new one?
+
+    // find the ssid
+    let Some(ap) = access_points
+        .iter()
+        .find(|x| x.ssid().as_str().unwrap() == ssid)
+    else {
+        return Err(anyhow!("Cannot find access point with ssid {ssid}"));
+    };
+
+    let credentials = AccessPointCredentials::Wpa {
+        passphrase: psk.to_string(),
+    };
+    if let Err(e) = wifi_device.connect(&ap, &credentials) {
+        return Err(anyhow!("Failed to connect to access point {e}"));
+    }
+
+    Ok(())
 }
 
 fn find_device(manager: &NetworkManager) -> anyhow::Result<Device> {

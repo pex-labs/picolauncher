@@ -18,12 +18,7 @@ local c_selected = 7
 local c_banner = 14
 
 local current_screen = "main"
-
--- virtual keyboard
 local show_keyboard = false
-local keyboard = Keyboard:new(7, 0, 8, 14, 78, function()
-  show_keyboard=false
-end)
 
 -- main menu
 local main_menu = menu_new({
@@ -43,7 +38,7 @@ function new_wifi_menu(networks)
     --{label="airplane mode", func=function()airplane_mode=not airplane_mode}
   }
   for i, network in ipairs(networks) do
-    add(wifi_menu_items, {ssid=network.ssid, strength=network.strength, func=function()
+    add(wifi_menu_items, {ssid=network.ssid, name=network.name, strength=network.strength, func=function()
       show_keyboard=true
     end})
   end
@@ -68,6 +63,16 @@ local joycon_controls = {
 local control_names = {"up", "down", "left", "right", "a", "b"}
 local current_control = 1
 
+-- virtual keyboard
+local keyboard = Keyboard:new(7, 0, 8, 14, 78, function(text)
+  show_keyboard=false
+  -- currently only used for connecting to networks
+  local ssid = wifi_menu:cur().ssid
+  local psk = text
+  serial_debug('connect to wifi request, ssid: '..ssid..', psk: '..psk)
+  request_loadable('wifi_connect', {ssid, psk})
+end)
+
 function _init()
   init_timers()
 
@@ -79,6 +84,10 @@ function _init()
       split_wifi[k].strength=tonum(split_wifi[k].strength)
     end
     wifi_menu=new_wifi_menu(split_wifi)
+  end, 1)
+
+  new_loadable('wifi_connect', function(resp)
+    serial_debug('resp'..tostring(resp))
   end, 1)
 
 end
@@ -204,9 +213,9 @@ function draw_wifi_menu()
 
       if is_selected then
         rectfill(0, y, screen_width, y + 9, c_selected)
-        print(network.ssid, 10, y + 2, 0)
+        print(network.name, 10, y + 2, 0)
       else
-        print(network.ssid, 10, y + 2, c_text)
+        print(network.name, 10, y + 2, c_text)
       end
 
       for j = 1, 4 do
