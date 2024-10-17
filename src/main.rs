@@ -16,7 +16,7 @@ use std::{
 use anyhow::anyhow;
 use dbus::blocking::Connection;
 use futures::future::join_all;
-use headless_chrome::{Browser, LaunchOptions};
+use headless_chrome::{Browser, LaunchOptions, Tab};
 use log::{debug, error, info, warn};
 use network_manager::{
     AccessPoint, AccessPointCredentials, Device, DeviceType, NetworkManager, ServiceState,
@@ -25,6 +25,7 @@ use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::{Map, Value};
+use tokio::runtime::Runtime;
 
 fn parse_metadata(path: &Path) -> anyhow::Result<String> {
     let content = read_to_string(path)?;
@@ -239,8 +240,9 @@ fn main() {
 
                 pico8_to_bg(&pico8_process, child);
             },
+            /*
+            // DEPRECATED
             "ls" => {
-                // fetch all carts in directory
                 let dir = (&*CART_DIR).join(data); // TODO watch out for path traversal
                 let mut carts = vec![];
                 if let Ok(read_dir) = read_dir(dir) {
@@ -268,6 +270,7 @@ fn main() {
                 writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            */
             "ls_exe" => {
                 // fetch all exe that are registered
                 //
@@ -323,86 +326,18 @@ fn main() {
                 let mut split = data.splitn(2, ",");
                 let page = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
                 let query = split.next().unwrap_or_default();
-                let query = query
-                    .parse::<PexsploreCategory>()
-                    .unwrap_or(PexsploreCategory::Featured);
                 info!("bbs command {page}, {query}");
 
-                let url = bbs_url_for_category(query, page);
-                info!("querying {url}");
-                let res = runtime
-                    .block_on(async {
-                        let tab_clone = Arc::clone(&tab);
-                        crawl_bbs(tab_clone, &url).await
-                    })
-                    .unwrap();
-
-                let cartdatas = res
-                    .iter()
-                    .map(|cart| {
-                        // TODO this is weird code
-                        let mut cart = cart.clone();
-                        // make all cart names uppercase (either this or invert the case)
-                        cart.title = cart.title.to_ascii_lowercase();
-                        cart.author = cart.author.to_ascii_lowercase();
-                        cart.to_lua_table()
-                    })
-                    .collect::<Vec<_>>()
-                    .join(",");
-
-                // TODO use trace to log async
-
-                // download these carts if not in games/ directory
-                let pico8_bins = pico8_bins.clone();
-                let res_cloned = res.clone();
-                runtime.block_on(async move {
-                    let mut tasks = vec![];
-
-                    for cart in res_cloned {
-                        // println!("{}", cart.to_lua_table());
-
-                        let Some(filename) = filename_from_url(&cart.download_url) else {
-                            warn!("could not extract filename from url: {}", cart.download_url);
-                            continue;
-                        };
-
-                        // download if we don't have a copy of it in our games dir
-                        let path = BBS_CART_DIR.join(filename);
-                        if !path.exists() {
-                            info!("download cart from bbs: {}", cart.download_url);
-                            let path = path.clone();
-                            let cart = cart.clone();
-                            let task = tokio::spawn(async move {
-                                // TODO kinda lmao how we need to make a new client here
-                                let client = reqwest::Client::new();
-                                if let Err(e) =
-                                    download_cart(client, cart.download_url.clone(), &path).await
-                                {
-                                    warn!("failed to download cart {path:?}: {e:?}");
-                                }
-                            });
-                            tasks.push(task);
-                        }
-                    }
-                    let _ = join_all(tasks).await;
-                });
-
-                for cart in res {
-                    // TODO some of this code is duplicated
-
-                    let Some(filename) = filename_from_url(&cart.download_url) else {
-                        warn!("could not extract filename from url: {}", cart.download_url);
-                        continue;
-                    };
-
-                    // download if we don't have a copy of it in our games dir
-                    let path = BBS_CART_DIR.join(filename);
-
-                    if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path) {
-                        warn!("failed to postprocess cart {e:?}");
-                        continue;
-                    }
-                }
+                // special case, return local files
+                let cartdatas = if query == "local" {
+                    //impl_bbs_local()
+                    String::new()
+                } else {
+                    let query = query
+                        .parse::<PexsploreCategory>()
+                        .unwrap_or(PexsploreCategory::Featured);
+                    impl_bbs(&runtime, &tab, pico8_bins.clone(), query, page)
+                };
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");
@@ -700,3 +635,111 @@ fn find_device(manager: &NetworkManager) -> anyhow::Result<Device> {
         return Err(anyhow!("Cannot find a WiFi device"));
     }
 }
+
+fn impl_bbs(
+    runtime: &Runtime,
+    tab: &Arc<Tab>,
+    pico8_bins: Vec<String>,
+    query: PexsploreCategory,
+    page: u32,
+) -> String {
+    let url = bbs_url_for_category(query, page);
+    info!("querying {url}");
+    let res = runtime
+        .block_on(async {
+            let tab_clone = Arc::clone(tab);
+            crawl_bbs(tab_clone, &url).await
+        })
+        .unwrap();
+
+    let cartdatas = res
+        .iter()
+        .map(|cart| {
+            // TODO this is weird code
+            let mut cart = cart.clone();
+            // make all cart names uppercase (either this or invert the case)
+            cart.title = cart.title.to_ascii_lowercase();
+            cart.author = cart.author.to_ascii_lowercase();
+            cart.to_lua_table()
+        })
+        .collect::<Vec<_>>()
+        .join(",");
+
+    // TODO use trace to log async
+
+    // download these carts if not in games/ directory
+    let res_cloned = res.clone();
+    runtime.block_on(async move {
+        let mut tasks = vec![];
+
+        for cart in res_cloned {
+            // println!("{}", cart.to_lua_table());
+
+            let Some(filename) = filename_from_url(&cart.download_url) else {
+                warn!("could not extract filename from url: {}", cart.download_url);
+                continue;
+            };
+
+            // download if we don't have a copy of it in our games dir
+            let path = BBS_CART_DIR.join(filename);
+            if !path.exists() {
+                info!("download cart from bbs: {}", cart.download_url);
+                let path = path.clone();
+                let cart = cart.clone();
+                let task = tokio::spawn(async move {
+                    // TODO kinda lmao how we need to make a new client here
+                    let client = reqwest::Client::new();
+                    if let Err(e) = download_cart(client, cart.download_url.clone(), &path).await {
+                        warn!("failed to download cart {path:?}: {e:?}");
+                    }
+                });
+                tasks.push(task);
+            }
+        }
+        let _ = join_all(tasks).await;
+    });
+
+    for cart in res {
+        // TODO some of this code is duplicated
+
+        let Some(filename) = filename_from_url(&cart.download_url) else {
+            warn!("could not extract filename from url: {}", cart.download_url);
+            continue;
+        };
+
+        // download if we don't have a copy of it in our games dir
+        let path = BBS_CART_DIR.join(filename);
+
+        if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path) {
+            warn!("failed to postprocess cart {e:?}");
+            continue;
+        }
+    }
+
+    cartdatas
+}
+
+/*
+// return the contents of the games dir
+fn impl_bbs_local(dir: &str) -> Vec<CartData> {
+    let dir = (&*GAMES_DIR).join(dir); // TODO watch out for path traversal
+    let mut carts = vec![];
+    if let Ok(read_dir) = read_dir(dir) {
+        for entry in read_dir {
+            let entry = entry.unwrap().path();
+            if entry.is_file() {
+                // for each file read metadata and pack into table string
+                let filename = entry.file_name().unwrap();
+                let mut metapath = PathBuf::from(filename);
+                metapath.set_extension("json");
+                let metapath = METADATA_DIR.join(metapath);
+                match parse_metadata(&metapath) {
+                    Ok(serialized) => carts.push(serialized),
+                    Err(e) => warn!("failed parsing metadata file: {e:?}"),
+                }
+            }
+        }
+    }
+    // TODO check efficiency for lots of files
+}
+*/
