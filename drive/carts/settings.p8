@@ -49,7 +49,7 @@ function new_wifi_menu(networks)
 end
 
 local wifi_menu = new_wifi_menu({})
-local wifi_status = "connected"
+local wifi_status = {ssid="", state="unknown"}
 local airplane_mode = false
 
 wifi_menu_scroll_tween = {}
@@ -111,6 +111,7 @@ function _init()
 
   new_loadable('wifi_status', function(resp)
     serial_debug('resp'..tostring(resp))
+    wifi_status=table_from_string(resp)
   end, 1)
 
   request_loadable('wifi_status')
@@ -186,7 +187,17 @@ function draw_main_menu()
     end
     print(menuitem.label, 10, y, color)
     if menuitem.label == "wifi" then
-      print(wifi_status, 70, y, 3)
+      local wifi_text=wifi_status.state
+      local text_c=5
+      if wifi_status.state == "connected" then
+        wifi_text=wifi_status.ssid
+        text_c=3
+      elseif wifi_status.state == "connecting" then
+        text_c=3
+      elseif wifi_status.state == "disconnected" or wifi_status.state == "disconnecting" then
+        text_c=8
+      end
+      print(wifi_status.state, 118-#wifi_text*4, y, text_c)
     end
   end
 
@@ -255,8 +266,8 @@ function draw_wifi_menu()
 
   -- TODO don't really like tying the wifi menu password screen with show_keyboard state
   if show_keyboard then
+    rectfill(9, 31, 119, 43, 0)
     rectfill(10, 32, 118, 42, 5)
-    rectfill(9, 31, 119, 43, 6)
     print(keyboard.text, 12, 34, 7)
   end
 end

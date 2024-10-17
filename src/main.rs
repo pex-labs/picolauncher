@@ -672,10 +672,10 @@ fn impl_wifi_status(nm: &NetworkManager) -> String {
             // TODO just doing the tostring impl here lol
             let state_str = match state {
                 network_manager::ConnectionState::Unknown => "unknown",
-                network_manager::ConnectionState::Activating => "activating",
-                network_manager::ConnectionState::Activated => "activated",
-                network_manager::ConnectionState::Deactivating => "deactivating",
-                network_manager::ConnectionState::Deactivated => "deaactivated",
+                network_manager::ConnectionState::Activating => "connecting",
+                network_manager::ConnectionState::Activated => "connected",
+                network_manager::ConnectionState::Deactivating => "disconnecting",
+                network_manager::ConnectionState::Deactivated => "disconnected",
             };
             prop_map.insert("state".into(), Value::String(state_str.into()));
             break;
