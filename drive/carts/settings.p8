@@ -7,6 +7,7 @@ __lua__
 #include timer.p8
 #include menu.p8
 #include vkeyboard.p8
+#include tween.lua
 
 local screen_width = 128
 local screen_height = 128
@@ -50,6 +51,24 @@ end
 local wifi_menu = new_wifi_menu({})
 local wifi_status = "connected"
 local airplane_mode = false
+
+wifi_menu_scroll_tween = {}
+wifi_menu_scroll = 0
+function make_wifi_menu_scroll_tween(new_scroll)
+  wifi_menu_scroll_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=wifi_menu_scroll,
+    v_end=new_scroll,
+    duration=1
+  })
+  wifi_menu_scroll_tween:register_step_callback(function(pos)
+    wifi_menu_scroll=pos
+  end)
+  wifi_menu_scroll_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
+  wifi_menu_scroll_tween:restart()
+end
 
 -- controller menu
 local joycon_controls = {
@@ -97,7 +116,7 @@ function _init()
   request_loadable('wifi_status')
 end
 
-function _update()
+function _update60()
   update_loadables()
   if show_keyboard then
     keyboard:input()
@@ -112,11 +131,11 @@ function _update()
       update_generic_menu()
     end
   end
+  tween_machine:update()
 end
 
 function _draw()
   cls(1)
-  draw_banner()
   if current_screen == "main" then
     draw_main_menu()
   elseif current_screen == "wifi" then
@@ -130,6 +149,7 @@ function _draw()
   if show_keyboard then
     keyboard:draw()
   end
+  draw_banner()
 end
 
 function draw_banner()
@@ -182,9 +202,11 @@ function update_wifi_menu()
   if btnp(2) then
     wifi_menu:up()
     sfx(0)
+    make_wifi_menu_scroll_tween(-1 * (wifi_menu:index() - 1) * 10)
   elseif btnp(3) then
     wifi_menu:down()
     sfx(0)
+    make_wifi_menu_scroll_tween(-1 * (wifi_menu:index() - 1) * 10)
   elseif btnp(5) then
     wifi_menu:cur().func()
   elseif btnp(4) then
@@ -194,7 +216,7 @@ end
 
 function draw_wifi_menu()
   if wifi_menu:index() == 1 then c=c_selected else c=c_text end
-  print("[scan]", 10, menu_start_y, c)
+  print("[scan]", 10, menu_start_y + wifi_menu_scroll, c)
 
   -- local airplane_y = menu_start_y + 10
   -- if current_item == 2 then
@@ -205,29 +227,29 @@ function draw_wifi_menu()
   -- end
   -- print(airplane_mode and "on" or "off", screen_width - 20, airplane_y + 2, airplane_mode and 11 or 8)
 
-  print("networks", 10, menu_start_y + 25, c_text)
-  line(10, menu_start_y + 33, screen_width - 10, menu_start_y + 33, c_text)
+  print("networks", 10, menu_start_y + 10 + wifi_menu_scroll, c_selected)
+  line(10, menu_start_y + 16 + wifi_menu_scroll, screen_width - 10, menu_start_y + 16 + wifi_menu_scroll, c_selected)
 
   -- TODO scrolling
   -- TODO wifi strength level
   for i, network in ipairs(wifi_menu.items) do
     -- skip the non network menu items
     if i > 1 then
-      local y = menu_start_y + 35 + (i-1) * 10
+      local y = menu_start_y + wifi_menu_scroll + 20 + (i-2) * 10
       local is_selected = (i == wifi_menu:index())
 
       if is_selected then
         rectfill(0, y, screen_width, y + 9, c_selected)
-        print(network.name, 10, y + 2, 0)
+        print(network.name, 12, y + 2, 0)
       else
-        print(network.name, 10, y + 2, c_text)
+        print(network.name, 12, y + 2, c_text)
       end
 
-      for j = 1, 4 do
-        if j <= network.strength then
-          line(screen_width - 16 + j*2, y + 9 - j*2, screen_width - 16 + j*2, y + 8, c_text)
-        end
-      end
+      -- for j = 1, 4 do
+      --   if j <= network.strength then
+      --     line(screen_width - 16 + j*2, y + 9 - j*2, screen_width - 16 + j*2, y + 8, c_text)
+      --   end
+      -- end
     end
   end
 
