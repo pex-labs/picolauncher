@@ -1,6 +1,11 @@
 {
-  "name": "s w o r d f i s h",
-  "filename": "swordfish",
+  "title": "s w o r d f i s h",
   "author": "chowyunbrent",
-  "tags": "fish underwater action"
+  "likes": 0,
+  "tags": [],
+  "lid": "No LID",
+  "download_url": "",
+  "description": "",
+  "thumb_url": "",
+  "filename": "swordfish"
 }

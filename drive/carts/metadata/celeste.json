@@ -1,6 +1,11 @@
 {
-  "name": "celeste",
-  "filename": "celeste",
+  "title": "celeste",
   "author": "noel",
-  "tags": ""
+  "likes": 0,
+  "tags": [],
+  "lid": "No LID",
+  "download_url": "",
+  "description": "",
+  "thumb_url": "",
+  "filename": "celeste"
 }

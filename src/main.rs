@@ -27,14 +27,6 @@ use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::{Map, Value};
 use tokio::runtime::Runtime;
 
-fn parse_metadata(path: &Path) -> anyhow::Result<String> {
-    let content = read_to_string(path)?;
-    let table: Map<String, serde_json::Value> = serde_json::from_str(&content)?;
-    let serialized = serialize_table(&table);
-    debug!("serialized {serialized}");
-    Ok(serialized)
-}
-
 fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(EXE_DIR.as_path())?;
     create_dir_all(CART_DIR.as_path())?;
@@ -240,37 +232,6 @@ fn main() {
 
                 pico8_to_bg(&pico8_process, child);
             },
-            /*
-            // DEPRECATED
-            "ls" => {
-                let dir = (&*CART_DIR).join(data); // TODO watch out for path traversal
-                let mut carts = vec![];
-                if let Ok(read_dir) = read_dir(dir) {
-                    for entry in read_dir {
-                        let entry = entry.unwrap().path();
-                        if entry.is_file() {
-                            // for each file read metadata and pack into table string
-                            let filename = entry.file_name().unwrap();
-                            let mut metapath = PathBuf::from(filename);
-                            metapath.set_extension("json");
-                            let metapath = METADATA_DIR.join(metapath);
-                            match parse_metadata(&metapath) {
-                                Ok(serialized) => carts.push(serialized),
-                                Err(e) => warn!("failed parsing metadata file: {e:?}"),
-                            }
-                        }
-                    }
-                }
-                // TODO check efficiency for lots of files
-
-                // TODO make this pipe writing stuff better (duplicate code)
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                let joined_carts = carts.join(",");
-                debug!("joined carts {joined_carts}");
-                writeln!(in_pipe, "{}", joined_carts).expect("failed to write to pipe");
-                drop(in_pipe);
-            },
-            */
             "ls_exe" => {
                 // fetch all exe that are registered
                 //
@@ -330,14 +291,26 @@ fn main() {
 
                 // special case, return local files
                 let cartdatas = if query == "local" {
-                    //impl_bbs_local()
-                    String::new()
+                    impl_bbs_local()
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
                     impl_bbs(&runtime, &tab, pico8_bins.clone(), query, page)
                 };
+
+                let cartdatas = cartdatas
+                    .iter()
+                    .map(|cart| {
+                        // TODO this is weird code
+                        let mut cart = cart.clone();
+                        // make all cart names uppercase (either this or invert the case)
+                        cart.title = cart.title.to_ascii_lowercase();
+                        cart.author = cart.author.to_ascii_lowercase();
+                        cart.to_lua_table()
+                    })
+                    .collect::<Vec<_>>()
+                    .join(",");
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");
@@ -489,15 +462,7 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
     let mut metadata_path = METADATA_DIR.clone().join(filestem);
     metadata_path.set_extension("json");
     if !metadata_path.exists() {
-        // TODO we don't need metadata file anymore (i think?)
-        let metadata = Metadata {
-            name: cart.title.clone(),
-            filename: filestem.to_owned(),
-            author: cart.author.clone(),
-            tags: cart.tags.join(","),
-        };
-
-        let metadata_serialized = serde_json::to_string_pretty(&metadata).unwrap();
+        let metadata_serialized = serde_json::to_string_pretty(cart).unwrap();
 
         let mut metadata_file = File::create(metadata_path.clone()).unwrap();
         metadata_file
@@ -642,7 +607,7 @@ fn impl_bbs(
     pico8_bins: Vec<String>,
     query: PexsploreCategory,
     page: u32,
-) -> String {
+) -> Vec<CartData> {
     let url = bbs_url_for_category(query, page);
     info!("querying {url}");
     let res = runtime
@@ -651,19 +616,6 @@ fn impl_bbs(
             crawl_bbs(tab_clone, &url).await
         })
         .unwrap();
-
-    let cartdatas = res
-        .iter()
-        .map(|cart| {
-            // TODO this is weird code
-            let mut cart = cart.clone();
-            // make all cart names uppercase (either this or invert the case)
-            cart.title = cart.title.to_ascii_lowercase();
-            cart.author = cart.author.to_ascii_lowercase();
-            cart.to_lua_table()
-        })
-        .collect::<Vec<_>>()
-        .join(",");
 
     // TODO use trace to log async
 
@@ -699,7 +651,7 @@ fn impl_bbs(
         let _ = join_all(tasks).await;
     });
 
-    for cart in res {
+    for cart in res.iter() {
         // TODO some of this code is duplicated
 
         let Some(filename) = filename_from_url(&cart.download_url) else {
@@ -716,13 +668,12 @@ fn impl_bbs(
         }
     }
 
-    cartdatas
+    res
 }
 
-/*
 // return the contents of the games dir
-fn impl_bbs_local(dir: &str) -> Vec<CartData> {
-    let dir = (&*GAMES_DIR).join(dir); // TODO watch out for path traversal
+fn impl_bbs_local() -> Vec<CartData> {
+    let dir = &*GAMES_DIR; // TODO watch out for path traversal
     let mut carts = vec![];
     if let Ok(read_dir) = read_dir(dir) {
         for entry in read_dir {
@@ -733,13 +684,22 @@ fn impl_bbs_local(dir: &str) -> Vec<CartData> {
                 let mut metapath = PathBuf::from(filename);
                 metapath.set_extension("json");
                 let metapath = METADATA_DIR.join(metapath);
-                match parse_metadata(&metapath) {
-                    Ok(serialized) => carts.push(serialized),
-                    Err(e) => warn!("failed parsing metadata file: {e:?}"),
-                }
+
+                let Ok(content) = read_to_string(&metapath) else {
+                    warn!("failed to read {:?}", metapath);
+                    continue;
+                };
+                let Ok(parsed_meta): Result<CartData, serde_json::Error> =
+                    serde_json::from_str(&content)
+                else {
+                    warn!("failed to parse into CartData {:?}", metapath);
+                    continue;
+                };
+
+                carts.push(parsed_meta);
             }
         }
     }
     // TODO check efficiency for lots of files
+    carts
 }
-*/

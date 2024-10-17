@@ -12,7 +12,7 @@ use log::{debug, warn};
 use regex::Regex;
 use reqwest::{Client, Url};
 use scraper::{Html, Selector};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
@@ -22,7 +22,7 @@ lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CartData {
     pub title: String,
     pub author: String,
@@ -49,16 +49,6 @@ impl CartData {
 
         serialize_table(&prop_map)
     }
-}
-
-/// The schema for the metadata json files present in drive/carts/metadata
-// TODO should combine this with CartData struct
-#[derive(Serialize)]
-pub struct Metadata {
-    pub name: String,
-    pub filename: String,
-    pub author: String,
-    pub tags: String,
 }
 
 /// Subsection of BBS

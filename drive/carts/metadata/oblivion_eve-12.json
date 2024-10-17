@@ -1,6 +1,11 @@
 {
-  "name": "Oblivion Eve",
-  "filename": "oblivion_eve-12",
+  "title": "Oblivion Eve",
   "author": "SmartAlloc",
-  "tags": ""
+  "likes": 0,
+  "tags": [],
+  "lid": "No LID",
+  "download_url": "",
+  "description": "",
+  "thumb_url": "",
+  "filename": "oblivion_eve-12"
 }

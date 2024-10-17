@@ -8,6 +8,7 @@ __lua__
 #include menu.p8
 #include utils.p8
 #include tween.lua
+#include timer.p8
 
 bg_color=129
 bar_color_1=12
@@ -17,7 +18,6 @@ cart_dir='games'
 label_dir='labels'
 loaded_carts={} -- list of all carts that can be displayed in the menu
 carts={}        -- menu for pexsplore ui
-labels={}
 
 -- menu for each cartridge
 cart_options=menu_new({
@@ -220,8 +220,6 @@ menuitem = {
 loaded_pages=0   -- number of pages (of 30 games) have been loaded so far
 carts_per_page=30
 
-pending_bbs_load=false
-
 loading_anim_timer=0 -- timer used for loading animation
 loading_state=0
 
@@ -232,17 +230,27 @@ function _init()
     printh('invalid games category')
     games_category='featured'
   end
+  -- special flag to disable pagination for local only categories (like local and favourites)
+  is_local = (games_category == 'local')
 
-  carts=menu_new({{menuitem=menuitem.load}})
-  carts:set_wrap(false)
-  labels=ls(label_dir)
-  for cart in all(carts.items) do
-    printh(tostring(cart))
-  end
+  carts=build_new_cart_menu({})
+  
+  new_loadable('bbs', function(resp)
+    printh('bbs_load response '..tostring(resp))
+    local split_carts=split(resp, ',', false)
+    for k, v in pairs(split_carts) do
+      split_carts[k]=table_from_string(v)
+    end
+    local old_index = carts:index()
+    carts=build_new_cart_menu(split_carts)
+    carts:set_index(old_index) -- set the correct position of the menu
+    load_label(carts:cur(), 0)
+  end, 1) 
 
   cart_tween_bobble()
 
-  load_label(carts:cur(), 0)
+  -- automatically make first query
+  request_loadable('bbs', {loaded_pages, games_category})
 end
 
 function _update60()
@@ -271,13 +279,11 @@ function _update60()
       if carts:cur().menuitem == menuitem.load then
 
         -- only ask for new page if previous page has been loaded
-        if pending_bbs_load == false then
+        if status_loadable('bbs') == false then
           -- request load from bbs
           loaded_pages=loaded_pages+1
           printh('requesting page from bbs '..loaded_pages)
-          serial_bbs(loaded_pages, games_category)
-
-          pending_bbs_load=true
+          request_loadable('bbs', {loaded_pages, games_category})
         end
 
       else
@@ -304,19 +310,8 @@ function _update60()
     end
   end
 
-  -- TODO can poll periodically instead of every update
   -- query for response from bbs load
-  if pending_bbs_load == true then
-    resp = serial_bbs_response()
-    -- printh('serial response '..tostring(resp))
-    if resp ~= nil then
-      local old_index = carts:index()
-      build_new_cart_menu(resp)
-      carts:set_index(old_index) -- set the correct position of the menu
-      load_label(carts:cur(), 0)
-      pending_bbs_load=false
-    end
-
+  if status_loadable('bbs') then
     -- update loading animation
     curtime=time()
     if curtime-loading_anim_timer > 1 then
@@ -324,6 +319,8 @@ function _update60()
       loading_state=(loading_state+1)%4
     end
   end
+
+  update_loadables()
 end
 
 function build_new_cart_menu(resp)
@@ -340,9 +337,13 @@ function build_new_cart_menu(resp)
     item.menuitem = menuitem.cart
     add(new_menuitems, item)
   end
+    
+  -- TODO would like to disable this option for local categories, but also need to make sure we don't have an empty menu
   add(new_menuitems, {menuitem=menuitem.load})
-  carts=menu_new(new_menuitems)
-  carts:set_wrap(false)
+
+  local new_carts=menu_new(new_menuitems)
+  new_carts:set_wrap(false)
+  return new_carts
 end
 
 function draw_menuitem(w, y, text, sel)
@@ -372,7 +373,7 @@ end
 function draw_carts_menu()
   -- draw the cartridge
   if carts:cur().menuitem == menuitem.load then
-    if pending_bbs_load then
+    if status_loadable('bbs') then
       local str="loading"
       for i=1,loading_state do
         str=str..'.'
@@ -387,6 +388,7 @@ function draw_carts_menu()
     local str="❎view"
     print(str, 64-#str*2, 117+cart_y_ease+cart_y_bob, 7)
   end
+
   if cart_tween_state > 0 then
     if carts:index() > 1 then
       print("⬅️", 3, 64, 7)

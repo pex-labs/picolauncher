@@ -54,8 +54,12 @@ end
 -- concats all stringified elements in table with comma
 function tconcat(table)
   local res = ""
-  for _, v in ipairs(table) do
-    res = res .. tostring(v) .. ","
+  for i, v in ipairs(table) do
+    if i == 1 then
+      res = tostring(v)
+    else
+      res = res .. "," .. tostring(v)
+    end
   end
   return res
 end

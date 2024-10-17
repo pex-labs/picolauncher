@@ -70,7 +70,7 @@ local loadable_table = {}
 -- name is the function to call
 -- callback_fn is called when the response is received
 function new_loadable(name, callback_fn, poll_duration)
-    loadable = {
+    local loadable = {
         name=name,
         callback_fn=callback_fn,
         poll_duration=poll_duration,
@@ -83,11 +83,17 @@ function new_loadable(name, callback_fn, poll_duration)
 end
 
 function request_loadable(name, args)
-    loadable = loadable_table[name]
+    local loadable = loadable_table[name]
     if loadable == nil then return end
     if args == nil then args = {} end
     serial_writeline(name..':'..tconcat(args))
     loadable.requested = true
+end
+
+function status_loadable(name)
+  local loadable = loadable_table[name]
+  if loadable == nil then return false end
+  return loadable.requested
 end
 
 function update_loadables()
