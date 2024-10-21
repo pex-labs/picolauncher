@@ -631,12 +631,18 @@ fn impl_bbs(
 ) -> Vec<CartData> {
     let url = bbs_url_for_category(query, page);
     info!("querying {url}");
-    let res = runtime
-        .block_on(async {
-            let tab_clone = Arc::clone(tab);
-            crawl_bbs(tab_clone, &url).await
-        })
-        .unwrap();
+    let res = runtime.block_on(async {
+        let tab_clone = Arc::clone(tab);
+        crawl_bbs(tab_clone, &url).await
+    });
+
+    let res = match res {
+        Ok(res) => res,
+        Err(e) => {
+            error!("failed to crawl bbs {e:?}");
+            vec![]
+        },
+    };
 
     // TODO use trace to log async
 
