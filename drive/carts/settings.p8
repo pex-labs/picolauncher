@@ -41,6 +41,7 @@ function new_wifi_menu(networks)
   for i, network in ipairs(networks) do
     add(wifi_menu_items, {ssid=network.ssid, name=network.name, strength=network.strength, func=function()
       show_keyboard=true
+      make_vkeyboard_tween(true)
     end})
   end
   local _wifi_menu = menu_new(wifi_menu_items)
@@ -83,14 +84,42 @@ local control_names = {"up", "down", "left", "right", "a", "b"}
 local current_control = 1
 
 -- virtual keyboard
-local keyboard = Keyboard:new(7, 0, 8, 14, 78, function(text)
-  show_keyboard=false
+local keyboard_up_y = 78
+local keyboard_down_y = 148
+local keyboard = Keyboard:new(7, 0, 8, 14, keyboard_down_y, function(text)
+  show_keyboard = false
+  make_vkeyboard_tween(false)
   -- currently only used for connecting to networks
   local ssid = wifi_menu:cur().ssid
   local psk = text
   serial_debug('connect to wifi request, ssid: '..ssid..', psk: '..psk)
   request_loadable('wifi_connect', {ssid, psk})
 end)
+
+-- tweens for keyboard
+vkeyboard_tween = {}
+function make_vkeyboard_tween(show_keyboard)
+  local vkeyboard_target_y = 0
+  if show_keyboard then
+    vkeyboard_target_y = keyboard_up_y
+  else
+    vkeyboard_target_y = keyboard_down_y
+  end
+  vkeyboard_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=keyboard.y,
+    v_end=vkeyboard_target_y,
+    duration=0.5
+  })
+  vkeyboard_tween:register_step_callback(function(pos)
+    keyboard.y = pos
+  end)
+  vkeyboard_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
+  vkeyboard_tween:restart()
+end
+
 
 function _init()
   init_timers()
@@ -147,9 +176,8 @@ function _draw()
   else
     draw_generic_menu()
   end
-  if show_keyboard then
-    keyboard:draw()
-  end
+  -- TODO would be nice to wrap around show keyboard, since we are wasting draw calls here?
+  keyboard:draw()
   draw_banner()
 end
 
@@ -264,12 +292,6 @@ function draw_wifi_menu()
     end
   end
 
-  -- TODO don't really like tying the wifi menu password screen with show_keyboard state
-  if show_keyboard then
-    rectfill(9, 31, 119, 43, 0)
-    rectfill(10, 32, 118, 42, 5)
-    print(keyboard.text, 12, 34, 7)
-  end
 end
 
 -- controls menu

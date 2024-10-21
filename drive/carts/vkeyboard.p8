@@ -11,6 +11,13 @@ local HEIGHT=50
 function Keyboard:new(key_color, border_color, selected_color, x, y, confirm_fn)
 
     local obj = {
+        -- include text field at top
+        show_textfield = true,
+        -- useful for password fields
+        redact_textfield = false,
+        -- textfield colors
+        textfield_border_color = 0,
+        textfield_color = 6,
         x = x,
         y = y,
         confirm_fn=confirm_fn,
@@ -151,6 +158,21 @@ function Keyboard:draw()
     local ok_x1 = ok_x0+self.key_width
     rectfill(ok_x0,ok_y0,ok_x1,ok_y1,ok_color)
     rect(ok_x0,ok_y0,ok_x1,ok_y1,self.border_color)
+
+    -- draw textfield if enabled
+    if self.show_textfield then
+        local textfield_x0 = self.x
+        local textfield_y0 = self.y - self.key_height
+        local textfield_x1 = textfield_x0 + 12 * self.key_width
+        local textfield_y1 = textfield_y0 + self.key_height
+        rectfill(textfield_x0, textfield_y0, textfield_x1, textfield_y1, self.textfield_color)
+        rect(textfield_x0, textfield_y0, textfield_x1, textfield_y1, self.textfield_border_color)
+        if self.redact_textfield then
+            -- print(string.rep("*", #self.text), textfield_x0 + 2, textfield_y0 + 2, self.border_color)
+        else
+            print(self.text, textfield_x0 + 2, textfield_y0 + 2, self.border_color)
+        end
+    end
 end
 
 function Keyboard:current_keyset()
