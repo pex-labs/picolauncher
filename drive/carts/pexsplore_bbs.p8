@@ -250,6 +250,7 @@ function _init()
   cart_tween_bobble()
 
   -- automatically make first query
+  loaded_pages = loaded_pages+1
   request_loadable('bbs', {loaded_pages, games_category})
 end
 
