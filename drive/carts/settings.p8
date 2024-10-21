@@ -257,15 +257,16 @@ function draw_main_menu()
 end
 
 -- wifi menu
+local wifi_menu_start_y = menu_start_y
 function update_wifi_menu()
   if btnp(2) then
     wifi_menu:up()
     sfx(0)
-    make_wifi_menu_scroll_tween(-1 * (wifi_menu:index() - 1) * 10)
+    make_wifi_menu_scroll_tween(min(-1 * (wifi_menu:index() - 1) * 10 + wifi_menu_start_y, 0))
   elseif btnp(3) then
     wifi_menu:down()
     sfx(0)
-    make_wifi_menu_scroll_tween(-1 * (wifi_menu:index() - 1) * 10)
+    make_wifi_menu_scroll_tween(min(-1 * (wifi_menu:index() - 1) * 10 + wifi_menu_start_y, 0))
   elseif btnp(5) then
     wifi_menu:cur().func()
   elseif btnp(4) then
@@ -273,7 +274,6 @@ function update_wifi_menu()
   end
 end
 
-local wifi_menu_start_y = menu_start_y
 function draw_wifi_menu()
 
   -- wifi state
@@ -315,11 +315,13 @@ function draw_wifi_menu()
         print(network.name, 12, y + 2, c_text)
       end
 
-      -- for j = 1, 4 do
-      --   if j <= network.strength then
-      --     line(screen_width - 16 + j*2, y + 9 - j*2, screen_width - 16 + j*2, y + 8, c_text)
-      --   end
-      -- end
+      for j = 1, 3 do
+        local c = 5
+        if (j-1)*25 <= network.strength then
+          c = c_text
+        end
+        line(screen_width - 16 + j*2, y + 8 - j*2, screen_width - 16 + j*2, y + 7, c)
+      end
     end
   end
 
