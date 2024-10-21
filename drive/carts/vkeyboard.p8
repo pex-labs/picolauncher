@@ -120,6 +120,7 @@ function Keyboard:draw()
     rect(shift_x0,shift_y0,shift_x1,shift_y1,self.border_color)
     palt(7,true)
     palt(0,false)
+    print('^', shift_x0+self.key_width/2, shift_y0+self.key_height/4)
     -- spr(1,shift_x0+self.key_width/2,shift_y0)
     palt()
 
@@ -140,24 +141,19 @@ function Keyboard:draw()
 
     local backspace_x0 = self.x+self.key_width*11
     local backspace_y0 = self.y
-    local backspace_y1 = backspace_y0+self.key_height
+    local backspace_y1 = backspace_y0+self.key_height*2
     local backspace_x1 = backspace_x0+self.key_width
     rectfill(backspace_x0,backspace_y0,backspace_x1,backspace_y1,backspace_color)
     rect(backspace_x0,backspace_y0,backspace_x1,backspace_y1,self.border_color)
+    print('◀', backspace_x0+self.key_width/2-2, backspace_y0+4)
 
     local return_x0 = self.x+self.key_width*11
-    local return_y0 = self.y+ self.key_height
-    local return_y1 = return_y0+self.key_height*2
+    local return_y0 = self.y+ self.key_height*2
+    local return_y1 = return_y0+self.key_height*4
     local return_x1 = return_x0+self.key_width
     rectfill(return_x0,return_y0,return_x1,return_y1,return_color)
     rect(return_x0,return_y0,return_x1,return_y1,self.border_color)
-
-    local ok_x0 = self.x+self.key_width*11
-    local ok_y0 = self.y+ self.key_height*3
-    local ok_y1 = ok_y0+self.key_height*2
-    local ok_x1 = ok_x0+self.key_width
-    rectfill(ok_x0,ok_y0,ok_x1,ok_y1,ok_color)
-    rect(ok_x0,ok_y0,ok_x1,ok_y1,self.border_color)
+    print('▶', return_x0+self.key_width/2-2, return_y0+4)
 
     -- draw textfield if enabled
     if self.show_textfield then
@@ -213,7 +209,7 @@ function Keyboard:input()
         if self.kx>11 then
             self.ry = self.ry-1
             if self.ry==0 then
-                self.ry=3
+                self.ry=2
             end
         else
             self.ky = self.ky-1
@@ -231,8 +227,8 @@ function Keyboard:input()
     elseif btnp(3) then
         if self.kx>11 then
             self.ry = self.ry+1
-            if self.ry==4 then
-                self.ry=0
+            if self.ry==3 then
+                self.ry=1
             end
         else
             self.ky = self.ky%5+1
@@ -262,8 +258,6 @@ function Keyboard:input()
                 -- return
                 self.confirm_fn(self.text)
                 self.text=""
-            else
-                -- okay
             end
         elseif self.ky>#self:current_keyset() then
             if self.bx==1 then

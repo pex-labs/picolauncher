@@ -89,6 +89,10 @@ local keyboard_down_y = 148
 local keyboard = Keyboard:new(7, 0, 8, 14, keyboard_down_y, function(text)
   show_keyboard = false
   make_vkeyboard_tween(false)
+
+  -- no-op if empty string
+  if text == "" then return end
+
   -- currently only used for connecting to networks
   local ssid = wifi_menu:cur().ssid
   local psk = text
