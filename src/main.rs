@@ -372,19 +372,27 @@ fn main() {
                 let res = impl_wifi_connect(&nm, &mut access_points, ssid, psk);
                 println!("wifi connection result {res:?}");
 
+                let status = impl_wifi_status(&nm);
+
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", res.is_ok().to_string()).expect("failed to write to pipe");
+                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
                 drop(in_pipe);
             },
             "wifi_disconnect" => {
                 let res = impl_wifi_disconnect(&nm);
                 println!("wifi disconnection result {res:?}");
+
+                let status = impl_wifi_status(&nm);
+
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
+                drop(in_pipe);
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = impl_wifi_status(&nm);
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status.to_string()).expect("failed to write to pipe");
+                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
                 drop(in_pipe);
             },
             "shutdown" => {

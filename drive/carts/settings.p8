@@ -40,8 +40,7 @@ function new_wifi_menu(networks)
   wifi_menu_items = {
     {label="[scan]", func=function()request_loadable('wifi_list')end},
     {label="[disconnect]", func=function()
-      serial_writeline('wifi_disconnect:')
-      request_loadable('wifi_status')
+      request_loadable('wifi_disconnect')
     end},
   }
 
@@ -145,6 +144,12 @@ function _init()
 
   new_loadable('wifi_connect', function(resp)
     serial_debug('resp'..tostring(resp))
+    wifi_status=table_from_string(resp)
+  end, 1)
+
+  new_loadable('wifi_disconnect', function(resp)
+    serial_debug('resp'..tostring(resp))
+    wifi_status=table_from_string(resp)
   end, 1)
 
   new_loadable('wifi_status', function(resp)
