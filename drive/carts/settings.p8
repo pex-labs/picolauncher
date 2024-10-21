@@ -252,7 +252,7 @@ function draw_main_menu()
   sysinfo_y_offset=70
   print("system information", 10, sysinfo_y_offset, c_text)
   line(10, sysinfo_y_offset+7, 118, sysinfo_y_offset+7, c_text)
-  print("version    v0.1.0", 10, sysinfo_y_offset+10, c_text)
+  print("version    v0.3.0", 10, sysinfo_y_offset+10, c_text)
   print("model      pex one", 10, sysinfo_y_offset+18, c_text)
 end
 
