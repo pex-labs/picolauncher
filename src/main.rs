@@ -376,6 +376,10 @@ fn main() {
                 writeln!(in_pipe, "{}", res.is_ok().to_string()).expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            "wifi_disconnect" => {
+                let res = impl_wifi_disconnect(&nm);
+                println!("wifi disconnection result {res:?}");
+            },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = impl_wifi_status(&nm);
@@ -550,6 +554,15 @@ fn impl_wifi_connect(
     };
     if let Err(e) = wifi_device.connect(&ap, &credentials) {
         return Err(anyhow!("Failed to connect to access point {e}"));
+    }
+
+    Ok(())
+}
+
+fn impl_wifi_disconnect(nm: &NetworkManager) -> anyhow::Result<()> {
+    let wifi_device = find_device(nm)?;
+    if let Err(e) = wifi_device.disconnect() {
+        return Err(anyhow!("Failed to disconnect from access point {e}"));
     }
 
     Ok(())

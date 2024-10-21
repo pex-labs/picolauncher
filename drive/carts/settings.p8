@@ -33,11 +33,18 @@ local scroll_offset = 0
 -- wifi related
 
 -- create new wifi menu
+local wifi_status = {ssid="", state="unknown"}
+local airplane_mode = false
+
 function new_wifi_menu(networks)
   wifi_menu_items = {
     {label="[scan]", func=function()request_loadable('wifi_list')end},
-    --{label="airplane mode", func=function()airplane_mode=not airplane_mode}
+    {label="[disconnect]", func=function()
+      serial_writeline('wifi_disconnect:')
+      request_loadable('wifi_status')
+    end},
   }
+
   for i, network in ipairs(networks) do
     add(wifi_menu_items, {ssid=network.ssid, name=network.name, strength=network.strength, func=function()
       show_keyboard=true
@@ -50,8 +57,6 @@ function new_wifi_menu(networks)
 end
 
 local wifi_menu = new_wifi_menu({})
-local wifi_status = {ssid="", state="unknown"}
-local airplane_mode = false
 
 wifi_menu_scroll_tween = {}
 wifi_menu_scroll = 0
@@ -209,6 +214,18 @@ function update_main_menu()
   end
 end
 
+function wifi_state_color()
+  local text_c=5
+  if wifi_status.state == "connected" then
+    text_c=3
+  elseif wifi_status.state == "connecting" then
+    text_c=3
+  elseif wifi_status.state == "disconnected" or wifi_status.state == "disconnecting" then
+    text_c=8
+  end
+  return text_c
+end
+
 function draw_main_menu()
   local curitem = main_menu:index()
   for i, menuitem in ipairs(main_menu.items) do
@@ -219,17 +236,11 @@ function draw_main_menu()
     end
     print(menuitem.label, 10, y, color)
     if menuitem.label == "wifi" then
-      local wifi_text=wifi_status.state
-      local text_c=5
+      local wifi_text = wifi_status.state
       if wifi_status.state == "connected" then
-        wifi_text=wifi_status.ssid
-        text_c=3
-      elseif wifi_status.state == "connecting" then
-        text_c=3
-      elseif wifi_status.state == "disconnected" or wifi_status.state == "disconnecting" then
-        text_c=8
+        wifi_text = wifi_status.ssid
       end
-      print(wifi_status.state, 118-#wifi_text*4, y, text_c)
+      print(wifi_status.state, 118-#wifi_text*4, y, wifi_state_color())
     end
   end
 
@@ -257,11 +268,22 @@ function update_wifi_menu()
   end
 end
 
+local wifi_menu_start_y = menu_start_y
 function draw_wifi_menu()
-  if wifi_menu:index() == 1 then c=c_selected else c=c_text end
-  print("[scan]", 10, menu_start_y + wifi_menu_scroll, c)
 
-  -- local airplane_y = menu_start_y + 10
+  -- wifi state
+  local text_c = wifi_state_color()
+  local text = "status: "
+  print(text, 10, wifi_menu_start_y + wifi_menu_scroll, 6)
+  print(wifi_status.state, 10 + #text*4, wifi_menu_start_y + wifi_menu_scroll, text_c)
+
+  if wifi_menu:index() == 1 then c=c_selected else c=c_text end
+  print("[scan]", 10, wifi_menu_start_y + 8 + wifi_menu_scroll, c)
+
+  if wifi_menu:index() == 2 then c=c_selected else c=c_text end
+  print("[disconnect]", 10, wifi_menu_start_y + 16 + wifi_menu_scroll, c)
+
+  -- local airplane_y = wifi_menu_start_y + 10
   -- if current_item == 2 then
   --   rectfill(0, airplane_y, screen_width, airplane_y + 9, c_selected)
   --   print("airplane mode", 10, airplane_y + 2, 0)
@@ -270,15 +292,15 @@ function draw_wifi_menu()
   -- end
   -- print(airplane_mode and "on" or "off", screen_width - 20, airplane_y + 2, airplane_mode and 11 or 8)
 
-  print("networks", 10, menu_start_y + 10 + wifi_menu_scroll, c_selected)
-  line(10, menu_start_y + 16 + wifi_menu_scroll, screen_width - 10, menu_start_y + 16 + wifi_menu_scroll, c_selected)
+  print("networks", 10, wifi_menu_start_y + 26 + wifi_menu_scroll, c_selected)
+  line(10, wifi_menu_start_y + 32 + wifi_menu_scroll, screen_width - 10, wifi_menu_start_y + 32 + wifi_menu_scroll, c_selected)
 
   -- TODO scrolling
   -- TODO wifi strength level
   for i, network in ipairs(wifi_menu.items) do
     -- skip the non network menu items
-    if i > 1 then
-      local y = menu_start_y + wifi_menu_scroll + 20 + (i-2) * 10
+    if i > 2 then
+      local y = wifi_menu_start_y + wifi_menu_scroll + 36 + (i-3) * 8
       local is_selected = (i == wifi_menu:index())
 
       if is_selected then
