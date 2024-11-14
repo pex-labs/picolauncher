@@ -62,7 +62,28 @@ function Keyboard:new(key_color, border_color, selected_color, x, y, confirm_fn)
     setmetatable(obj, self)
     return obj
 end
+--invert case
+function Keyboard:corrected_text()
+    local inverted_text = ""
 
+    for i = 1, #self.text do
+        local char = sub(self.text, i, i)
+        local ascii = ord(char)
+
+        if ascii >= 97 and ascii <= 122 then
+            -- Lowercase to uppercase
+            inverted_text = inverted_text .. chr(ascii - 32)
+        elseif ascii >= 65 and ascii <= 90 then
+            -- Uppercase to lowercase
+            inverted_text = inverted_text .. chr(ascii + 32)
+        else
+            -- Non-alphabet characters remain the same
+            inverted_text = inverted_text .. char
+        end
+    end
+
+    return inverted_text
+end
 function Keyboard:draw()
     local keys = self:current_keyset()
     for i = 1, #keys do
@@ -175,9 +196,9 @@ function Keyboard:current_keyset()
     if self.switch then
         return self.symbols_keyset
     elseif self.shift then
-        return self.uppercase_keyset
+        return self.lowercase_keyset
     end
-    return self.lowercase_keyset
+    return self.uppercase_keyset
 end
 
 function Keyboard:current_char(keys)
@@ -245,18 +266,18 @@ function Keyboard:input()
     elseif btnp(4) then
         -- back, exit menu and clear text
         self.text=""
-        self.confirm_fn(self.text)
+        self.confirm_fn(self:corrected_text())
     elseif btnp(5) then
         -- TODO make this less stupid
         if self.kx>11 then
             if self.ry==1 then
                 -- backspace
                 if #self.text > 0 then
-                    self.text = sub(self.text, 1, #self.text - 1) 
+                    self.text = sub(self.text, 1, #self.text - 1)
                 end
             elseif self.ry==2 then
                 -- return
-                self.confirm_fn(self.text)
+                self.confirm_fn(self:corrected_text())
                 self.text=""
             end
         elseif self.ky>#self:current_keyset() then
