@@ -6,7 +6,6 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     ops::ControlFlow,
     path::{Path, PathBuf},
-    process::{Child, Command, Stdio},
     ptr,
     sync::Arc,
     thread,
@@ -14,7 +13,6 @@ use std::{
 };
 
 use anyhow::anyhow;
-use dbus::blocking::Connection;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use log::{debug, error, info, warn};
@@ -23,9 +21,10 @@ use network_manager::{
 };
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
-use picolauncher::{bbs::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
+use picolauncher::{bbs::*, bluetooth::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::{Map, Value};
-use tokio::runtime::Runtime;
+use tokio::sync::Mutex;
+use tokio::{process::Command, runtime::Runtime};
 
 fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(EXE_DIR.as_path())?;
@@ -39,8 +38,8 @@ fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(SCREENSHOT_PATH)?;
     Ok(())
 }
-
-fn main() {
+#[tokio::main]
+async fn main() {
     // set up logger
     let crate_name = env!("CARGO_PKG_NAME");
     env_logger::builder()
@@ -66,6 +65,8 @@ fn main() {
     }
     let nm = NetworkManager::new();
     let mut access_points: Vec<AccessPoint> = vec![];
+
+    let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new()));
 
     // create necessary directories
     if let Err(e) = create_dirs() {
@@ -113,12 +114,6 @@ fn main() {
     let mut out_pipe = open_out_pipe().expect("failed to open pipe");
     let mut reader = BufReader::new(out_pipe);
 
-    // TODO: tokio runtime here, maybe convert entire main to tokio::main in future
-    let runtime = tokio::runtime::Builder::new_current_thread()
-        .enable_all()
-        .build()
-        .unwrap();
-
     // TODO don't crash if browser fails to launch - just disable bbs functionality?
     // spawn browser and create tab for crawling
     let chrome_args = vec![
@@ -164,7 +159,7 @@ fn main() {
     // listen for commands from pico8 process
     loop {
         // check if pico8 process has exited
-        if let Some(status) = pico8_process.try_wait().unwrap() {
+        if let Ok(status) = pico8_process.wait().await {
             info!("pico8 process exited with status {status}");
             break;
         }
@@ -296,7 +291,7 @@ fn main() {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
-                    impl_bbs(&runtime, &tab, pico8_bins.clone(), query, page)
+                    impl_bbs(&tab, &pico8_bins, query, page).await
                 };
 
                 let cartdatas = cartdatas
@@ -395,6 +390,19 @@ fn main() {
                 writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            "bt_start" => {
+                let _ = update_connected_devices(bt_status.clone()).await;
+                let _ = discover_devices(bt_status.clone()).await;
+            },
+            "bt_stop" => {
+                let mut bt_status_guard = bt_status.lock().await;
+                bt_status_guard.stop();
+            },
+
+            "bt_status" => {},
+            "bt_connect" => {},
+            "bt_disconnect" => {},
+
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -441,7 +449,11 @@ fn bbs_url_for_category(category: PexsploreCategory, page: u32) -> String {
 }
 
 // TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
-fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> anyhow::Result<()> {
+async fn postprocess_cart(
+    pico8_bins: &Vec<String>,
+    cart: &CartData,
+    path: &Path,
+) -> anyhow::Result<()> {
     // TODO: since path.file_prefix is still unstable, we need to split on the first period
     let filename = path.file_name().unwrap().to_str().unwrap();
     let mut split = filename.splitn(2, ".");
@@ -451,7 +463,8 @@ fn postprocess_cart(pico8_bins: &Vec<String>, cart: &CartData, path: &Path) -> a
     let mut dest_path = GAMES_DIR.join(filestem);
     dest_path.set_extension("p8");
     if !dest_path.exists() {
-        pico8_export(pico8_bins, path, &dest_path)
+        pico8_export(&pico8_bins, path, &dest_path)
+            .await
             .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
     }
 
@@ -622,65 +635,31 @@ fn find_device(manager: &NetworkManager) -> anyhow::Result<Device> {
     }
 }
 
-fn impl_bbs(
-    runtime: &Runtime,
+async fn impl_bbs(
     tab: &Arc<Tab>,
-    pico8_bins: Vec<String>,
+    pico8_bins: &Vec<String>,
     query: PexsploreCategory,
     page: u32,
 ) -> Vec<CartData> {
     let url = bbs_url_for_category(query, page);
     info!("querying {url}");
-    let res = runtime.block_on(async {
-        let tab_clone = Arc::clone(tab);
-        crawl_bbs(tab_clone, &url).await
-    });
+
+    let res = crawl_bbs(tab.clone(), &url).await;
 
     let res = match res {
         Ok(res) => res,
         Err(e) => {
             error!("failed to crawl bbs {e:?}");
-            vec![]
+            return vec![];
         },
     };
 
-    // TODO use trace to log async
-
     // download these carts if not in games/ directory
     let res_cloned = res.clone();
-    runtime.block_on(async move {
-        let mut tasks = vec![];
 
-        for cart in res_cloned {
-            // println!("{}", cart.to_lua_table());
+    let mut tasks = vec![];
 
-            let Some(filename) = filename_from_url(&cart.download_url) else {
-                warn!("could not extract filename from url: {}", cart.download_url);
-                continue;
-            };
-
-            // download if we don't have a copy of it in our games dir
-            let path = BBS_CART_DIR.join(filename);
-            if !path.exists() {
-                info!("download cart from bbs: {}", cart.download_url);
-                let path = path.clone();
-                let cart = cart.clone();
-                let task = tokio::spawn(async move {
-                    // TODO kinda lmao how we need to make a new client here
-                    let client = reqwest::Client::new();
-                    if let Err(e) = download_cart(client, cart.download_url.clone(), &path).await {
-                        warn!("failed to download cart {path:?}: {e:?}");
-                    }
-                });
-                tasks.push(task);
-            }
-        }
-        let _ = join_all(tasks).await;
-    });
-
-    for cart in res.iter() {
-        // TODO some of this code is duplicated
-
+    for cart in res_cloned {
         let Some(filename) = filename_from_url(&cart.download_url) else {
             warn!("could not extract filename from url: {}", cart.download_url);
             continue;
@@ -688,8 +667,35 @@ fn impl_bbs(
 
         // download if we don't have a copy of it in our games dir
         let path = BBS_CART_DIR.join(filename);
+        if !path.exists() {
+            info!("download cart from bbs: {}", cart.download_url);
+            let path = path.clone();
+            let cart = cart.clone();
+            let task = tokio::spawn(async move {
+                // New client in async task
+                let client = reqwest::Client::new();
+                if let Err(e) = download_cart(client, cart.download_url.clone(), &path).await {
+                    warn!("failed to download cart {path:?}: {e:?}");
+                }
+            });
+            tasks.push(task);
+        }
+    }
 
-        if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path) {
+    // Wait for all the download tasks to complete
+    let _ = join_all(tasks).await;
+
+    // Postprocess carts
+    for cart in res.iter() {
+        let Some(filename) = filename_from_url(&cart.download_url) else {
+            warn!("could not extract filename from url: {}", cart.download_url);
+            continue;
+        };
+
+        // Download if we don't have a copy of it in our games dir
+        let path = BBS_CART_DIR.join(filename);
+
+        if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path).await {
             warn!("failed to postprocess cart {e:?}");
             continue;
         }

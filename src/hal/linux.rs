@@ -1,9 +1,9 @@
 use std::{
     fs::{File, OpenOptions},
     path::{Path, PathBuf},
-    process::{Child, Command},
     time::Duration,
 };
+use tokio::process::{Child, Command};
 
 use anyhow::anyhow;
 use event::CreateKind;
@@ -54,19 +54,35 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
 }
 
 pub fn kill_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
-    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    let pico8_pid = Pid::from_raw(
+        pico8_process
+            .id()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "PID not found"))?
+            as i32,
+    );
+
     kill(pico8_pid, Signal::SIGKILL)?;
     Ok(())
 }
 
 pub fn stop_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
-    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    let pico8_pid = Pid::from_raw(
+        pico8_process
+            .id()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "PID not found"))?
+            as i32,
+    );
     kill(pico8_pid, Signal::SIGSTOP)?;
     Ok(())
 }
 
 pub fn resume_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
-    let pico8_pid = Pid::from_raw(pico8_process.id() as i32);
+    let pico8_pid = Pid::from_raw(
+        pico8_process
+            .id()
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "PID not found"))?
+            as i32,
+    );
     kill(pico8_pid, Signal::SIGCONT)?;
     Ok(())
 }
@@ -120,12 +136,12 @@ pub fn screenshot_watcher() {
 }
 
 /// Suspend the pico8 process until child process exits
-pub fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
+pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
     // suspend current pico8 process and swap with newly spawned process
     stop_pico8_process(pico8_process);
 
     // unsuspend when child finishes
-    child.wait().unwrap();
+    child.wait().await.unwrap();
     resume_pico8_process(pico8_process);
 }
 
@@ -147,7 +163,7 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
 }
 
 /// Use the pico8 binary to export games from *.p8.png to *.p8
-pub fn pico8_export(
+pub async fn pico8_export(
     bin_names: &Vec<String>,
     in_file: &Path,
     out_file: &Path,
@@ -161,6 +177,6 @@ pub fn pico8_export(
             out_file.to_str().unwrap(),
         ],
     )?;
-    pico8_process.wait()?;
+    pico8_process.wait().await?;
     Ok(())
 }
