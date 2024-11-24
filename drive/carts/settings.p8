@@ -25,7 +25,12 @@ local show_keyboard = false
 local main_menu = menu_new({
   {label="theme",func=function()current_screen="theme"end},
   {label="wifi",func=function()current_screen="wifi"end},
-  {label="bluetooth",func=function()current_screen="bluetooth"end},
+  {
+    label = "bluetooth",
+    func = function()
+        current_screen = "bluetooth"
+    end
+  },
   {label="controls",func=function()current_screen="controls"end}
 })
 local scroll_offset = 0
@@ -157,6 +162,12 @@ function _init()
     wifi_status=table_from_string(resp)
   end, 1)
 
+  -- bluetooth loadables
+  new_loadable('bt_status', function(resp)
+    serial_debug('resp'..tostring(resp))
+  end, 1)
+
+
   request_loadable('wifi_status')
 end
 
@@ -171,6 +182,8 @@ function _update60()
       update_wifi_menu()
     elseif current_screen == "controls" then
       update_controls_menu()
+    elseif current_screen == "bluetooth" then
+      update_bluetooth_menu()
     else
       update_generic_menu()
     end
@@ -184,6 +197,8 @@ function _draw()
     draw_main_menu()
   elseif current_screen == "wifi" then
     draw_wifi_menu()
+  elseif current_screen == "bluetooth" then
+    draw_generic_menu()
   elseif current_screen == "controls" then
     --draw_controls_menu()
     draw_generic_menu()
@@ -327,6 +342,14 @@ function draw_wifi_menu()
 
 end
 
+-- bluetooth menu
+function update_bluetooth_menu()
+  if btnp(4) then
+    current_screen = "main"
+  end
+
+end
+
 -- controls menu
 function update_controls_menu()
   if btnp(2) then
@@ -347,57 +370,57 @@ function draw_accurate_joycon()
   local x, y = 10, 20  -- starting position
   local w, h = 110, 70  -- width and height
   local c = 7  -- main color (white)
-  
+
   -- draw the elongated oval outline
   -- top curve
   line(x+4, y, x+w-5, y, c)
   line(x+2, y+1, x+w-3, y+1, c)
   line(x+1, y+2, x+w-2, y+2, c)
   line(x, y+3, x+w-1, y+3, c)
-  
+
   -- bottom curve
   line(x+4, y+h-1, x+w-5, y+h-1, c)
   line(x+2, y+h-2, x+w-3, y+h-2, c)
   line(x+1, y+h-3, x+w-2, y+h-3, c)
   line(x, y+h-4, x+w-1, y+h-4, c)
-  
+
   -- left and right sides
   for i=4, h-5 do
     pset(x, y+i, c)
     pset(x+w-1, y+i, c)
   end
-  
+
   -- top buttons
   rect(x+8, y+4, x+20, y+8, c)
   rect(x+w-21, y+4, x+w-9, y+8, c)
-  
+
   -- left analog stick
   for r=8,10 do circ(x+30, y+30, r, c) end
   circfill(x+30, y+30, 3, c)
-  
+
   -- button cluster
   circ(x+w-30, y+30, 7, c)  -- top button
   circ(x+w-42, y+42, 7, c)  -- left button
   circ(x+w-18, y+42, 7, c)  -- right button
   circ(x+w-30, y+54, 7, 8)  -- bottom button (red)
   circfill(x+w-30, y+54, 3, 8)  -- red center
-  
+
   -- center button
   rect(x+48, y+40, x+60, y+48, c)
 end
 
 function draw_controls_menu()
   cls(1)  -- clear screen with dark blue background
-  
+
   draw_accurate_joycon()
-  
+
   print("controls", 4, 4, 10)  -- title in yellow
-  
+
   local start_y = 15
   for i, control in ipairs(control_names) do
     local y = start_y + i * 8
     local color = (i == current_control) and 10 or 7
-    
+
     print(control, 4, y, color)
     print(joycon_controls[control], 30, y, color)
   end
