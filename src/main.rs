@@ -66,7 +66,13 @@ async fn main() {
     let nm = NetworkManager::new();
     let mut access_points: Vec<AccessPoint> = vec![];
 
-    let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new()));
+    let session = bluer::Session::new().await.unwrap();
+    let adapter = Arc::new(session.default_adapter().await.unwrap());
+    println!("Using Bluetooth adapter: {}", adapter.name());
+    // Ensure the adapter is powered on
+    adapter.set_powered(true).await.unwrap();
+
+    let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new(&adapter).await.unwrap()));
 
     // create necessary directories
     if let Err(e) = create_dirs() {
@@ -159,7 +165,7 @@ async fn main() {
     // listen for commands from pico8 process
     loop {
         // check if pico8 process has exited
-        if let Ok(status) = pico8_process.wait().await {
+        if let Some(status) = pico8_process.try_wait().unwrap() {
             info!("pico8 process exited with status {status}");
             break;
         }
@@ -197,18 +203,18 @@ async fn main() {
                     .spawn()
                     .unwrap();
 
-                pico8_to_bg(&pico8_process, child);
+                pico8_to_bg(&pico8_process, child).await;
             },
             "spawn_pico8" => {
-                let mut child = launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR]).unwrap();
+                let child = launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR]).unwrap();
 
-                pico8_to_bg(&pico8_process, child);
+                pico8_to_bg(&pico8_process, child).await;
             },
             "spawn_splore" => {
-                let mut child =
+                let child =
                     launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR, "-splore"]).unwrap();
 
-                pico8_to_bg(&pico8_process, child);
+                pico8_to_bg(&pico8_process, child).await;
             },
             "spawnp" => {
                 // execute a pico8 cart as an external process
@@ -225,7 +231,7 @@ async fn main() {
                     .spawn()
                     .unwrap();
 
-                pico8_to_bg(&pico8_process, child);
+                pico8_to_bg(&pico8_process, child).await;
             },
             "ls_exe" => {
                 // fetch all exe that are registered
@@ -391,15 +397,33 @@ async fn main() {
                 drop(in_pipe);
             },
             "bt_start" => {
-                let _ = update_connected_devices(bt_status.clone()).await;
-                let _ = discover_devices(bt_status.clone()).await;
+                println!("HELLO");
+                let _ = update_connected_devices(bt_status.clone(), adapter.clone()).await;
+                tokio::spawn({
+                    let bt_status = bt_status.clone();
+                    let adapter = adapter.clone();
+                    async move {
+                        discover_devices(bt_status.clone(), adapter).await.unwrap();
+                    }
+                });
             },
             "bt_stop" => {
                 let mut bt_status_guard = bt_status.lock().await;
                 bt_status_guard.stop();
             },
 
-            "bt_status" => {},
+            "bt_status" => {
+                let mut bt_status_guard = bt_status.lock().await;
+
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(
+                    in_pipe,
+                    "{}",
+                    bt_status_guard.get_status_table(&adapter).await.unwrap()
+                )
+                .expect("failed to write to pipe");
+                drop(in_pipe);
+            },
             "bt_connect" => {},
             "bt_disconnect" => {},
 
