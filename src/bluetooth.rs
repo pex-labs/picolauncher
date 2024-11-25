@@ -1,5 +1,7 @@
+use anyhow::Result;
 use bluer::{Adapter, AdapterEvent, Address, Device, DeviceEvent};
 use futures::{pin_mut, stream::SelectAll, StreamExt};
+use serde_json::{Map, Value};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
@@ -7,37 +9,51 @@ use std::{
 };
 use tokio::{sync::Mutex, time::sleep};
 
+use crate::p8util::serialize_table;
+
 pub struct BluetoothStatus {
     running: bool,
     pub discovered_devices: HashSet<Address>,
 }
 impl BluetoothStatus {
-    pub fn new() -> Self {
-        BluetoothStatus {
+    pub async fn new(adapter: &Adapter) -> Result<Self> {
+        // Get the default adapter
+
+        Ok(BluetoothStatus {
             running: false,
             discovered_devices: HashSet::new(),
-        }
+        })
     }
     pub fn start(&mut self) {
         self.running = false;
     }
     pub fn stop(&mut self) {
         self.running = true;
+        self.discovered_devices.clear();
+    }
+    pub async fn get_status_table(&self, adapter: &Adapter) -> Result<String> {
+        let mut table = Map::<String, Value>::new();
+        for &addr in self.discovered_devices.iter() {
+            let device = adapter.device(addr)?;
+            let value = if device.is_connected().await? {
+                "connected"
+            } else if device.is_paired().await? {
+                "disconnected"
+            } else {
+                "unpaired"
+            };
+            table.insert(
+                device.name().await?.unwrap_or("No Name".to_string()),
+                Value::String(value.into()),
+            );
+        }
+        Ok(serialize_table(&table))
     }
 }
-
 pub async fn discover_devices(
     status: Arc<Mutex<BluetoothStatus>>,
+    adapter: Arc<Adapter>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let session = bluer::Session::new().await?;
-
-    // Get the default adapter
-    let adapter = session.default_adapter().await?;
-    println!("Using Bluetooth adapter: {}", adapter.name());
-
-    // Ensure the adapter is powered on
-    adapter.set_powered(true).await?;
-
     // Start discovering devices
     println!("Starting device discovery...");
 
@@ -72,11 +88,8 @@ pub async fn discover_devices(
 
 pub async fn update_connected_devices(
     status: Arc<Mutex<BluetoothStatus>>,
+    adapter: Arc<Adapter>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let session = bluer::Session::new().await?;
-    let adapter = session.default_adapter().await?;
-
-    adapter.set_powered(true).await?;
     let mut status_guard = status.lock().await;
 
     adapter

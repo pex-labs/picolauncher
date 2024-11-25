@@ -29,6 +29,8 @@ local main_menu = menu_new({
     label = "bluetooth",
     func = function()
         current_screen = "bluetooth"
+        request_loadable("bt_start")
+
     end
   },
   {label="controls",func=function()current_screen="controls"end}
@@ -166,6 +168,11 @@ function _init()
   new_loadable('bt_status', function(resp)
     serial_debug('resp'..tostring(resp))
   end, 1)
+
+  new_loadable('bt_start', function(resp)
+    serial_debug('resp'..tostring(resp))
+  end, 1)
+
 
 
   request_loadable('wifi_status')
