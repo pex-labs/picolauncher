@@ -2,6 +2,7 @@
 .DS_Store
 *.swp
 *.~undo-tree~
+*.sqlite
 drive/config.txt
 drive/activity_log.txt
 drive/backup/

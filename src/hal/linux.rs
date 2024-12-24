@@ -3,7 +3,6 @@ use std::{
     path::{Path, PathBuf},
     time::Duration,
 };
-use tokio::process::{Child, Command};
 
 use anyhow::anyhow;
 use event::CreateKind;
@@ -13,6 +12,7 @@ use nix::{
     unistd::Pid,
 };
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
+use tokio::process::{Child, Command};
 
 use crate::{
     consts::*,
