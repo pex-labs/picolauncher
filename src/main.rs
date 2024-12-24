@@ -13,6 +13,7 @@ use std::{
 };
 
 use anyhow::anyhow;
+use db::DB;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use log::{debug, error, info, warn};
@@ -21,10 +22,9 @@ use network_manager::{
 };
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
-use picolauncher::{bbs::*, bluetooth::*, consts::*, exe::ExeMeta, hal::*, p8util::*};
+use picolauncher::{bbs::*, bluetooth::*, consts::*, db, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::{Map, Value};
-use tokio::sync::Mutex;
-use tokio::{process::Command, runtime::Runtime};
+use tokio::{process::Command, runtime::Runtime, sync::Mutex};
 
 fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(EXE_DIR.as_path())?;
@@ -161,6 +161,14 @@ async fn main() {
     // cart stack
     let mut cartstack = Vec::<String>::new();
     cartstack.push(init_cart.into());
+
+    // connect to database
+    let mut db = DB::connect(db::DB_PATH).expect("unable to establish connection with database");
+    debug!("established connection to sqlite database");
+
+    db.add_favorite("advent2024-27.p8")
+        .expect("failed to add to fav");
+    db.get_favorites().expect("failed to get fav");
 
     // listen for commands from pico8 process
     loop {

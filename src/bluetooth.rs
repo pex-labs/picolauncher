@@ -1,12 +1,13 @@
-use anyhow::Result;
-use bluer::{Adapter, AdapterEvent, Address, Device, DeviceEvent};
-use futures::{pin_mut, stream::SelectAll, StreamExt};
-use serde_json::{Map, Value};
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
     time::Duration,
 };
+
+use anyhow::Result;
+use bluer::{Adapter, AdapterEvent, Address, Device, DeviceEvent};
+use futures::{pin_mut, stream::SelectAll, StreamExt};
+use serde_json::{Map, Value};
 use tokio::{sync::Mutex, time::sleep};
 
 use crate::p8util::serialize_table;
