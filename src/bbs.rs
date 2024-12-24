@@ -16,39 +16,10 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::p8util::serialize_table;
+use crate::{db::Cart, p8util::serialize_table};
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct CartData {
-    pub title: String,
-    pub author: String,
-    pub likes: u32,
-    pub tags: Vec<String>,
-    pub lid: String,
-    pub download_url: String,
-    pub description: String,
-    pub thumb_url: String,
-    pub filename: String,
-}
-
-impl CartData {
-    pub fn to_lua_table(&self) -> String {
-        let mut prop_map = Map::<String, Value>::new();
-        prop_map.insert("title".into(), Value::String(self.title.clone()));
-        prop_map.insert("author".into(), Value::String(self.author.clone()));
-        prop_map.insert(
-            "cart_download_url".into(),
-            Value::String(self.download_url.clone()),
-        );
-        prop_map.insert("tags".into(), Value::String(self.tags.join(",")));
-        prop_map.insert("filename".into(), Value::String(self.filename.clone()));
-
-        serialize_table(&prop_map)
-    }
 }
 
 /// Subsection of BBS
@@ -84,7 +55,7 @@ impl ToString for OrderBy {
 }
 
 /// Scrape a given cartridge page
-pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
+pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<Cart> {
     // Fetch the cartridge page
     let cart_page = client.get(cart_url).send().await?.text().await?;
 
@@ -114,14 +85,15 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
         .next()
         .map(|e| e.inner_html())
         .unwrap_or_else(|| "0".to_string());
-    let likes = likes_text.trim().parse::<u32>().unwrap_or(0);
+    let likes = likes_text.trim().parse::<i32>().unwrap_or(0);
 
     //  tags
     let tags_selector = Selector::parse("a[href^=\"?mode=carts&tag=\"]").unwrap();
     let tags = document
         .select(&tags_selector)
         .map(|e| e.inner_html())
-        .collect::<Vec<_>>();
+        .collect::<Vec<_>>()
+        .join(",");
 
     //  LID (label id)
     let lid_selector = Selector::parse("img.cart").unwrap();
@@ -180,7 +152,7 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
     let mut split = filename.splitn(2, ".");
     let filestem = split.next().unwrap();
 
-    Ok(CartData {
+    Ok(Cart {
         title,
         author,
         likes,
@@ -190,6 +162,7 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<CartData> {
         description,
         thumb_url,
         filename: filestem.to_string(),
+        favorite: false,
     })
 }
 
@@ -228,7 +201,7 @@ pub fn build_bbs_url(
     url
 }
 
-pub async fn crawl_bbs(tab: Arc<Tab>, url: &str) -> Result<Vec<CartData>> {
+pub async fn crawl_bbs(tab: Arc<Tab>, url: &str) -> Result<Vec<Cart>> {
     let browser_context_id = tab.get_browser_context_id().unwrap();
     debug!("browser context id for tab: {:?}", browser_context_id);
 

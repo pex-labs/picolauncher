@@ -21,7 +21,9 @@ cart_options=menu_new({
   {label='play',func=function()
     make_transition_tween(carts:cur())
   end},
-  {label='favourite',func=function()sfx(1)end},
+  {label='favorite',func=function()
+    sfx(1)end
+  },
   {label='download',func=function()sfx(1)end},
   {label='save music',func=function()sfx(1)end},
   {label='similar carts',func=function()sfx(1)end},

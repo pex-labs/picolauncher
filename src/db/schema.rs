@@ -1,22 +1,54 @@
 use diesel::prelude::*;
+use serde::{Deserialize, Serialize};
+use serde_json::{Map, Value};
+
+use crate::p8util::serialize_table;
 
 diesel::table! {
-    favorites(id) {
-        id -> Integer,
+    carts(id) {
+        id -> Text,
+        title -> Text,
+        author -> Text,
+        likes -> Integer,
+        tags -> Text,
+        lid -> Text,
+        download_url -> Text,
+        description -> Text,
+        thumb_url -> Text,
         filename -> Text,
+        favorite -> Bool,
     }
 }
 
-#[derive(Queryable, Selectable, Debug)]
-#[diesel(table_name = favorites)]
+#[derive(Debug, Serialize, Deserialize, Clone, Queryable, Selectable)]
+#[diesel(table_name = carts)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
-pub struct Favorite {
-    pub id: i32,
+pub struct Cart {
+    pub title: String,
+    pub author: String,
+    pub likes: i32,
+    pub tags: String,
+    pub lid: String,
+    pub download_url: String,
+    pub description: String,
+    pub thumb_url: String,
     pub filename: String,
+
+    pub favorite: bool,
 }
 
-#[derive(Insertable)]
-#[diesel(table_name = favorites)]
-pub struct NewFavorite<'a> {
-    pub filename: &'a str,
+impl Cart {
+    pub fn to_lua_table(&self) -> String {
+        let mut prop_map = Map::<String, Value>::new();
+        prop_map.insert("title".into(), Value::String(self.title.clone()));
+        prop_map.insert("author".into(), Value::String(self.author.clone()));
+        prop_map.insert(
+            "cart_download_url".into(),
+            Value::String(self.download_url.clone()),
+        );
+        prop_map.insert("tags".into(), Value::String(self.tags.clone()));
+        prop_map.insert("filename".into(), Value::String(self.filename.clone()));
+
+        serialize_table(&prop_map)
+    }
 }

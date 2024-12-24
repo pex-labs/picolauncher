@@ -24,7 +24,10 @@ cart_options=menu_new({
   {label='play',func=function()
     make_transition_tween(carts:cur())
   end},
-  {label='favourite',func=function()sfx(1)end},
+  {label='favorite',func=function()
+    sfx(1)
+    request_loadable('add_favorite', {"placeholder"})
+  end},
   {label='download',func=function()sfx(1)end},
   {label='save music',func=function()sfx(1)end},
   {label='similar carts',func=function()sfx(1)end},
@@ -235,6 +238,7 @@ function _init()
 
   carts=build_new_cart_menu({})
   
+  -- loadables
   new_loadable('bbs', function(resp)
     printh('bbs_load response '..tostring(resp))
     local split_carts=split(resp, ',', false)
@@ -246,6 +250,10 @@ function _init()
     carts:set_index(old_index) -- set the correct position of the menu
     load_label(carts:cur(), 0)
   end, 1) 
+
+  new_loadable('add_favorite', function(resp)
+    printh('response from add_favorite')
+  end, 1)
 
   cart_tween_bobble()
 

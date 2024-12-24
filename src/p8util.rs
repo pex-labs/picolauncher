@@ -70,11 +70,11 @@ impl Section {
 }
 
 // TODO super stupid impl currently, each section is just represented by the entire string
-pub struct Cart {
+pub struct CartFile {
     pub sections: HashMap<SectionName, Section>,
 }
 
-impl Cart {
+impl CartFile {
     pub fn new() -> Self {
         Self {
             sections: HashMap::new(),
@@ -92,8 +92,8 @@ impl Cart {
     }
 
     // Parse a cart file into memory
-    pub fn from_file(cart_path: &Path) -> anyhow::Result<Cart> {
-        let mut new_cart = Cart::new();
+    pub fn from_file(cart_path: &Path) -> anyhow::Result<CartFile> {
+        let mut new_cart = CartFile::new();
 
         let file = File::open(cart_path)?;
 
@@ -146,14 +146,14 @@ impl Cart {
 }
 
 // convert a screenshot png of size 128x128 to a cartridge
-pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<Cart> {
+pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<CartFile> {
     let img = ImageReader::open(png_path)?.decode()?;
 
     if img.width() != 128 || img.height() != 128 {
         return Err(anyhow!("Only images of size 128x128 are supported"));
     }
 
-    let mut cart = Cart::new();
+    let mut cart = CartFile::new();
 
     for y in 0..img.height() {
         let mut spriteline = String::new();
@@ -195,13 +195,13 @@ fn is_power_of_two(x: u8) -> bool {
 
 // takes cart with 128x128 sprite in sprite section and downscales it as well as arranges in sfx
 // section
-pub fn format_label(cart: &mut Cart, size: u8) -> anyhow::Result<Cart> {
+pub fn format_label(cart: &mut CartFile, size: u8) -> anyhow::Result<CartFile> {
     // check that size is passed as power of 2
     if !is_power_of_two(size) && size <= 128 {
         return Err(anyhow!("size can only be a power of 2"));
     }
 
-    let mut new_cart = Cart::new();
+    let mut new_cart = CartFile::new();
     let gfx = cart.get_section(SectionName::Gfx);
     let new_gfx = new_cart.get_section_mut(SectionName::Gfx);
 
@@ -224,9 +224,9 @@ pub fn format_label(cart: &mut Cart, size: u8) -> anyhow::Result<Cart> {
 }
 
 // Convert a standard cartridge into a music cart (a cartridge that only contains music data)
-pub fn cart2music(cart_path: &Path) -> anyhow::Result<Cart> {
-    let mut cart = Cart::from_file(cart_path)?;
-    let mut new_cart = Cart::new();
+pub fn cart2music(cart_path: &Path) -> anyhow::Result<CartFile> {
+    let mut cart = CartFile::from_file(cart_path)?;
+    let mut new_cart = CartFile::new();
 
     // copy over sfx and music sections
     if let Some(sec_sfx) = cart.sections.remove(&SectionName::Sfx) {
@@ -244,9 +244,9 @@ pub fn cart2music(cart_path: &Path) -> anyhow::Result<Cart> {
     Ok(new_cart)
 }
 
-pub fn cart2label(cart_path: &Path) -> anyhow::Result<Cart> {
-    let mut cart = Cart::from_file(cart_path)?;
-    let mut new_cart = Cart::new();
+pub fn cart2label(cart_path: &Path) -> anyhow::Result<CartFile> {
+    let mut cart = CartFile::from_file(cart_path)?;
+    let mut new_cart = CartFile::new();
 
     // move label to gfx
     if let Some(sec_label) = cart.sections.remove(&SectionName::Label) {

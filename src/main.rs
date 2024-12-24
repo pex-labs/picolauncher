@@ -13,7 +13,6 @@ use std::{
 };
 
 use anyhow::anyhow;
-use db::DB;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use log::{debug, error, info, warn};
@@ -25,6 +24,8 @@ use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{bbs::*, bluetooth::*, consts::*, db, exe::ExeMeta, hal::*, p8util::*};
 use serde_json::{Map, Value};
 use tokio::{process::Command, runtime::Runtime, sync::Mutex};
+
+use crate::db::{Cart, DB};
 
 fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(EXE_DIR.as_path())?;
@@ -166,9 +167,9 @@ async fn main() {
     let mut db = DB::connect(db::DB_PATH).expect("unable to establish connection with database");
     debug!("established connection to sqlite database");
 
-    db.add_favorite("advent2024-27.p8")
-        .expect("failed to add to fav");
-    db.get_favorites().expect("failed to get fav");
+    // db.add_favorite("advent2024-27.p8")
+    //     .expect("failed to add to fav");
+    // db.get_favorites().expect("failed to get fav");
 
     // listen for commands from pico8 process
     loop {
@@ -262,7 +263,7 @@ async fn main() {
                         if entry.extension().unwrap() != "p8" {
                             continue;
                         }
-                        let Ok(mut cart) = Cart::from_file(&entry) else {
+                        let Ok(mut cart) = CartFile::from_file(&entry) else {
                             warn!("failed to read exe meta file {entry:?}");
                             continue;
                         };
@@ -432,9 +433,20 @@ async fn main() {
                 .expect("failed to write to pipe");
                 drop(in_pipe);
             },
+            "add_favorite" => {
+                let mut split = data.splitn(1, ",");
+                let filename = split.next().unwrap();
+
+                println!("add_favorite '{split:?}' '{filename:?}'");
+
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                writeln!(in_pipe, "",).expect("failed to write to pipe");
+                drop(in_pipe);
+            },
+            "del_favorite" => {},
+            "list_favorite" => {},
             "bt_connect" => {},
             "bt_disconnect" => {},
-
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -483,7 +495,7 @@ fn bbs_url_for_category(category: PexsploreCategory, page: u32) -> String {
 // TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
 async fn postprocess_cart(
     pico8_bins: &Vec<String>,
-    cart: &CartData,
+    cart: &Cart,
     path: &Path,
 ) -> anyhow::Result<()> {
     // TODO: since path.file_prefix is still unstable, we need to split on the first period
@@ -672,7 +684,7 @@ async fn impl_bbs(
     pico8_bins: &Vec<String>,
     query: PexsploreCategory,
     page: u32,
-) -> Vec<CartData> {
+) -> Vec<Cart> {
     let url = bbs_url_for_category(query, page);
     info!("querying {url}");
 
@@ -737,7 +749,7 @@ async fn impl_bbs(
 }
 
 // return the contents of the games dir
-fn impl_bbs_local() -> Vec<CartData> {
+fn impl_bbs_local() -> Vec<Cart> {
     let dir = &*GAMES_DIR; // TODO watch out for path traversal
     let mut carts = vec![];
     if let Ok(read_dir) = read_dir(dir) {
@@ -754,7 +766,7 @@ fn impl_bbs_local() -> Vec<CartData> {
                     warn!("failed to read {:?}", metapath);
                     continue;
                 };
-                let Ok(parsed_meta): Result<CartData, serde_json::Error> =
+                let Ok(parsed_meta): Result<Cart, serde_json::Error> =
                     serde_json::from_str(&content)
                 else {
                     warn!("failed to parse into CartData {:?}", metapath);

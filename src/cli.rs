@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use picolauncher::{bbs::CartData, consts::*, p8util};
+use picolauncher::{bbs::Cart, consts::*, p8util};
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -144,7 +144,7 @@ fn main() {
             println!("generated label {label_path:?}");
 
             // generate metadata file
-            let metadata = CartData {
+            let metadata = Cart {
                 title: name.clone().unwrap_or(cart_name.to_owned()),
                 filename: cart_name.to_owned(),
                 author: author.clone().unwrap_or_default(),
