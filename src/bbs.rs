@@ -20,6 +20,7 @@ use crate::{db::Cart, p8util::serialize_table};
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
+    static ref PID_RE: Regex = Regex::new(r#"pid=(\d+)"#).unwrap();
 }
 
 /// Subsection of BBS
@@ -152,7 +153,17 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<Cart> {
     let mut split = filename.splitn(2, ".");
     let filestem = split.next().unwrap();
 
+    // extract id from url
+    println!("{cart_url:?}");
+    let mut captures = PID_RE.captures(&cart_url).unwrap();
+    let id = captures
+        .get(1)
+        .ok_or(anyhow::anyhow!("could not find id in cart url"))?
+        .as_str();
+    let id = id.parse::<i32>()?;
+
     Ok(Cart {
+        id,
         title,
         author,
         likes,

@@ -6,7 +6,7 @@ use crate::p8util::serialize_table;
 
 diesel::table! {
     carts(id) {
-        id -> Text,
+        id -> Integer,
         title -> Text,
         author -> Text,
         likes -> Integer,
@@ -20,10 +20,11 @@ diesel::table! {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, Queryable, Selectable)]
+#[derive(Debug, Serialize, Deserialize, Clone, Queryable, Selectable, Insertable, AsChangeset)]
 #[diesel(table_name = carts)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Cart {
+    pub id: i32,
     pub title: String,
     pub author: String,
     pub likes: i32,

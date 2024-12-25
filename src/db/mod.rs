@@ -8,14 +8,6 @@ pub use schema::Cart;
 use schema::*;
 
 // TODO create initial db migration
-/*
-
-CREATE TABLE IF NOT EXISTS favorites (
-    id INTEGER PRIMARY KEY,
-    filename TEXT NOT NULL
-);
-
-*/
 
 pub static DB_PATH: &'static str = "./db.sqlite";
 
@@ -54,19 +46,48 @@ impl DB {
     }
     */
 
-    // TODO need to avoid sql injections LOL
-    pub fn insert_cart(&mut self, cart: &Cart) -> anyhow::Result<()> {
-        // diesel::insert_into(schema::carts::table)
-        //     .values(cart)
-        //     .returning(Cart::as_returning())
-        //     .execute(&mut self.conn)?;
+    pub fn migrate(&mut self) -> anyhow::Result<()> {
+        let sql = r#"
+            CREATE TABLE IF NOT EXISTS carts (
+                id TEXT PRIMARY KEY,
+                title TEXT NOT NULL,
+                author TEXT NOT NULL,
+                likes INTEGER NOT NULL,
+                tags TEXT NOT NULL,
+                lid TEXT NOT NULL,
+                download_url TEXT NOT NULL,
+                description TEXT NOT NULL,
+                thumb_url TEXT NOT NULL,
+                filename TEXT NOT NULL,
+                favorite BOOLEAN NOT NULL
+            );
+        "#;
+
+        diesel::sql_query(sql).execute(&mut self.conn)?;
 
         Ok(())
     }
 
-    pub fn get_carts() -> anyhow::Result<Vec<Cart>> {
-        let carts = vec![];
+    pub fn insert_cart(&mut self, cart: &Cart) -> anyhow::Result<()> {
+        diesel::insert_into(schema::carts::table)
+            .values(cart)
+            .on_conflict(crate::db::carts::id)
+            .do_update()
+            .set(cart)
+            .execute(&mut self.conn)?;
 
-        Ok(carts)
+        Ok(())
+    }
+    // TODO need to avoid sql injections LOL
+    pub fn insert_carts(&mut self, carts: &Vec<Cart>) -> anyhow::Result<()> {
+        diesel::insert_into(schema::carts::table)
+            .values(carts)
+            .execute(&mut self.conn)?;
+
+        Ok(())
+    }
+
+    pub fn get_conn(&mut self) -> &mut SqliteConnection {
+        &mut self.conn
     }
 }

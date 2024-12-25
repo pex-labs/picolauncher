@@ -166,6 +166,7 @@ async fn main() {
     // connect to database
     let mut db = DB::connect(db::DB_PATH).expect("unable to establish connection with database");
     debug!("established connection to sqlite database");
+    db.migrate().expect("failed migrating database");
 
     // db.add_favorite("advent2024-27.p8")
     //     .expect("failed to add to fav");
@@ -306,7 +307,7 @@ async fn main() {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
-                    impl_bbs(&tab, &pico8_bins, query, page).await
+                    impl_bbs(&mut db, &tab, &pico8_bins, query, page).await
                 };
 
                 let cartdatas = cartdatas
@@ -494,6 +495,7 @@ fn bbs_url_for_category(category: PexsploreCategory, page: u32) -> String {
 
 // TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
 async fn postprocess_cart(
+    db: &mut DB,
     pico8_bins: &Vec<String>,
     cart: &Cart,
     path: &Path,
@@ -528,6 +530,7 @@ async fn postprocess_cart(
     }
 
     // generate metadata file
+    /*
     let mut metadata_path = METADATA_DIR.clone().join(filestem);
     metadata_path.set_extension("json");
     if !metadata_path.exists() {
@@ -538,6 +541,11 @@ async fn postprocess_cart(
             .write_all(metadata_serialized.as_bytes())
             .unwrap();
     }
+    */
+
+    // save metadata to db
+    // TODO might be nicer to do batch insert instead of single query per cart?
+    db.insert_cart(cart)?;
 
     Ok(())
 }
@@ -680,6 +688,7 @@ fn find_device(manager: &NetworkManager) -> anyhow::Result<Device> {
 }
 
 async fn impl_bbs(
+    db: &mut DB,
     tab: &Arc<Tab>,
     pico8_bins: &Vec<String>,
     query: PexsploreCategory,
@@ -739,7 +748,7 @@ async fn impl_bbs(
         // Download if we don't have a copy of it in our games dir
         let path = BBS_CART_DIR.join(filename);
 
-        if let Err(e) = postprocess_cart(&pico8_bins, &cart, &path).await {
+        if let Err(e) = postprocess_cart(db, &pico8_bins, &cart, &path).await {
             warn!("failed to postprocess cart {e:?}");
             continue;
         }
