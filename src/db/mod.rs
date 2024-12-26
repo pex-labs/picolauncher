@@ -97,4 +97,15 @@ impl DB {
 
         Ok(is_favorite)
     }
+
+    pub fn get_favorites(&mut self, limit: i64) -> anyhow::Result<Vec<Cart>> {
+        use crate::db::carts::{dsl::*, favorite, id};
+
+        let res = carts
+            .filter(favorite.eq(true))
+            .limit(limit)
+            .load::<Cart>(&mut self.conn)?;
+
+        Ok(res)
+    }
 }

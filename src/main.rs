@@ -300,10 +300,13 @@ async fn main() {
                 let query = split.next().unwrap_or_default();
                 info!("bbs command {page}, {query}");
 
-                // special case, return local files
                 // TODO don't need to fetch new carts every time
                 let remote_cartdatas = if query == "local" {
+                    // special case, return local files
                     impl_bbs_local()
+                } else if query == "favorite" {
+                    // special case, return favorite carts
+                    db.get_favorites(20).unwrap()
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
