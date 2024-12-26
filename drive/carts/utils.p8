@@ -46,6 +46,16 @@ function tostring(any)
     return "unkown" -- should never show
 end
 
+function tobool(str)
+  if str == 'true' then
+    return true
+  elseif str =='false' then
+    return false
+  else
+    return nil
+  end
+end
+
 -- check if a string ends with given suffix
 function ends_with(str, suffix)
   return sub(str, -#suffix) == suffix

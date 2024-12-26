@@ -25,8 +25,10 @@ cart_options=menu_new({
     make_transition_tween(carts:cur())
   end},
   {label='favorite',func=function()
-    sfx(1)
-    request_loadable('add_favorite', {"placeholder"})
+    sfx(3)
+    -- TODO get currently selected cart
+    local is_favorite = not carts:cur().favorite
+    request_loadable('set_favorite', {carts:cur().id, is_favorite})
   end},
   {label='download',func=function()sfx(1)end},
   {label='save music',func=function()sfx(1)end},
@@ -244,6 +246,13 @@ function _init()
     local split_carts=split(resp, ',', false)
     for k, v in pairs(split_carts) do
       split_carts[k]=table_from_string(v)
+
+      -- parse into bool
+      if split_carts[k].favorite == 'true' then
+        split_carts[k].favorite = true
+      else
+        split_carts[k].favorite = false
+      end
     end
     local old_index = carts:index()
     carts=build_new_cart_menu(split_carts)
@@ -251,8 +260,17 @@ function _init()
     load_label(carts:cur(), 0)
   end, 1) 
 
-  new_loadable('add_favorite', function(resp)
-    printh('response from add_favorite')
+  new_loadable('set_favorite', function(resp)
+    local split_resp=split(resp, ',', true)
+    local cart_id=split_resp[1]
+    local is_favorite=tobool(split_resp[2])
+    printh('response from set_favorite '..tostring(cart_id)..' '..tostring(is_favorite))
+
+    -- TODO probably not safe to use cur_cart, since it could have changed
+    carts:cur().favorite = is_favorite
+
+    printh('favorite is now '..tostring(carts:cur().favorite))
+
   end, 1)
 
   cart_tween_bobble()
@@ -423,7 +441,19 @@ function draw_carts_menu()
       c=6
       x_off=2
     end
-    print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
+
+    if menuitem.label == "favorite" then
+      -- special case for favorite
+      if carts:cur().favorite then
+        c=8
+      else
+        c=7
+      end
+
+      print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
+    else
+      print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
+    end
   end
 
 end

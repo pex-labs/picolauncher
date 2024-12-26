@@ -21,31 +21,6 @@ impl DB {
         Ok(DB { conn })
     }
 
-    /*
-    pub fn add_favorite(&mut self, filename: &str) -> anyhow::Result<()> {
-        diesel::insert_into(schema::favorites::table)
-            .values(&NewFavorite { filename })
-            .returning(Favorite::as_returning())
-            .execute(&mut self.conn)?;
-
-        Ok(())
-    }
-
-    pub fn del_favorite(&mut self, filename: &str) -> anyhow::Result<()> {
-        Ok(())
-    }
-
-    pub fn get_favorites(&mut self) -> anyhow::Result<()> {
-        let favorites = favorites::dsl::favorites
-            .select(Favorite::as_select())
-            .load(&mut self.conn)?;
-
-        println!("results {favorites:?}");
-
-        Ok(())
-    }
-    */
-
     pub fn migrate(&mut self) -> anyhow::Result<()> {
         let sql = r#"
             CREATE TABLE IF NOT EXISTS carts (
@@ -69,9 +44,11 @@ impl DB {
     }
 
     pub fn insert_cart(&mut self, cart: &Cart) -> anyhow::Result<()> {
-        diesel::insert_into(schema::carts::table)
+        use crate::db::carts::{dsl::*, id};
+
+        diesel::insert_into(carts)
             .values(cart)
-            .on_conflict(crate::db::carts::id)
+            .on_conflict(id)
             .do_update()
             .set(cart)
             .execute(&mut self.conn)?;
@@ -79,9 +56,11 @@ impl DB {
         Ok(())
     }
     // TODO need to avoid sql injections LOL
-    pub fn insert_carts(&mut self, carts: &Vec<Cart>) -> anyhow::Result<()> {
-        diesel::insert_into(schema::carts::table)
-            .values(carts)
+    pub fn insert_carts(&mut self, new_carts: &Vec<Cart>) -> anyhow::Result<()> {
+        use crate::db::carts::dsl::*;
+
+        diesel::insert_into(carts)
+            .values(new_carts)
             .execute(&mut self.conn)?;
 
         Ok(())
@@ -89,5 +68,15 @@ impl DB {
 
     pub fn get_conn(&mut self) -> &mut SqliteConnection {
         &mut self.conn
+    }
+
+    pub fn set_favorite(&mut self, cart_id: i32, is_favorite: bool) -> anyhow::Result<bool> {
+        use crate::db::carts::{dsl::*, id};
+
+        diesel::update(carts.filter(id.eq(cart_id)))
+            .set(favorite.eq(is_favorite))
+            .execute(&mut self.conn)?;
+
+        Ok(is_favorite)
     }
 }

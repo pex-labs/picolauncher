@@ -434,17 +434,18 @@ async fn main() {
                 .expect("failed to write to pipe");
                 drop(in_pipe);
             },
-            "add_favorite" => {
-                let mut split = data.splitn(1, ",");
-                let filename = split.next().unwrap();
+            "set_favorite" => {
+                let mut split = data.splitn(2, ",");
+                let cart_id = split.next().unwrap().parse::<i32>().unwrap();
+                let is_favorite = split.next().unwrap().parse::<bool>().unwrap();
 
-                println!("add_favorite '{split:?}' '{filename:?}'");
+                // TODO better error handling
+                db.set_favorite(cart_id, is_favorite).unwrap();
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "",).expect("failed to write to pipe");
+                writeln!(in_pipe, "{cart_id},{is_favorite}").expect("failed to write to pipe");
                 drop(in_pipe);
             },
-            "del_favorite" => {},
             "list_favorite" => {},
             "bt_connect" => {},
             "bt_disconnect" => {},

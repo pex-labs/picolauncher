@@ -41,6 +41,7 @@ pub struct Cart {
 impl Cart {
     pub fn to_lua_table(&self) -> String {
         let mut prop_map = Map::<String, Value>::new();
+        prop_map.insert("id".into(), Value::String(self.id.to_string()));
         prop_map.insert("title".into(), Value::String(self.title.clone()));
         prop_map.insert("author".into(), Value::String(self.author.clone()));
         prop_map.insert(
@@ -49,6 +50,7 @@ impl Cart {
         );
         prop_map.insert("tags".into(), Value::String(self.tags.clone()));
         prop_map.insert("filename".into(), Value::String(self.filename.clone()));
+        prop_map.insert("favorite".into(), Value::String(self.favorite.to_string()));
 
         serialize_table(&prop_map)
     }
