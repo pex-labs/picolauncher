@@ -4,6 +4,8 @@ use serde_json::{Map, Value};
 
 use crate::p8util::serialize_table;
 
+pub type CartId = i32;
+
 diesel::table! {
     carts(id) {
         id -> Integer,
@@ -24,7 +26,7 @@ diesel::table! {
 #[diesel(table_name = carts)]
 #[diesel(check_for_backend(diesel::sqlite::Sqlite))]
 pub struct Cart {
-    pub id: i32,
+    pub id: CartId,
     pub title: String,
     pub author: String,
     pub likes: i32,

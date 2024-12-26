@@ -301,7 +301,8 @@ async fn main() {
                 info!("bbs command {page}, {query}");
 
                 // special case, return local files
-                let cartdatas = if query == "local" {
+                // TODO don't need to fetch new carts every time
+                let remote_cartdatas = if query == "local" {
                     impl_bbs_local()
                 } else {
                     let query = query
@@ -310,12 +311,20 @@ async fn main() {
                     impl_bbs(&mut db, &tab, &pico8_bins, query, page).await
                 };
 
-                let cartdatas = cartdatas
+                // fetch desired cartdatas from db
+                let cart_ids = remote_cartdatas
+                    .iter()
+                    .map(|cart| cart.id)
+                    .collect::<Vec<_>>();
+                let cartdatas = db.get_carts_by_ids(cart_ids).unwrap();
+
+                let cartdatas_encoded = cartdatas
                     .iter()
                     .map(|cart| {
                         // TODO this is weird code
                         let mut cart = cart.clone();
                         // make all cart names uppercase (either this or invert the case)
+                        // TODO maybe can just do this when saving to db?
                         cart.title = cart.title.to_ascii_lowercase();
                         cart.author = cart.author.to_ascii_lowercase();
                         cart.to_lua_table()
@@ -324,7 +333,7 @@ async fn main() {
                     .join(",");
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", cartdatas).expect("failed to write to pipe");
+                writeln!(in_pipe, "{}", cartdatas_encoded).expect("failed to write to pipe");
                 drop(in_pipe);
             },
             "download" => {

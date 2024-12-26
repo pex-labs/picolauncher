@@ -447,7 +447,7 @@ function draw_carts_menu()
       if carts:cur().favorite then
         c=8
       else
-        c=7
+        c=6
       end
 
       print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)

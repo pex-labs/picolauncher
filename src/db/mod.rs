@@ -46,12 +46,20 @@ impl DB {
     pub fn insert_cart(&mut self, cart: &Cart) -> anyhow::Result<()> {
         use crate::db::carts::{dsl::*, id};
 
+        // TODO currently doing a no-op if id already exists, but technically could update some
+        // fields
+        diesel::insert_or_ignore_into(carts)
+            .values(cart)
+            .execute(&mut self.conn)?;
+
+        /*
         diesel::insert_into(carts)
             .values(cart)
             .on_conflict(id)
             .do_update()
             .set(cart)
             .execute(&mut self.conn)?;
+        */
 
         Ok(())
     }
@@ -64,6 +72,16 @@ impl DB {
             .execute(&mut self.conn)?;
 
         Ok(())
+    }
+
+    pub fn get_carts_by_ids(&mut self, cart_ids: Vec<CartId>) -> anyhow::Result<Vec<Cart>> {
+        use crate::db::carts::{dsl::*, id};
+
+        let res = carts
+            .filter(id.eq_any(cart_ids))
+            .load::<Cart>(&mut self.conn)?;
+
+        Ok(res)
     }
 
     pub fn get_conn(&mut self) -> &mut SqliteConnection {
