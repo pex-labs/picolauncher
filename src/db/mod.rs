@@ -1,11 +1,10 @@
-mod schema;
+pub mod schema;
 
 use std::path::Path;
 
 use anyhow;
 use diesel::prelude::*;
-pub use schema::Cart;
-use schema::*;
+pub use schema::*;
 
 // TODO create initial db migration
 
@@ -80,6 +79,14 @@ impl DB {
         let res = carts
             .filter(id.eq_any(cart_ids))
             .load::<Cart>(&mut self.conn)?;
+
+        Ok(res)
+    }
+
+    pub fn get_cart_by_id(&mut self, cart_id: CartId) -> anyhow::Result<Cart> {
+        use crate::db::carts::{dsl::*, id};
+
+        let res = carts.filter(id.eq(cart_id)).first::<Cart>(&mut self.conn)?;
 
         Ok(res)
     }

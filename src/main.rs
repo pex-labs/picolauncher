@@ -21,11 +21,19 @@ use network_manager::{
 };
 use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
-use picolauncher::{bbs::*, bluetooth::*, consts::*, db, exe::ExeMeta, hal::*, p8util::*};
+use picolauncher::{
+    bbs::*,
+    bluetooth::*,
+    consts::*,
+    db,
+    exe::ExeMeta,
+    hal::*,
+    p8util::{self, *},
+};
 use serde_json::{Map, Value};
 use tokio::{process::Command, runtime::Runtime, sync::Mutex};
 
-use crate::db::{Cart, DB};
+use crate::db::{schema::CartId, Cart, DB};
 
 fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(EXE_DIR.as_path())?;
@@ -461,6 +469,14 @@ async fn main() {
             "list_favorite" => {},
             "bt_connect" => {},
             "bt_disconnect" => {},
+            "download_music" => {
+                let cart_id = data.parse::<i32>().unwrap();
+                let res = impl_download_music(&mut db, cart_id).await;
+                if let Err(ref e) = res {
+                    warn!("download_music failed {e:?}");
+                }
+                write_to_pico8(format!("{}", res.is_ok())).await;
+            },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -801,4 +817,41 @@ fn impl_bbs_local() -> Vec<Cart> {
     }
     // TODO check efficiency for lots of files
     carts
+}
+
+async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()> {
+    // TODO can also just supply the cartname directly
+    // find the name of the cart (using id)
+    let cart = db.get_cart_by_id(cart_id)?;
+
+    // obtain path of cart in filesystem
+    let mut cart_path = GAMES_DIR.join(&cart.filename);
+    cart_path.set_extension("p8");
+
+    // try to download the cart if it isnt already
+    if !cart_path.exists() {
+        // TODO
+        debug!("cart {cart_path:?} does not exist, attempting to download");
+        let client = reqwest::Client::new();
+        let path = BBS_CART_DIR.join(&cart.filename);
+        download_cart(client, cart.download_url.clone(), &path).await?;
+        debug!("successfully downloaded cart cart: {cart_path:?}");
+    }
+
+    // convert cart to music file
+    let music_cart = p8util::cart2music(&cart_path)?;
+
+    // write music cart file to filesystem
+    let mut music_path = MUSIC_DIR.join(&cart.filename);
+    music_path.set_extension("p8");
+    let mut music_file = File::create(music_path.clone())?;
+    music_cart.write(&mut music_file)?;
+
+    Ok(())
+}
+
+async fn write_to_pico8(msg: String) {
+    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
+    drop(in_pipe);
 }

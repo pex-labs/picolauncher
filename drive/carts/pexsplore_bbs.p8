@@ -26,12 +26,16 @@ cart_options=menu_new({
   end},
   {label='favorite',func=function()
     sfx(3)
-    -- TODO get currently selected cart
     local is_favorite = not carts:cur().favorite
     request_loadable('set_favorite', {carts:cur().id, is_favorite})
   end},
   {label='download',func=function()sfx(1)end},
-  {label='save music',func=function()sfx(1)end},
+  {label='save music',func=function()
+    sfx(3)
+    -- TODO check if music is already downloaded
+
+    request_loadable('download_music', {carts:cur().id})
+  end},
   {label='similar carts',func=function()sfx(1)end},
   {label='back',func=function()
     sfx(3)
@@ -271,6 +275,10 @@ function _init()
 
     printh('favorite is now '..tostring(carts:cur().favorite))
 
+  end, 1)
+
+  new_loadable('download_music', function(resp)
+    printh('response from download_music '..resp)
   end, 1)
 
   cart_tween_bobble()
