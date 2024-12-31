@@ -16,6 +16,7 @@ end
 
 -- TODO should move each category into some sort of enum that can be shared with pesplore_bbs.p8
 categories=menu_new({
+    {label='search',cmd=function()end},
     {label='featured',c1=12,c2=0,icon=1,cmd=pexsplore_category('featured')},
     {label='platformer',c1=9,c2=0,icon=2,cmd=pexsplore_category('platformer')},
     {label='new',c1=11,c2=0,icon=3,cmd=pexsplore_category('new')},
@@ -58,17 +59,27 @@ function _update60()
   tween_machine:update()
   camera(0, cam_y) 
 
-  local menu1_w = 3
-  local menu1_h = 3
-  if 1 <= categories:index() and categories:index() <= 7 then
-    local cur_index = categories:index()
-    if btnp(0) then
+  if btnp(0) then
+    sfx(0)
+    categories:up()
+  elseif btnp(1) then
+    sfx(0)
+    categories:down()
+  end
+
+  if categories:index() == 1 then
+    if btnp(2) then
       sfx(0)
       categories:up()
-    elseif btnp(1) then
-      sfx(0)
+    elseif btnp(3) then
+      sfx(3)
       categories:down()
-    elseif btnp(2) then
+    end
+  elseif 2 <= categories:index() and categories:index() <= 8 then
+    local menu1_w = 3
+    local menu1_h = 3
+    local cur_index = categories:index()
+    if btnp(2) then
       sfx(0)
       categories:set_index(cur_index-menu1_w)
     elseif btnp(3) then
@@ -86,15 +97,35 @@ end
 
 function _draw()
   cls(1)
-  rectfill(0, 0, 128, 26, 12)
+  rectfill(0, 0, 128, 8, 12)
   -- TODO scale text
   -- https://www.lexaloffle.com/bbs/?tid=29612
-  print('PEXsplore', 86, 20, 7)
+  print('PEXsplore', 86, 2, 7)
 
   -- categories section
   print('categories', 8, 30, 6)
   line(8, 36, 120, 36, 6)
 
+  -- draw search bar
+  search_x = 8
+  search_y = 15
+  search_h = 10
+  local search_c = 6
+  if categories:index() == 1 then
+    search_c = 7
+  end
+  line(search_x+1, search_y, 128-search_x-1, search_y, search_c)
+  line(search_x+1, search_y+search_h, 128-search_x-1, search_y+search_h, search_c)
+  rectfill(search_x, search_y+1, search_x+2, search_y+search_h-1, search_c)
+  rectfill(128-search_x-3, search_y+1, 128-search_x, search_y+search_h-1, search_c)
+  -- TODO replace with point?
+  line(search_x+3, search_y+1, search_x+3, search_y+1, search_c)
+  line(128-search_x-4, search_y+1, 128-search_x-4, search_y+1, search_c)
+  line(search_x+3, search_y+search_h-1, search_x+3, search_y+search_h-1, search_c)
+  line(128-search_x-4, search_y+search_h-1, 128-search_x-4, search_y+search_h-1, search_c)
+  print("search", search_x+6, search_y+3, search_c)
+
+  -- draw categories menu
   cat_x = 8
   cat_y = 40
   cat_w = 32
@@ -102,24 +133,25 @@ function _draw()
   cat_pad_x = 8
   cat_pad_y = 12
   for i, item in ipairs(categories.items) do
-    -- submenu only consists of 7 items
-    if i > 7 then break end
+    if 2 <= i and i <= 8 then
+      rel_i = i-1
 
-    x = (i-1) % 3
-    y = ((i-1)\3)
-    -- print(item.label .. ' ' .. x .. ' ' .. y)
-    if categories:index() == i then
-      c1=7
-      press_offset=2
-    else
-      c1=5
-      press_offset=0
+      x = (rel_i-1) % 3
+      y = ((rel_i-1)\3)
+      -- print(item.label .. ' ' .. x .. ' ' .. y)
+      if categories:index() == i then
+        c1=7
+        press_offset=2
+      else
+        c1=5
+        press_offset=0
+      end
+      rectfill(cat_x+x*(cat_w+cat_pad_x), cat_y+y*(cat_h+cat_pad_y)+cat_h+1, cat_x+x*(cat_w+cat_pad_x)+cat_w, cat_y+y*(cat_h+cat_pad_y)+cat_h+2, 0)
+      sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+cat_pad_x), cat_y+y*(cat_h+cat_pad_y)+press_offset)
+      rect(cat_x+x*(cat_w+cat_pad_x), cat_y+y*(cat_h+cat_pad_y)-1+press_offset, cat_x+x*(cat_w+cat_pad_x)+cat_w, cat_y+y*(cat_h+cat_pad_y)+cat_h+press_offset, c1)
+      -- category name
+      print(item.label, cat_x+x*(cat_w+cat_pad_x)+cat_w/2-#(item.label)*2+1, cat_y+y*(cat_h+cat_pad_y)+cat_h+4, c1)
     end
-    rectfill(cat_x+x*(cat_w+cat_pad_x)-1, cat_y+y*(cat_h+cat_pad_y)+cat_h+1, cat_x+x*(cat_w+cat_pad_x)+cat_w, cat_y+y*(cat_h+cat_pad_y)+cat_h+2, 0)
-    rect(cat_x+x*(cat_w+cat_pad_x)-1, cat_y+y*(cat_h+cat_pad_y)-1+press_offset, cat_x+x*(cat_w+cat_pad_x)+cat_w, cat_y+y*(cat_h+cat_pad_y)+cat_h+press_offset, c1)
-    sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+cat_pad_x), cat_y+y*(cat_h+cat_pad_y)+press_offset)
-    -- category name
-    print(item.label, cat_x+x*(cat_w+cat_pad_x)+cat_w/2-#(item.label)*2, cat_y+y*(cat_h+cat_pad_y)+cat_h+4, c1)
   end
 
   -- featured carts section
