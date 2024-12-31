@@ -99,6 +99,8 @@ function _draw()
   cat_y = 40
   cat_w = 32
   cat_h = 16
+  cat_pad_x = 8
+  cat_pad_y = 12
   for i, item in ipairs(categories.items) do
     -- submenu only consists of 7 items
     if i > 7 then break end
@@ -113,9 +115,11 @@ function _draw()
       c1=5
       press_offset=0
     end
-    rectfill(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)+cat_h+1, cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h+2, 0)
-    rect(cat_x+x*(cat_w+8)-1, cat_y+y*(cat_h+8)-1+press_offset, cat_x+x*(cat_w+8)+cat_w, cat_y+y*(cat_h+8)+cat_h+press_offset, c1)
-    sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+8), cat_y+y*(cat_h+8)+press_offset)
+    rectfill(cat_x+x*(cat_w+cat_pad_x)-1, cat_y+y*(cat_h+cat_pad_y)+cat_h+1, cat_x+x*(cat_w+cat_pad_x)+cat_w, cat_y+y*(cat_h+cat_pad_y)+cat_h+2, 0)
+    rect(cat_x+x*(cat_w+cat_pad_x)-1, cat_y+y*(cat_h+cat_pad_y)-1+press_offset, cat_x+x*(cat_w+cat_pad_x)+cat_w, cat_y+y*(cat_h+cat_pad_y)+cat_h+press_offset, c1)
+    sspr(((item.icon-1)*32)%128, flr((item.icon-1)/4)*16, 32, 16, cat_x+x*(cat_w+cat_pad_x), cat_y+y*(cat_h+cat_pad_y)+press_offset)
+    -- category name
+    print(item.label, cat_x+x*(cat_w+cat_pad_x)+cat_w/2-#(item.label)*2, cat_y+y*(cat_h+cat_pad_y)+cat_h+4, c1)
   end
 
   -- featured carts section
