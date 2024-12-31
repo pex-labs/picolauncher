@@ -240,7 +240,7 @@ function _init()
     games_category='featured'
   end
   -- special flag to disable pagination for local only categories (like local and favourites)
-  is_local = (games_category == 'local')
+  is_local = (games_category == 'local' or games_category == 'favorites')
 
   carts=build_new_cart_menu({})
   

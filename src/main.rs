@@ -315,11 +315,15 @@ async fn main() {
                 } else if query == "favorite" {
                     // special case, return favorite carts
                     db.get_favorites(20).unwrap()
+                } else if let Some(search_query) = query.strip_prefix("search:") {
+                    let url = bbs_url_for_search(search_query, page);
+                    impl_bbs(&mut db, &tab, &pico8_bins, &url, page).await
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
-                    impl_bbs(&mut db, &tab, &pico8_bins, query, page).await
+                    let url = bbs_url_for_category(query, page);
+                    impl_bbs(&mut db, &tab, &pico8_bins, &url, page).await
                 };
 
                 // fetch desired cartdatas from db
@@ -522,6 +526,16 @@ fn bbs_url_for_category(category: PexsploreCategory, page: u32) -> String {
     }
 }
 
+fn bbs_url_for_search(search_query: &str, page: u32) -> String {
+    build_bbs_url(
+        Sub::Releases,
+        page,
+        Some(search_query.to_string()),
+        None,
+        Some(OrderBy::Featured),
+    )
+}
+
 // TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
 async fn postprocess_cart(
     db: &mut DB,
@@ -720,10 +734,9 @@ async fn impl_bbs(
     db: &mut DB,
     tab: &Arc<Tab>,
     pico8_bins: &Vec<String>,
-    query: PexsploreCategory,
+    url: &str,
     page: u32,
 ) -> Vec<Cart> {
-    let url = bbs_url_for_category(query, page);
     info!("querying {url}");
 
     let res = crawl_bbs(tab.clone(), &url).await;

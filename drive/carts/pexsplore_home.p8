@@ -3,15 +3,61 @@ version 42
 __lua__
 
 #include serial.p8
-#include menu.p8
 #include utils.p8
+#include timer.p8
+#include menu.p8
+#include vkeyboard.p8
 #include tween.lua
+
+local show_keyboard = false
+local keyboard_up_y = 78
+local keyboard_down_y = 148
+local keyboard = Keyboard:new(7, 0, 8, 14, keyboard_down_y, function(text)
+  show_keyboard = false
+  make_vkeyboard_tween(false)
+
+  -- no-op if empty string
+  if text == "" then return end
+
+  -- search bbs
+  pexsplore_search(text)
+end)
+
+-- tweens for keyboard (TODO this is copied from settings.p8)
+vkeyboard_tween = {}
+function make_vkeyboard_tween(show_keyboard)
+  local vkeyboard_target_y = 0
+  if show_keyboard then
+    vkeyboard_target_y = keyboard_up_y
+  else
+    vkeyboard_target_y = keyboard_down_y
+  end
+  vkeyboard_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=keyboard.y,
+    v_end=vkeyboard_target_y,
+    duration=0.5
+  })
+  vkeyboard_tween:register_step_callback(function(pos)
+    keyboard.y = pos
+  end)
+  vkeyboard_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
+  vkeyboard_tween:restart()
+end
+
 
 -- launch pexsplore with given games category
 function pexsplore_category(category)
   return function()
     os_load('pexsplore_bbs.p8', '', category)
   end
+end
+
+function pexsplore_search(search_str)
+  -- search has a concatenated 'search:' prefix
+  os_load('pexsplore_bbs.p8', '', 'search:' .. search_str)
 end
 
 -- TODO should move each category into some sort of enum that can be shared with pesplore_bbs.p8
@@ -56,7 +102,15 @@ function _init()
 end
 
 function _update60()
+  if show_keyboard then
+    keyboard:input()
+  else
+    menu_update()
+  end
   tween_machine:update()
+end
+
+function menu_update()
   camera(0, cam_y) 
 
   if btnp(0) then
@@ -74,6 +128,10 @@ function _update60()
     elseif btnp(3) then
       sfx(3)
       categories:down()
+    elseif btnp(5) then
+      -- open onscreen kb
+      show_keyboard=true
+      make_vkeyboard_tween(true)
     end
   elseif 2 <= categories:index() and categories:index() <= 8 then
     local menu1_w = 3
@@ -157,6 +215,8 @@ function _draw()
   -- featured carts section
   -- print('featured', 8, 116, 6)
   -- line(8, 124, 120, 124, 6)
+
+  keyboard:draw()
 
 
 end
