@@ -689,7 +689,7 @@ fn impl_wifi_status(nm: &NetworkManager) -> String {
     let mut prop_map = Map::<String, Value>::new();
     prop_map.insert("state".into(), Value::String("unknown".into()));
 
-    let conns = nm.get_active_connections().unwrap();
+    let conns = nm.get_active_connections().unwrap_or_default();
     for conn in conns {
         let settings = conn.settings();
         // TODO double check this is the right string for all wireless
