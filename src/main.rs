@@ -176,6 +176,14 @@ async fn main() {
     debug!("established connection to sqlite database");
     db.migrate().expect("failed migrating database");
 
+    // enable gyroscope
+    // TODO should put this behind a feature flag
+    // TODO print error message if this failed
+    let gyro: Option<_> = LSM9DS1::new("/dev/i2c-5", 0x6B).ok();
+    if gyro.is_none() {
+        warn!("gyroscope failed to initialize");
+    }
+
     // db.add_favorite("advent2024-27.p8")
     //     .expect("failed to add to fav");
     // db.get_favorites().expect("failed to get fav");

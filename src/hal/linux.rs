@@ -5,7 +5,9 @@ use std::{
 };
 
 use anyhow::anyhow;
+use embedded_hal::i2c::{I2c, Operation as I2cOperation};
 use event::CreateKind;
+use linux_embedded_hal::I2cdev;
 use log::{debug, error, info, warn};
 use nix::{
     sys::signal::{kill, Signal},
@@ -179,4 +181,53 @@ pub async fn pico8_export(
     )?;
     pico8_process.wait().await?;
     Ok(())
+}
+
+pub const CTRL_REG1_G: u8 = 0x10; // Gyroscope control register
+pub const OUT_X_L_G: u8 = 0x18; // Gyroscope output X low register
+pub const WHO_AM_I: u8 = 0x0F; // WHO_AM_I register
+pub const GYRO_SCALE: f64 = 0.07; // sensitivity of gyroscope
+
+pub struct LSM9DS1 {
+    dev: I2cdev,
+    gyro_addr: u8,
+}
+
+impl LSM9DS1 {
+    pub fn new(i2cdev: &str, gyro_addr: u8) -> anyhow::Result<Self> {
+        // create i2c device
+        let mut dev = I2cdev::new(i2cdev)?;
+
+        // run a heartbeat command to see if the device is connected
+        let mut buf = [0];
+        dev.write_read(gyro_addr, &[WHO_AM_I], &mut buf)?;
+        if buf[0] != gyro_addr {
+            return Err(anyhow::anyhow!(format!(
+                "unexpected gyroscope address, expected: {}, got: {}",
+                gyro_addr, buf[0]
+            )));
+        }
+
+        // enable the gyroscope
+        dev.write(gyro_addr, &[CTRL_REG1_G, 0x60])?;
+
+        Ok(LSM9DS1 { dev, gyro_addr })
+    }
+
+    fn read_register(&mut self, addr: u8, len: usize) -> anyhow::Result<Vec<u8>> {
+        let mut buf = vec![0; len];
+        self.dev
+            .write_read(self.gyro_addr, &[addr | 0x80], &mut buf)?; // 0x80 for auto-increment
+        Ok(buf)
+    }
+
+    pub fn read_gyro(&mut self) -> anyhow::Result<(f64, f64, f64)> {
+        let data = self.read_register(OUT_X_L_G, 6)?;
+
+        let x = i16::from_le_bytes([data[0], data[1]]) as f64 * GYRO_SCALE;
+        let y = i16::from_le_bytes([data[2], data[3]]) as f64 * GYRO_SCALE;
+        let z = i16::from_le_bytes([data[4], data[5]]) as f64 * GYRO_SCALE;
+
+        Ok((x, y, z))
+    }
 }
