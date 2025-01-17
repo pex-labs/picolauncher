@@ -5,6 +5,7 @@ use std::{
 };
 
 use anyhow::anyhow;
+use chrono;
 use embedded_hal::i2c::{I2c, Operation as I2cOperation};
 use event::CreateKind;
 use linux_embedded_hal::I2cdev;
@@ -193,10 +194,13 @@ const WHO_AM_I_RESP: u8 = 0x68; // the value we expect to get back from whoami r
 const GYRO_SCALE: f64 = 0.07; // sensitivity of gyroscope
 const ACCEL_SCALE: f64 = 0.000061; // sensitivity of accel
 
+const COMPL_FILTER_ALPHA: f64 = 0.98;
+
 pub struct LSM9DS1 {
     dev: I2cdev,
     accel_gyro_addr: u8,
-    calib: (f32, f32, f32),
+    pitch: f64,
+    roll: f64,
 }
 
 impl LSM9DS1 {
@@ -228,37 +232,57 @@ impl LSM9DS1 {
         Ok(LSM9DS1 {
             dev,
             accel_gyro_addr,
-            calib: (0., 0., 0.),
+            pitch: 0.,
+            roll: 0.,
         })
     }
 
-    // calibrate the gyro by taking sample values
-    // TODO maybe don't need this if we implement complimentary filter
-    pub fn calibrate(&mut self) -> Result<()> {
-        const CALIB_STEPS: u32 = 1000;
+    // spawn a task that periodically queries the gyro and updates internal tilt
+    pub async fn start(&mut self) -> anyhow::Result<()> {
+        use tokio::time::{self, Duration};
 
-        let mut calib = (0., 0., 0.);
-        for _ in 0..CALIB_STEPS {
-            // TODO technically can skip and allow dropping a couple of calib steps
-            let data = self.read_gyro()?;
-            calib += data;
+        let mut interval = time::interval(Duration::from_millis(100));
+        let mut last_time = std::time::Instant::now();
+        loop {
+            interval.tick().await;
+            let dt = last_time.elapsed().as_millis() as f64 / 1000.;
+
+            // we probably don't want to use default values, since it will mess with the
+            // current tilt prediction, just skip this loop iteration and print warning
+            let Ok((g_x, g_y, _)) = self.read_gyro() else {
+                warn!("failed to read from gyro");
+                continue;
+            };
+            let Ok((a_x, a_y, a_z)) = self.read_accel() else {
+                warn!("failed to read from accel");
+                continue;
+            };
+
+            // compute pitch and roll from raw accel readings
+            let accel_pitch =
+                a_x.atan2((a_y * a_y + a_z * a_z).sqrt()) * (180.0 / std::f64::consts::PI);
+            let accel_roll =
+                a_y.atan2((a_x * a_x + a_z * a_z).sqrt()) * (180.0 / std::f64::consts::PI);
+
+            // complimentary filter
+            self.pitch = COMPL_FILTER_ALPHA * (self.pitch + g_x * dt)
+                + (1.0 - COMPL_FILTER_ALPHA) * accel_pitch;
+            self.roll = COMPL_FILTER_ALPHA * (self.roll + g_y * dt)
+                + (1.0 - COMPL_FILTER_ALPHA) * accel_roll;
+
+            last_time = std::time::Instant::now();
         }
-        calib /= CALIB_STEPS;
-
         Ok(())
     }
-
-    // spawn a task that periodically queries the gyro and updates internal tilt
-    // TODO
 
     fn read_register(&mut self, addr: u8, len: usize) -> anyhow::Result<Vec<u8>> {
         let mut buf = vec![0; len];
         self.dev
-            .write_read(self.gyro_addr, &[addr | 0x80], &mut buf)?; // 0x80 for auto-increment
+            .write_read(self.accel_gyro_addr, &[addr | 0x80], &mut buf)?; // 0x80 for auto-increment
         Ok(buf)
     }
 
-    pub fn read_gyro(&mut self) -> anyhow::Result<(f64, f64, f64)> {
+    fn read_gyro(&mut self) -> anyhow::Result<(f64, f64, f64)> {
         let data = self.read_register(OUT_X_L_GYRO, 6)?;
 
         let x = i16::from_le_bytes([data[0], data[1]]) as f64 * GYRO_SCALE;
@@ -268,7 +292,7 @@ impl LSM9DS1 {
         Ok((x, y, z))
     }
 
-    pub fn read_accel(&mut self) -> anyhow::Result<(f64, f64, f64)> {
+    fn read_accel(&mut self) -> anyhow::Result<(f64, f64, f64)> {
         let data = self.read_register(OUT_X_L_ACCEL, 6)?;
 
         let x = i16::from_le_bytes([data[0], data[1]]) as f64 * ACCEL_SCALE;

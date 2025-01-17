@@ -179,8 +179,15 @@ async fn main() {
     // enable IMU
     // TODO should put this behind a feature flag
     // TODO print error message if this failed
-    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", true).ok();
-    if imu.is_none() {
+    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", true)
+        .map(|x| Arc::new(tokio::sync::RwLock::new(x)))
+        .ok();
+    if let Some(imu) = imu {
+        let imu = Arc::clone(&imu);
+        tokio::spawn(async move {
+            imu.write().await.start().await.unwrap();
+        });
+    } else {
         warn!("LSM9DS1 IMU failed to initialize");
     }
 
@@ -490,6 +497,7 @@ async fn main() {
                 write_to_pico8(format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
+                /*
                 if let Some(ref mut imu) = imu {
                     let (x, y, z) = imu.read_gyro().unwrap_or_default();
                     debug!("got imu data {},{},{}", x, y, z);
@@ -497,6 +505,8 @@ async fn main() {
                 } else {
                     write_to_pico8(format!("0,0,0")).await;
                 }
+                */
+                write_to_pico8(format!("0,0,0")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process

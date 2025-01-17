@@ -21,6 +21,7 @@ ndarray = "0.16"
 strum = "0.26"
 strum_macros = "0.26"
 pino_deref = "0.1.1"
+chrono = "0.4"
 
 rusqlite = { version = "0.32", features = ["bundled"] }
 diesel = { version = "2.2.6", features = ["sqlite", "returning_clauses_for_sqlite_3_35"] }
