@@ -176,6 +176,14 @@ async fn main() {
     debug!("established connection to sqlite database");
     db.migrate().expect("failed migrating database");
 
+    // enable IMU
+    // TODO should put this behind a feature flag
+    // TODO print error message if this failed
+    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", 0x6B).ok();
+    if imu.is_none() {
+        warn!("LSM9DS1 IMU failed to initialize");
+    }
+
     // db.add_favorite("advent2024-27.p8")
     //     .expect("failed to add to fav");
     // db.get_favorites().expect("failed to get fav");
@@ -480,6 +488,15 @@ async fn main() {
                     warn!("download_music failed {e:?}");
                 }
                 write_to_pico8(format!("{}", res.is_ok())).await;
+            },
+            "gyro_read" => {
+                if let Some(ref mut imu) = imu {
+                    let (x, y, z) = imu.read_gyro().unwrap_or_default();
+                    debug!("got imu data {},{},{}", x, y, z);
+                    write_to_pico8(format!("{x},{y},{z}")).await;
+                } else {
+                    write_to_pico8(format!("0,0,0")).await;
+                }
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process

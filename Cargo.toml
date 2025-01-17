@@ -8,6 +8,10 @@ description = ""
 repository = ""
 
 [features]
+default = []
+
+# enable gyroscope driver
+gyro = []
 
 [dependencies]
 notify = "6.1"
@@ -33,7 +37,9 @@ env_logger = "0.11"
 
 network-manager = { version = "0.13.3", git = "https://github.com/balena-io-modules/network-manager" }
 dbus = "0.9"
-bluer = {version="0.17.3", features=["full"]}
+bluer = { version = "0.17.3", features = ["full"] }
+embedded-hal = "1"
+linux-embedded-hal = { version = "0.4", features = ["i2cdev"] } 
 
 # temp dependencies for scraper functionality
 tokio = { version = "1.37", features = ["full"] }
