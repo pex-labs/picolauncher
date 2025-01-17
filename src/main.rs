@@ -179,7 +179,7 @@ async fn main() {
     // enable IMU
     // TODO should put this behind a feature flag
     // TODO print error message if this failed
-    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", 0x6B).ok();
+    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", true).ok();
     if imu.is_none() {
         warn!("LSM9DS1 IMU failed to initialize");
     }

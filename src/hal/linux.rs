@@ -183,36 +183,73 @@ pub async fn pico8_export(
     Ok(())
 }
 
-pub const CTRL_REG1_G: u8 = 0x10; // Gyroscope control register
-pub const OUT_X_L_G: u8 = 0x18; // Gyroscope output X low register
-pub const WHO_AM_I: u8 = 0x0F; // WHO_AM_I register
-pub const GYRO_SCALE: f64 = 0.07; // sensitivity of gyroscope
+const CTRL_REG1_GYRO: u8 = 0x10; // Gyroscope control register
+const OUT_X_L_GYRO: u8 = 0x18; // Gyroscope output X low register
+const CTRL_REG6_ACCEL: u8 = 0x20; // Accelerometer control register
+const OUT_X_L_ACCEL: u8 = 0x28; // Accelerometer X low byte
+
+const WHO_AM_I: u8 = 0x0F; // WHO_AM_I register
+const WHO_AM_I_RESP: u8 = 0x68; // the value we expect to get back from whoami request
+const GYRO_SCALE: f64 = 0.07; // sensitivity of gyroscope
+const ACCEL_SCALE: f64 = 0.000061; // sensitivity of accel
 
 pub struct LSM9DS1 {
     dev: I2cdev,
-    gyro_addr: u8,
+    accel_gyro_addr: u8,
+    calib: (f32, f32, f32),
 }
 
 impl LSM9DS1 {
-    pub fn new(i2cdev: &str, gyro_addr: u8) -> anyhow::Result<Self> {
+    /// sdom_high: if the SDOM pin is pulled high or low
+    /// sdoag_high: if the SDOAG pin is pulled high or low
+    pub fn new(i2cdev: &str, sdoag_high: bool) -> anyhow::Result<Self> {
+        let accel_gyro_addr = if sdoag_high { 0x6B } else { 0x6A };
+
         // create i2c device
         let mut dev = I2cdev::new(i2cdev)?;
 
         // run a heartbeat command to see if the device is connected
+        // for gyro
         let mut buf = [0];
-        dev.write_read(gyro_addr, &[WHO_AM_I], &mut buf)?;
-        if buf[0] != gyro_addr {
+        dev.write_read(accel_gyro_addr, &[WHO_AM_I], &mut buf)?;
+        if buf[0] != WHO_AM_I_RESP {
             return Err(anyhow::anyhow!(format!(
                 "unexpected gyroscope address, expected: {}, got: {}",
-                gyro_addr, buf[0]
+                accel_gyro_addr, buf[0]
             )));
         }
 
-        // enable the gyroscope
-        dev.write(gyro_addr, &[CTRL_REG1_G, 0x60])?;
+        // enable the gyro
+        dev.write(accel_gyro_addr, &[CTRL_REG1_GYRO, 0x60])?;
 
-        Ok(LSM9DS1 { dev, gyro_addr })
+        // enable the accel
+        dev.write(accel_gyro_addr, &[CTRL_REG6_ACCEL, 0x60])?;
+
+        Ok(LSM9DS1 {
+            dev,
+            accel_gyro_addr,
+            calib: (0., 0., 0.),
+        })
     }
+
+    // calibrate the gyro by taking sample values
+    // TODO maybe don't need this if we implement complimentary filter
+    pub fn calibrate(&mut self) -> Result<()> {
+        const CALIB_STEPS: u32 = 1000;
+
+        let mut calib = (0., 0., 0.);
+        for _ in 0..CALIB_STEPS {
+            // TODO technically can skip and allow dropping a couple of calib steps
+            let data = self.read_gyro()?;
+            calib += data;
+        }
+        calib /= CALIB_STEPS;
+
+        Ok(())
+    }
+
+    // spawn a task that periodically queries the gyro and updates internal tilt
+    // TODO
 
     fn read_register(&mut self, addr: u8, len: usize) -> anyhow::Result<Vec<u8>> {
         let mut buf = vec![0; len];
@@ -222,11 +259,21 @@ impl LSM9DS1 {
     }
 
     pub fn read_gyro(&mut self) -> anyhow::Result<(f64, f64, f64)> {
-        let data = self.read_register(OUT_X_L_G, 6)?;
+        let data = self.read_register(OUT_X_L_GYRO, 6)?;
 
         let x = i16::from_le_bytes([data[0], data[1]]) as f64 * GYRO_SCALE;
         let y = i16::from_le_bytes([data[2], data[3]]) as f64 * GYRO_SCALE;
         let z = i16::from_le_bytes([data[4], data[5]]) as f64 * GYRO_SCALE;
+
+        Ok((x, y, z))
+    }
+
+    pub fn read_accel(&mut self) -> anyhow::Result<(f64, f64, f64)> {
+        let data = self.read_register(OUT_X_L_ACCEL, 6)?;
+
+        let x = i16::from_le_bytes([data[0], data[1]]) as f64 * ACCEL_SCALE;
+        let y = i16::from_le_bytes([data[2], data[3]]) as f64 * ACCEL_SCALE;
+        let z = i16::from_le_bytes([data[4], data[5]]) as f64 * ACCEL_SCALE;
 
         Ok((x, y, z))
     }
