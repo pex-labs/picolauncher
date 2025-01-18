@@ -179,16 +179,19 @@ async fn main() {
     // enable IMU
     // TODO should put this behind a feature flag
     // TODO print error message if this failed
-    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", true)
-        .map(|x| Arc::new(tokio::sync::RwLock::new(x)))
-        .ok();
-    if let Some(imu) = imu {
+    let mut imu: Option<Arc<tokio::sync::RwLock<LSM9DS1>>> = match LSM9DS1::new("/dev/i2c-5", true)
+    {
+        Ok(imu) => Some(Arc::new(tokio::sync::RwLock::new(imu))),
+        Err(e) => {
+            warn!("LSM9DS1 IMU failed to initialize {e:?}");
+            None
+        },
+    };
+    if let Some(ref imu) = imu {
         let imu = Arc::clone(&imu);
         tokio::spawn(async move {
             imu.write().await.start().await.unwrap();
         });
-    } else {
-        warn!("LSM9DS1 IMU failed to initialize");
     }
 
     // db.add_favorite("advent2024-27.p8")
@@ -497,16 +500,15 @@ async fn main() {
                 write_to_pico8(format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
-                /*
-                if let Some(ref mut imu) = imu {
-                    let (x, y, z) = imu.read_gyro().unwrap_or_default();
-                    debug!("got imu data {},{},{}", x, y, z);
-                    write_to_pico8(format!("{x},{y},{z}")).await;
+                if imu.is_some() {
+                    let imu = Arc::clone(&imu.clone().unwrap());
+                    let (pitch, roll) = imu.read().await.get_tilt();
+                    debug!("got imu data {},{}", pitch, roll);
+                    write_to_pico8(format!("{pitch},{roll}")).await;
                 } else {
-                    write_to_pico8(format!("0,0,0")).await;
+                    write_to_pico8(format!("0,0")).await;
                 }
-                */
-                write_to_pico8(format!("0,0,0")).await;
+                write_to_pico8(format!("0,0")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process

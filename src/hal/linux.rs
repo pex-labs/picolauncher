@@ -270,6 +270,8 @@ impl LSM9DS1 {
             self.roll = COMPL_FILTER_ALPHA * (self.roll + g_y * dt)
                 + (1.0 - COMPL_FILTER_ALPHA) * accel_roll;
 
+            debug!("{} {}", self.pitch, self.roll);
+
             last_time = std::time::Instant::now();
         }
         Ok(())
@@ -300,5 +302,9 @@ impl LSM9DS1 {
         let z = i16::from_le_bytes([data[4], data[5]]) as f64 * ACCEL_SCALE;
 
         Ok((x, y, z))
+    }
+
+    pub fn get_tilt(&self) -> (f64, f64) {
+        (self.pitch, self.roll)
     }
 }
