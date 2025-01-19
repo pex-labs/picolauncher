@@ -15,7 +15,10 @@ use nix::{
     unistd::Pid,
 };
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
-use tokio::process::{Child, Command};
+use tokio::{
+    process::{Child, Command},
+    sync::RwLock,
+};
 
 use crate::{
     consts::*,
@@ -197,10 +200,10 @@ const ACCEL_SCALE: f64 = 0.000061; // sensitivity of accel
 const COMPL_FILTER_ALPHA: f64 = 0.98;
 
 pub struct LSM9DS1 {
-    dev: I2cdev,
+    i2cdev: String,
     accel_gyro_addr: u8,
-    pitch: f64,
-    roll: f64,
+    /// (pitch, roll)
+    tilt: RwLock<(f64, f64)>,
 }
 
 impl LSM9DS1 {
@@ -209,6 +212,23 @@ impl LSM9DS1 {
     pub fn new(i2cdev: &str, sdoag_high: bool) -> anyhow::Result<Self> {
         let accel_gyro_addr = if sdoag_high { 0x6B } else { 0x6A };
 
+        let mut dev = LSM9DS1::open_i2cdev(i2cdev, accel_gyro_addr)?;
+
+        // enable the gyro
+        dev.write(accel_gyro_addr, &[CTRL_REG1_GYRO, 0x60])?;
+
+        // enable the accel
+        dev.write(accel_gyro_addr, &[CTRL_REG6_ACCEL, 0x60])?;
+
+        Ok(LSM9DS1 {
+            i2cdev: i2cdev.into(),
+            accel_gyro_addr,
+            tilt: RwLock::new((0., 0.)),
+        })
+    }
+
+    /// Verify that the IMU is responsive
+    fn open_i2cdev(i2cdev: &str, accel_gyro_addr: u8) -> anyhow::Result<I2cdev> {
         // create i2c device
         let mut dev = I2cdev::new(i2cdev)?;
 
@@ -223,23 +243,14 @@ impl LSM9DS1 {
             )));
         }
 
-        // enable the gyro
-        dev.write(accel_gyro_addr, &[CTRL_REG1_GYRO, 0x60])?;
-
-        // enable the accel
-        dev.write(accel_gyro_addr, &[CTRL_REG6_ACCEL, 0x60])?;
-
-        Ok(LSM9DS1 {
-            dev,
-            accel_gyro_addr,
-            pitch: 0.,
-            roll: 0.,
-        })
+        Ok(dev)
     }
 
-    // spawn a task that periodically queries the gyro and updates internal tilt
-    pub async fn start(&mut self) -> anyhow::Result<()> {
+    /// spawn a task that periodically queries the gyro and updates internal tilt
+    pub async fn start(&self) -> anyhow::Result<()> {
         use tokio::time::{self, Duration};
+
+        let mut dev = LSM9DS1::open_i2cdev(&self.i2cdev, self.accel_gyro_addr)?;
 
         let mut interval = time::interval(Duration::from_millis(100));
         let mut last_time = std::time::Instant::now();
@@ -249,11 +260,11 @@ impl LSM9DS1 {
 
             // we probably don't want to use default values, since it will mess with the
             // current tilt prediction, just skip this loop iteration and print warning
-            let Ok((g_x, g_y, _)) = self.read_gyro() else {
+            let Ok((g_x, g_y, _)) = self.read_gyro(&mut dev) else {
                 warn!("failed to read from gyro");
                 continue;
             };
-            let Ok((a_x, a_y, a_z)) = self.read_accel() else {
+            let Ok((a_x, a_y, a_z)) = self.read_accel(&mut dev) else {
                 warn!("failed to read from accel");
                 continue;
             };
@@ -265,27 +276,33 @@ impl LSM9DS1 {
                 a_y.atan2((a_x * a_x + a_z * a_z).sqrt()) * (180.0 / std::f64::consts::PI);
 
             // complimentary filter
-            self.pitch = COMPL_FILTER_ALPHA * (self.pitch + g_x * dt)
-                + (1.0 - COMPL_FILTER_ALPHA) * accel_pitch;
-            self.roll = COMPL_FILTER_ALPHA * (self.roll + g_y * dt)
-                + (1.0 - COMPL_FILTER_ALPHA) * accel_roll;
+            let tilt = self.tilt.read().await;
+            let new_pitch =
+                COMPL_FILTER_ALPHA * (tilt.0 + g_x * dt) + (1.0 - COMPL_FILTER_ALPHA) * accel_pitch;
+            let new_roll =
+                COMPL_FILTER_ALPHA * (tilt.1 + g_y * dt) + (1.0 - COMPL_FILTER_ALPHA) * accel_roll;
 
-            debug!("{} {}", self.pitch, self.roll);
+            debug!("{} {}", new_pitch, new_roll);
+            drop(tilt);
+
+            let mut tilt = self.tilt.write().await;
+            tilt.0 = new_pitch;
+            tilt.1 = new_roll;
+            drop(tilt);
 
             last_time = std::time::Instant::now();
         }
         Ok(())
     }
 
-    fn read_register(&mut self, addr: u8, len: usize) -> anyhow::Result<Vec<u8>> {
+    fn read_register(&self, dev: &mut I2cdev, addr: u8, len: usize) -> anyhow::Result<Vec<u8>> {
         let mut buf = vec![0; len];
-        self.dev
-            .write_read(self.accel_gyro_addr, &[addr | 0x80], &mut buf)?; // 0x80 for auto-increment
+        dev.write_read(self.accel_gyro_addr, &[addr | 0x80], &mut buf)?; // 0x80 for auto-increment
         Ok(buf)
     }
 
-    fn read_gyro(&mut self) -> anyhow::Result<(f64, f64, f64)> {
-        let data = self.read_register(OUT_X_L_GYRO, 6)?;
+    fn read_gyro(&self, dev: &mut I2cdev) -> anyhow::Result<(f64, f64, f64)> {
+        let data = self.read_register(dev, OUT_X_L_GYRO, 6)?;
 
         let x = i16::from_le_bytes([data[0], data[1]]) as f64 * GYRO_SCALE;
         let y = i16::from_le_bytes([data[2], data[3]]) as f64 * GYRO_SCALE;
@@ -294,8 +311,8 @@ impl LSM9DS1 {
         Ok((x, y, z))
     }
 
-    fn read_accel(&mut self) -> anyhow::Result<(f64, f64, f64)> {
-        let data = self.read_register(OUT_X_L_ACCEL, 6)?;
+    fn read_accel(&self, dev: &mut I2cdev) -> anyhow::Result<(f64, f64, f64)> {
+        let data = self.read_register(dev, OUT_X_L_ACCEL, 6)?;
 
         let x = i16::from_le_bytes([data[0], data[1]]) as f64 * ACCEL_SCALE;
         let y = i16::from_le_bytes([data[2], data[3]]) as f64 * ACCEL_SCALE;
@@ -304,7 +321,7 @@ impl LSM9DS1 {
         Ok((x, y, z))
     }
 
-    pub fn get_tilt(&self) -> (f64, f64) {
-        (self.pitch, self.roll)
+    pub async fn get_tilt(&self) -> (f64, f64) {
+        *(self.tilt.read().await)
     }
 }

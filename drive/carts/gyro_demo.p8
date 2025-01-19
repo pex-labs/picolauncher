@@ -47,6 +47,9 @@ function _update()
     chary += speed
   end
 
+  -- limit ball position
+  charx = max(0, min(128, charx))
+  chary = max(0, min(128, chary))
 
   update_loadables()
 end
