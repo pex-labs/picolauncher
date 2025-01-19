@@ -194,8 +194,8 @@ const OUT_X_L_ACCEL: u8 = 0x28; // Accelerometer X low byte
 
 const WHO_AM_I: u8 = 0x0F; // WHO_AM_I register
 const WHO_AM_I_RESP: u8 = 0x68; // the value we expect to get back from whoami request
-const GYRO_SCALE: f64 = 0.07; // sensitivity of gyroscope
-const ACCEL_SCALE: f64 = 0.000061; // sensitivity of accel
+const GYRO_SCALE: f64 = 0.01750; // sensitivity of gyroscope
+const ACCEL_SCALE: f64 = 0.000122; // sensitivity of accel
 
 const COMPL_FILTER_ALPHA: f64 = 0.98;
 
@@ -252,11 +252,12 @@ impl LSM9DS1 {
 
         let mut dev = LSM9DS1::open_i2cdev(&self.i2cdev, self.accel_gyro_addr)?;
 
-        let mut interval = time::interval(Duration::from_millis(100));
+        let mut interval = time::interval(Duration::from_millis(10));
         let mut last_time = std::time::Instant::now();
         loop {
             interval.tick().await;
-            let dt = last_time.elapsed().as_millis() as f64 / 1000.;
+            let dt = last_time.elapsed().as_secs_f64();
+            last_time = std::time::Instant::now();
 
             // we probably don't want to use default values, since it will mess with the
             // current tilt prediction, just skip this loop iteration and print warning
@@ -289,8 +290,6 @@ impl LSM9DS1 {
             tilt.0 = new_pitch;
             tilt.1 = new_roll;
             drop(tilt);
-
-            last_time = std::time::Instant::now();
         }
         Ok(())
     }

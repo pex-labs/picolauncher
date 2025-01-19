@@ -22,10 +22,10 @@ function _init()
     roll = parts[2]
 
     requests = requests + 1
-  end, 1)
+  end, 0.1)
 end
 
-local threshold = 300
+local threshold = 30
 local speed = 5
 function _update()
   -- periodically request for the gyro data
