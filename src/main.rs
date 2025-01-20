@@ -23,7 +23,7 @@ use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{
     bbs::*,
-    bluetooth::*,
+    //bluetooth::*,
     consts::*,
     db,
     exe::ExeMeta,
@@ -64,6 +64,7 @@ async fn main() {
     // set up dbus connection and network manager
     // TODO linux specific currently
     // start network manager if not started
+
     NetworkManager::start_service(1000).expect("unable to start network manager service");
     let nm_state =
         NetworkManager::get_service_state().expect("unable to get network manager state");
@@ -75,13 +76,14 @@ async fn main() {
     let nm = NetworkManager::new();
     let mut access_points: Vec<AccessPoint> = vec![];
 
-    let session = bluer::Session::new().await.unwrap();
-    let adapter = Arc::new(session.default_adapter().await.unwrap());
-    println!("Using Bluetooth adapter: {}", adapter.name());
+    //remove bluethooth session to run it in macos  
+    // let session = bluer::Session::new().await.unwrap();
+    //let adapter = Arc::new(session.default_adapter().await.unwrap());
+    //println!("Using Bluetooth adapter: {}", adapter.name());
     // Ensure the adapter is powered on
-    adapter.set_powered(true).await.unwrap();
+    //adapter.set_powered(true).await.unwrap();
 
-    let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new(&adapter).await.unwrap()));
+    //let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new(&adapter).await.unwrap()));
 
     // create necessary directories
     if let Err(e) = create_dirs() {
@@ -91,7 +93,7 @@ async fn main() {
     // launch pico8 binary
     let pico8_bin_override = std::env::var("PICO8_BINARY");
 
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     let mut pico8_bins: Vec<String> = vec!["pico8".into(), "pico8_64".into(), "pico8_dyn".into()];
 
     #[cfg(target_os = "windows")]
@@ -427,32 +429,32 @@ async fn main() {
                 drop(in_pipe);
             },
             "bt_start" => {
-                println!("HELLO");
-                let _ = update_connected_devices(bt_status.clone(), adapter.clone()).await;
-                tokio::spawn({
-                    let bt_status = bt_status.clone();
-                    let adapter = adapter.clone();
-                    async move {
-                        discover_devices(bt_status.clone(), adapter).await.unwrap();
-                    }
-                });
+                // println!("HELLO");
+                // let _ = update_connected_devices(bt_status.clone(), adapter.clone()).await;
+                // tokio::spawn({
+                //     let bt_status = bt_status.clone();
+                //     let adapter = adapter.clone();
+                //     async move {
+                //         discover_devices(bt_status.clone(), adapter).await.unwrap();
+                //     }
+                // });
             },
             "bt_stop" => {
-                let mut bt_status_guard = bt_status.lock().await;
-                bt_status_guard.stop();
+                // let mut bt_status_guard = bt_status.lock().await;
+                // bt_status_guard.stop();
             },
 
             "bt_status" => {
-                let mut bt_status_guard = bt_status.lock().await;
+                // let mut bt_status_guard = bt_status.lock().await;
 
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(
-                    in_pipe,
-                    "{}",
-                    bt_status_guard.get_status_table(&adapter).await.unwrap()
-                )
-                .expect("failed to write to pipe");
-                drop(in_pipe);
+                // let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                // writeln!(
+                //     in_pipe,
+                //     "{}",
+                //     bt_status_guard.get_status_table(&adapter).await.unwrap()
+                // )
+                // .expect("failed to write to pipe");
+                // drop(in_pipe);
             },
             "set_favorite" => {
                 let mut split = data.splitn(2, ",");

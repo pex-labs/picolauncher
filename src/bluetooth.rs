@@ -1,37 +1,52 @@
+#[cfg(target_os = "linux")]
 use std::{
     collections::{HashMap, HashSet},
     sync::Arc,
     time::Duration,
 };
 
+#[cfg(target_os = "linux")]
 use anyhow::Result;
-use bluer::{Adapter, AdapterEvent, Address, Device, DeviceEvent};
-use futures::{pin_mut, stream::SelectAll, StreamExt};
+
+#[cfg(target_os = "linux")]
+use bluer::{Adapter, AdapterEvent, Address};
+
+#[cfg(target_os = "linux")]
+use futures::{pin_mut, StreamExt};
+
+#[cfg(target_os = "linux")]
 use serde_json::{Map, Value};
+
+#[cfg(target_os = "linux")]
 use tokio::{sync::Mutex, time::sleep};
 
+#[cfg(target_os = "linux")]
 use crate::p8util::serialize_table;
 
+#[cfg(target_os = "linux")]
 pub struct BluetoothStatus {
     running: bool,
     pub discovered_devices: HashSet<Address>,
 }
+
+#[cfg(target_os = "linux")]
 impl BluetoothStatus {
     pub async fn new(adapter: &Adapter) -> Result<Self> {
-        // Get the default adapter
-
         Ok(BluetoothStatus {
             running: false,
             discovered_devices: HashSet::new(),
         })
     }
+
     pub fn start(&mut self) {
-        self.running = false;
-    }
-    pub fn stop(&mut self) {
         self.running = true;
+    }
+
+    pub fn stop(&mut self) {
+        self.running = false;
         self.discovered_devices.clear();
     }
+
     pub async fn get_status_table(&self, adapter: &Adapter) -> Result<String> {
         let mut table = Map::<String, Value>::new();
         for &addr in self.discovered_devices.iter() {
@@ -51,11 +66,12 @@ impl BluetoothStatus {
         Ok(serialize_table(&table))
     }
 }
+
+#[cfg(target_os = "linux")]
 pub async fn discover_devices(
     status: Arc<Mutex<BluetoothStatus>>,
     adapter: Arc<Adapter>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    // Start discovering devices
     println!("Starting device discovery...");
 
     let discover = adapter.discover_devices().await?;
@@ -63,10 +79,8 @@ pub async fn discover_devices(
 
     while let Some(evt) = discover.next().await {
         {
-            // Lock the BluetoothStatus to check if discovery should continue
             let status_guard = status.lock().await;
             if !status_guard.running {
-                // If running is false, break the loop and stop discovering
                 println!("Discovery stopped.");
                 break;
             }
@@ -75,11 +89,11 @@ pub async fn discover_devices(
             AdapterEvent::DeviceAdded(addr) => {
                 let mut status_guard = status.lock().await;
                 status_guard.discovered_devices.insert(addr);
-            },
+            }
             AdapterEvent::DeviceRemoved(addr) => {
                 let mut status_guard = status.lock().await;
                 status_guard.discovered_devices.remove(&addr);
-            },
+            }
             _ => (),
         }
     }
@@ -87,6 +101,7 @@ pub async fn discover_devices(
     Ok(())
 }
 
+#[cfg(target_os = "linux")]
 pub async fn update_connected_devices(
     status: Arc<Mutex<BluetoothStatus>>,
     adapter: Arc<Adapter>,
