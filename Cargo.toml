@@ -8,7 +8,10 @@ description = ""
 repository = ""
 
 [features]
+default = []
 wifi = []
+# enable gyroscope driver
+gyro = []
 
 [dependencies]
 notify = "6.1"
@@ -20,7 +23,7 @@ strum_macros = "0.26"
 pino_deref = "0.1.1"
 libc = "0.2.155" # or the latest available version
 
-# rusqlite = { version = "0.32" }
+rusqlite = { version = "0.32", features = ["bundled"] }
 diesel = { version = "2.2.6", features = ["sqlite", "returning_clauses_for_sqlite_3_35"] }
 
 clap = { version = "4.5", features = ["derive"] }
@@ -35,7 +38,7 @@ env_logger = "0.11"
 
 network-manager = { version = "0.13.3", git = "https://github.com/balena-io-modules/network-manager" }
 dbus = "0.9"
-
+bluer = {version="0.17.3", features=["full"]}
 
 # temp dependencies for scraper functionality
 tokio = { version = "1.37", features = ["full"] }

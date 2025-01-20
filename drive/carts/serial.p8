@@ -216,6 +216,15 @@ function os_back()
   end
 end
 
+function gyro_read()
+  serial_writeline('gyro_read:')
+  local gyro_data=serial_readline()
+  if gyro_data ~= nil or #gyro_data > 0 then
+    parts=split(gyro_data, ',', true)
+    return {parts[0], parts[1], parts[2]}
+  end
+end
+
 -- carts={}
 -- function _init()
 --   cls(0)

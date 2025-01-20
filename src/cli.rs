@@ -7,7 +7,7 @@ use std::{
 };
 
 use clap::{Parser, Subcommand};
-use picolauncher::{bbs::Cart, consts::*, p8util};
+use picolauncher::{consts::*, db::schema::Cart, p8util};
 
 #[derive(Subcommand, Debug)]
 enum Commands {
@@ -145,15 +145,17 @@ fn main() {
 
             // generate metadata file
             let metadata = Cart {
+                id: 0,
                 title: name.clone().unwrap_or(cart_name.to_owned()),
                 filename: cart_name.to_owned(),
                 author: author.clone().unwrap_or_default(),
-                tags: vec![],
+                tags: String::new(),
                 likes: 0,
                 lid: String::new(),
                 download_url: String::new(),
                 description: String::new(),
                 thumb_url: String::new(),
+                favorite: false,
             };
 
             let metadata_serialized = serde_json::to_string_pretty(&metadata).unwrap();

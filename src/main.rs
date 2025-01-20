@@ -178,6 +178,14 @@ async fn main() {
     debug!("established connection to sqlite database");
     db.migrate().expect("failed migrating database");
 
+    // enable IMU
+    // TODO should put this behind a feature flag
+    // TODO print error message if this failed
+    let mut imu: Option<_> = LSM9DS1::new("/dev/i2c-5", 0x6B).ok();
+    if imu.is_none() {
+        warn!("LSM9DS1 IMU failed to initialize");
+    }
+
     // db.add_favorite("advent2024-27.p8")
     //     .expect("failed to add to fav");
     // db.get_favorites().expect("failed to get fav");
@@ -317,11 +325,15 @@ async fn main() {
                 } else if query == "favorite" {
                     // special case, return favorite carts
                     db.get_favorites(20).unwrap()
+                } else if let Some(search_query) = query.strip_prefix("search:") {
+                    let url = bbs_url_for_search(search_query, page);
+                    impl_bbs(&mut db, &tab, &pico8_bins, &url, page).await
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
-                    impl_bbs(&mut db, &tab, &pico8_bins, query, page).await
+                    let url = bbs_url_for_category(query, page);
+                    impl_bbs(&mut db, &tab, &pico8_bins, &url, page).await
                 };
 
                 // fetch desired cartdatas from db
@@ -479,6 +491,15 @@ async fn main() {
                 }
                 write_to_pico8(format!("{}", res.is_ok())).await;
             },
+            "gyro_read" => {
+                if let Some(ref mut imu) = imu {
+                    let (x, y, z) = imu.read_gyro().unwrap_or_default();
+                    debug!("got imu data {},{},{}", x, y, z);
+                    write_to_pico8(format!("{x},{y},{z}")).await;
+                } else {
+                    write_to_pico8(format!("0,0,0")).await;
+                }
+            },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
@@ -522,6 +543,16 @@ fn bbs_url_for_category(category: PexsploreCategory, page: u32) -> String {
             Some(OrderBy::Featured),
         ),
     }
+}
+
+fn bbs_url_for_search(search_query: &str, page: u32) -> String {
+    build_bbs_url(
+        Sub::Releases,
+        page,
+        Some(search_query.to_string()),
+        None,
+        Some(OrderBy::Featured),
+    )
 }
 
 // TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
@@ -677,7 +708,7 @@ fn impl_wifi_status(nm: &NetworkManager) -> String {
     let mut prop_map = Map::<String, Value>::new();
     prop_map.insert("state".into(), Value::String("unknown".into()));
 
-    let conns = nm.get_active_connections().unwrap();
+    let conns = nm.get_active_connections().unwrap_or_default();
     for conn in conns {
         let settings = conn.settings();
         // TODO double check this is the right string for all wireless
@@ -722,10 +753,9 @@ async fn impl_bbs(
     db: &mut DB,
     tab: &Arc<Tab>,
     pico8_bins: &Vec<String>,
-    query: PexsploreCategory,
+    url: &str,
     page: u32,
 ) -> Vec<Cart> {
-    let url = bbs_url_for_category(query, page);
     info!("querying {url}");
 
     let res = crawl_bbs(tab.clone(), &url).await;

@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::{db::Cart, p8util::serialize_table};
+use crate::{db::schema::Cart, p8util::serialize_table};
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
