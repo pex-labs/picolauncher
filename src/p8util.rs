@@ -146,6 +146,7 @@ impl CartFile {
 }
 
 // convert a screenshot png of size 128x128 to a cartridge
+// specifically, this creates a cartridge with no content, just an image.
 pub fn screenshot2cart(png_path: &Path) -> anyhow::Result<CartFile> {
     let img = ImageReader::open(png_path)?.decode()?;
 

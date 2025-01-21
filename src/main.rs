@@ -64,14 +64,22 @@ async fn main() {
     // set up dbus connection and network manager
     // TODO linux specific currently
     // start network manager if not started
-    NetworkManager::start_service(1000).expect("unable to start network manager service");
-    let nm_state =
-        NetworkManager::get_service_state().expect("unable to get network manager state");
-    if nm_state != ServiceState::Active {
-        // TODO maybe implement retry loop to attempt starting nm multiple times
-        error!("failed to start network manager");
-        return;
+    let did_nm_start = NetworkManager::start_service(1000);
+    match did_nm_start {
+        Ok(_) => {
+            println!("Network manager service started successfully!");
+            let nm_state = NetworkManager::get_service_state().expect("unable to get network manager state");
+            if nm_state != ServiceState::Active {
+                // TODO maybe implement retry loop to attempt starting nm multiple times
+                error!("failed to start network manager");
+                return;
+            }
+        },
+        Err(err) => {
+            println!("Failed to start network manager service: {}", err);
+        }
     }
+
     let nm = NetworkManager::new();
     let mut access_points: Vec<AccessPoint> = vec![];
 
