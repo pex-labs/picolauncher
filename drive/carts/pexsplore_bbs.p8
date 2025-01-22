@@ -275,7 +275,7 @@ function _init()
 
     printh('favorite is now '..tostring(carts:cur().favorite))
 
-  end, 1)
+  end, 0.1)
 
   new_loadable('download_music', function(resp)
     printh('response from download_music '..resp)

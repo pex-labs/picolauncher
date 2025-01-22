@@ -12,7 +12,7 @@ app_menu=menu_new({
   {label='files', icon=7, func=function()os_load('pexsplore_bbs.p8', '', 'local')end}, -- load local games only
   {label='apps', icon=6, func=function()os_load('apps.p8')end},
   {label='photos', icon=2, func=function()os_load('gallery.p8')end},
-  {label='gyro_demo', icon=2, func=function()os_load('gyro_demo.p8')end},
+  -- {label='gyro_demo', icon=2, func=function()os_load('cherrybomb-0.p8')end},
   {label='tunes', icon=3, func=function()os_load('tunes.p8')end},
   {label='settings', icon=4, func=function()os_load('settings.p8')end},
   -- TODO: only quits to prompt if not in exported binary
