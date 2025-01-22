@@ -68,7 +68,8 @@ async fn main() {
     match did_nm_start {
         Ok(_) => {
             println!("Network manager service started successfully!");
-            let nm_state = NetworkManager::get_service_state().expect("unable to get network manager state");
+            let nm_state =
+                NetworkManager::get_service_state().expect("unable to get network manager state");
             if nm_state != ServiceState::Active {
                 // TODO maybe implement retry loop to attempt starting nm multiple times
                 error!("failed to start network manager");
@@ -77,7 +78,7 @@ async fn main() {
         },
         Err(err) => {
             println!("Failed to start network manager service: {}", err);
-        }
+        },
     }
 
     let nm = NetworkManager::new();
