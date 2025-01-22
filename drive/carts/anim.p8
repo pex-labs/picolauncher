@@ -34,6 +34,9 @@ function anim_new(name, frames, speed, loop)
           if self.loop then
             self:start()
           else
+            -- TODO: kinda bad
+            -- go back one to keep the current frame at the last frame
+            self._cur_frame = max(0,#self.frames-1)
             self:stop()
           end
         end
