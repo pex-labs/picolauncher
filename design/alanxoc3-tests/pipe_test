@@ -1,0 +1,3 @@
+#!/bin/bash
+
+yes hello | pico8 -run test.lua
