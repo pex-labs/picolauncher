@@ -28,6 +28,7 @@ use picolauncher::{
     db,
     exe::ExeMeta,
     hal::*,
+    image,
     p8util::{self, *},
 };
 use serde_json::{Map, Value};
@@ -391,6 +392,25 @@ async fn main() {
             },
             "sys" => {
                 // Get system information like operating system, etc
+            },
+
+            // PARAMS: filename, img_num, frame_num, bytes_per_frame
+            // filename: which file to load
+            // img_num: which image in a gif to load. not used for non-gifs.
+            // frame_num: which frame this is for loading the image.
+            // bytes_per_frame: how many bytes you are loading each frame.
+            "load_image" => {
+                let mut split = data.splitn(4, ",");
+                let filename = split.next().unwrap_or_default();
+                let img_num = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let frame_num = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let bytes_per_frame = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let image_data = image::process(filename);
+                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                in_pipe.write(
+                    &image_data[((frame_num * bytes_per_frame) as usize)
+                        ..(((frame_num + 1) * bytes_per_frame) as usize)],
+                );
             },
             "pushcart" => {
                 // when loading a new cart, can push the current cart and use as breadcrumb

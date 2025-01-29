@@ -5,3 +5,4 @@ pub mod db;
 pub mod exe;
 pub mod hal;
 pub mod p8util;
+pub mod image;

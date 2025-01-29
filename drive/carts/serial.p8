@@ -88,6 +88,26 @@ function serial_spawn_pico8()
   serial_writeline('spawn_pico8:')
 end
 
+-- load an image serial-in
+-- image is loaded in the pico-8 4bit image format.
+function serial_load_image(filename, buffer_len)
+  -- buffer_len guaranteed to align to a byte and be up to 1 screen in size.
+  local buffer_len = mid(1, ceil(buffer_len), 128*128/2)
+  serial_writeline('load_image:'..ceil(buffer_len)..","..filename)
+end
+
+-- buffer_len: how big the image is
+-- step_len: how many bytes to read with each step
+-- location: where to write data to (eg: 0x8000)
+function serial_read_image(buffer_len, step_len, location)
+  local offset = 0
+  while offset < buffer_len do
+    serial(stdin, location+offset, step_len)
+    offset += step_len
+    yield()
+  end
+end
+
 function serial_spawn_splore()
   serial_writeline('spawn_splore:')
 end

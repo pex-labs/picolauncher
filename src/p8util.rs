@@ -8,8 +8,8 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, Result};
-use image::{GenericImageView, ImageReader, Pixel, Pixels};
+use anyhow::anyhow;
+use image::{GenericImageView, ImageReader};
 use lazy_static::lazy_static;
 use ndarray::{arr1, arr2, Array1, Array2};
 use pino_deref::{Deref, DerefMut};
