@@ -1,6 +1,6 @@
 // TODO maybe switch to async
 use std::{
-    collections::HashMap, ffi::OsStr, fs::{create_dir_all, read_dir, read_to_string, File}, io::{BufRead, BufReader}, path::{Path, PathBuf}, sync::Arc, thread, time::{Duration, Instant}
+    collections::HashMap, ffi::OsStr, fs::{create_dir_all, read_dir, read_to_string, File}, path::{Path, PathBuf}, sync::Arc, thread, time::{Duration, Instant}
 };
 
 use anyhow::anyhow;
@@ -23,7 +23,7 @@ use picolauncher::{
     p8util::{self, *},
 };
 use serde_json::{Map, Value};
-use tokio::{io::AsyncWriteExt, process::{Child, Command}, runtime::Runtime, sync::Mutex};
+use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, process::{Child, Command}, runtime::Runtime, sync::Mutex};
 
 use crate::db::{schema::CartId, Cart, DB};
 
@@ -123,8 +123,8 @@ async fn main() {
     // let mut in_pipe = open_in_pipe().expect("failed to open pipe");
     // drop(in_pipe);
 
-    let mut out_pipe = open_out_pipe().expect("failed to open pipe");
-    let mut reader = BufReader::new(out_pipe);
+    let pico8_stdout = pico8_process.stdout.take().expect("child did not have a handle to stdout");
+    let mut reader = BufReader::new(pico8_stdout).lines();
 
     // TODO don't crash if browser fails to launch - just disable bbs functionality?
     // spawn browser and create tab for crawling
@@ -202,17 +202,8 @@ async fn main() {
             break;
         }
 
-        let mut line = String::new();
-        reader
-            .read_line(&mut line)
-            .expect("failed to read line from pipe");
+        let mut line = reader.next_line().await.unwrap().unwrap(); // TODO: better error handling. unwrap for await then line.
         line = line.trim().to_string();
-
-        // TODO this busy loops?
-        if line.len() == 0 {
-            continue;
-        }
-        //println!("received [{}] {}", line.len(), line);
 
         // spawn process command
         let mut split = line.splitn(2, ':');
