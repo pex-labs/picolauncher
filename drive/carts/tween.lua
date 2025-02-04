@@ -491,6 +491,7 @@ function tween_machine:add_tween(instance)
         start_time = 0,
         duration = 0,
         elapsed = 0,
+        frame = 0,
         finished = false,
     
         --- Callbacks
@@ -583,6 +584,7 @@ end
 function __tween:restart()
     self:init()
     self.elapsed = 0
+    self.frame = 0
     self.finished = false
 end
 
@@ -604,6 +606,7 @@ function __tween:update()
     if (self.finished or self.func == nil) return
 
     self.elapsed = time() - self.start_time
+    self.frame += 1 -- frame just increments by 1 each frame.
     if (self.elapsed > self.duration) self.elapsed = self.duration
     self.value = self.func(
         self.elapsed, 
@@ -614,7 +617,7 @@ function __tween:update()
 
     if #self.step_callbacks > 0 then
         for v in all(self.step_callbacks) do
-            v(self.value)
+            v(self.value, self.frame)
         end
     end
 

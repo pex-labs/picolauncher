@@ -1,7 +1,5 @@
 use std::{
-    fs::{File, OpenOptions},
-    path::{Path, PathBuf},
-    time::Duration,
+    fs::{File, OpenOptions}, path::{Path, PathBuf}, process::Stdio, time::Duration
 };
 
 use anyhow::anyhow;
@@ -52,7 +50,7 @@ pub fn open_in_pipe() -> anyhow::Result<File> {
 }
 
 pub fn open_out_pipe() -> anyhow::Result<File> {
-    create_pipe(&PathBuf::from(IN_PIPE))?;
+    create_pipe(&PathBuf::from(OUT_PIPE))?;
 
     let out_pipe = OpenOptions::new().read(true).open(&*OUT_PIPE)?;
 
@@ -157,7 +155,8 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
     for bin_name in bin_names {
         let pico8_process = Command::new(bin_name.clone())
             .args(args.clone())
-            // .stdout(Stdio::piped())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
             .spawn();
 
         match pico8_process {

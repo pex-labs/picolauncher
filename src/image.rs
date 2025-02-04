@@ -32,6 +32,8 @@ use image::{DynamicImage, GenericImageView, ImageReader};
 use lazy_static::lazy_static;
 use ndarray::{arr1, arr2, Array1, Array2};
 use std::cmp::Ordering;
+use std::env;
+use std::path::Path;
 
 type Pico8Screen = [u8; 8192];
 
@@ -104,22 +106,26 @@ fn rgba_to_pico8(palette: &Array2<u8>, img: &DynamicImage, x: u32, y: u32) -> us
 
 // coords for where the label image starts. (16, 24)
 // dimensions to verify p8.png file: 160 x 205
-pub fn process(filename: &str) -> Pico8Screen {
-    match process_(filename) {
+pub fn process(filepath: &Path) -> Pico8Screen {
+    match process_(filepath) {
         Err(_) => [0; 8192],
         Ok(value) => value,
     }
 }
 
 // intermediate function
-fn process_(filename: &str) -> anyhow::Result<Pico8Screen> {
-    let img_path = ImageReader::open(filename)?;
+fn process_(filepath: &Path) -> anyhow::Result<Pico8Screen> {
+    let current_dir = env::current_dir()?;
+    println!("{}", current_dir.display());
+    println!("1 {}", filepath.display());
+    let img_path = ImageReader::open(filepath)?;
     let _img_format = img_path.format();
     let img = img_path.decode()?;
     let mut imgdata = [0; 8192]; // this is the default value
 
     // assume these exact dimensions mean the image is a pico8 cartridge.
     if img.width() == 160 && img.height() == 205 {
+        println!("Ya Yes");
         for y in 0..128 {
             for x in 0..64 {
                 let p1 = rgba_to_pico8(&DEFAULT_PALETTE, &img, 16 + x * 2, y + 24);
@@ -127,24 +133,11 @@ fn process_(filename: &str) -> anyhow::Result<Pico8Screen> {
                 imgdata[(y * 64 + x) as usize] = (p1 << 4 | p2) as u8;
             }
         }
+    } else {
+        println!("Nope no");
     }
 
     Ok(imgdata)
-
-    // let mut pixels = Vec::new();
-
-    // if Path::new(filename).extension() == Some(std::ffi::OsStr::new("p8.png")) {
-    //     let img = image::open(filename).map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Failed to open image"))?;
-    //     let (width, height) = img.dimensions();
-
-    //     // p8.png files are always 160x205
-    //     if width == 160 && height == 205 {
-    //         for (_, _, pixel) in img.pixels() {
-    //             pixels.push(pixel[0]);
-    //         }
-    //     }
-    // }
-    // Ok(pixels)
 }
 
 #[cfg(test)]

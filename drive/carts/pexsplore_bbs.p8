@@ -16,7 +16,7 @@ bar_color_1=12
 bar_color_2=-4
 
 cart_dir='games'
-label_dir='labels'
+label_dir='bbs' -- TODO: currently bbs is a symlink because I want to test p8.png loading. This should not be a symlink and instead games should have p8.png files when possible since those have more information.
 loaded_carts={} -- list of all carts that can be displayed in the menu
 carts={}        -- menu for pexsplore ui
 
@@ -188,10 +188,16 @@ function make_cart_swipe_tween(dir)
   cart_swipe_tween:register_step_callback(function(pos)
     cart_x_swipe=pos
   end)
+
+  cart_swipe_tween:register_step_callback(function(_, frame)
+    serial_load_image("bbs/"..carts:cur().filename, 0x0000, 128, 128, frame)
+  end)
+
   cart_swipe_tween:register_finished_callback(function(tween)
     cart_x_swipe=64-1*dir*128
     tween:remove()
-    load_label(carts:cur(), 0)
+
+    -- load_label(carts:cur(), 0)
     make_cart_swipe_tween_2(dir)
   end)
   cart_swipe_tween:restart()

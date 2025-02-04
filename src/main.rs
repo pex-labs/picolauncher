@@ -1,15 +1,6 @@
 // TODO maybe switch to async
 use std::{
-    collections::HashMap,
-    ffi::OsStr,
-    fs::{create_dir_all, read_dir, read_to_string, File, OpenOptions},
-    io::{BufRead, BufReader, Read, Write},
-    ops::ControlFlow,
-    path::{Path, PathBuf},
-    ptr,
-    sync::Arc,
-    thread,
-    time::{Duration, Instant},
+    collections::HashMap, ffi::OsStr, fs::{create_dir_all, read_dir, read_to_string, File}, io::{BufRead, BufReader}, path::{Path, PathBuf}, sync::Arc, thread, time::{Duration, Instant}
 };
 
 use anyhow::anyhow;
@@ -32,7 +23,7 @@ use picolauncher::{
     p8util::{self, *},
 };
 use serde_json::{Map, Value};
-use tokio::{process::Command, runtime::Runtime, sync::Mutex};
+use tokio::{io::AsyncWriteExt, process::{Child, Command}, runtime::Runtime, sync::Mutex};
 
 use crate::db::{schema::CartId, Cart, DB};
 
@@ -124,17 +115,13 @@ async fn main() {
             DRIVE_DIR,
             "-run",
             &format!("drive/carts/{init_cart}"),
-            "-i",
-            "in_pipe",
-            "-o",
-            "out_pipe",
         ],
     )
     .expect("failed to spawn pico8 process");
 
     // need to drop the in_pipe (for some reason) for the pico8 process to start up
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-    drop(in_pipe);
+    // let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+    // drop(in_pipe);
 
     let mut out_pipe = open_out_pipe().expect("failed to open pipe");
     let mut reader = BufReader::new(out_pipe);
@@ -321,11 +308,9 @@ async fn main() {
                         exes.push(meta_string);
                     }
                 }
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 let exes_joined = exes.join(",");
                 debug!("exes_joined {exes_joined}");
-                writeln!(in_pipe, "{}", exes_joined).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, exes_joined).await;
             },
             "bbs" => {
                 // Query the bbs
@@ -374,9 +359,7 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", cartdatas_encoded).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, cartdatas_encoded).await;
             },
             "download" => {
                 // Download a cart from the bbs
@@ -400,17 +383,28 @@ async fn main() {
             // frame_num: which frame this is for loading the image.
             // bytes_per_frame: how many bytes you are loading each frame.
             "load_image" => {
-                let mut split = data.splitn(4, ",");
-                let filename = split.next().unwrap_or_default();
-                let img_num = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
-                let frame_num = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let mut split = data.splitn(6, ",");
+                // filename..","..scale_width..","..scale_height..","..bytes_per_frame..","..frame..","..mode)
+                let filename        = CART_DIR.join(split.next().unwrap_or_default());
+                let scale_width     = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let scale_height    = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
                 let bytes_per_frame = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
-                let image_data = image::process(filename);
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                in_pipe.write(
-                    &image_data[((frame_num * bytes_per_frame) as usize)
-                        ..(((frame_num + 1) * bytes_per_frame) as usize)],
-                );
+                let frame           = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let mode            = split.next().unwrap_or_default();
+
+                if frame*bytes_per_frame < scale_height*scale_width/2 {
+                    let image_data = image::process(&filename.as_path());
+                    stdin_writeraw(
+                        &mut pico8_process,
+                        &image_data[((frame * bytes_per_frame) as usize)
+                                    ..(((frame + 1) * bytes_per_frame) as usize)]
+                    ).await;
+                } else {
+                    stdin_writeraw(
+                        &mut pico8_process,
+                        &vec![3u8; bytes_per_frame as usize]
+                    ).await;
+                }
             },
             "pushcart" => {
                 // when loading a new cart, can push the current cart and use as breadcrumb
@@ -422,9 +416,7 @@ async fn main() {
                 let topcart = cartstack.last().cloned().unwrap_or_default();
                 debug!("popcart topcart is {topcart}");
 
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", topcart).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, topcart).await;
             },
             "wifi_list" => {
                 // scan for networks
@@ -437,9 +429,7 @@ async fn main() {
                 // TODO save this to global state
 
                 println!("found networks {}", networks.join(","));
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", networks.join(",")).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, networks.join(",")).await;
             },
             "wifi_connect" => {
                 // Grab password and connect to wifi, returning success or failure info
@@ -454,27 +444,19 @@ async fn main() {
                 println!("wifi connection result {res:?}");
 
                 let status = impl_wifi_status(&nm);
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, status).await;
             },
             "wifi_disconnect" => {
                 let res = impl_wifi_disconnect(&nm);
                 println!("wifi disconnection result {res:?}");
 
                 let status = impl_wifi_status(&nm);
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, status).await;
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = impl_wifi_status(&nm);
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, status).await;
             },
             "bt_start" => {
                 println!("HELLO");
@@ -493,16 +475,8 @@ async fn main() {
             },
 
             "bt_status" => {
-                let mut bt_status_guard = bt_status.lock().await;
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(
-                    in_pipe,
-                    "{}",
-                    bt_status_guard.get_status_table(&adapter).await.unwrap()
-                )
-                .expect("failed to write to pipe");
-                drop(in_pipe);
+                let bt_status_guard = bt_status.lock().await;
+                stdin_writeln(&mut pico8_process, bt_status_guard.get_status_table(&adapter).await.unwrap()).await;
             },
             "set_favorite" => {
                 let mut split = data.splitn(2, ",");
@@ -511,10 +485,7 @@ async fn main() {
 
                 // TODO better error handling
                 db.set_favorite(cart_id, is_favorite).unwrap();
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{cart_id},{is_favorite}").expect("failed to write to pipe");
-                drop(in_pipe);
+                stdin_writeln(&mut pico8_process, format!("{},{}", cart_id, is_favorite)).await;
             },
             "list_favorite" => {},
             "bt_connect" => {},
@@ -525,18 +496,18 @@ async fn main() {
                 if let Err(ref e) = res {
                     warn!("download_music failed {e:?}");
                 }
-                write_to_pico8(format!("{}", res.is_ok())).await;
+                stdin_writeln(&mut pico8_process, format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
                 if imu.is_some() {
                     let imu = Arc::clone(&imu.clone().unwrap());
                     let (pitch, roll) = imu.get_tilt().await;
                     debug!("got imu data {},{}", pitch, roll);
-                    write_to_pico8(format!("{pitch},{roll}")).await;
+                    stdin_writeln(&mut pico8_process, format!("{pitch},{roll}")).await;
                 } else {
-                    write_to_pico8(format!("0,0")).await;
+                    stdin_writeln(&mut pico8_process, format!("0,0")).await;
                 }
-                write_to_pico8(format!("0,0")).await;
+                stdin_writeln(&mut pico8_process, format!("0,0")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
@@ -612,21 +583,6 @@ async fn postprocess_cart(
         pico8_export(&pico8_bins, path, &dest_path)
             .await
             .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
-    }
-
-    // generate label file
-    let mut label_path = LABEL_DIR.join(filestem);
-    label_path.set_extension("64.p8");
-    if !label_path.exists() {
-        let label_cart = cart2label(&dest_path)
-            .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
-
-        let mut label_file = File::create(label_path.clone())
-            .map_err(|e| anyhow!("failed to create label file {label_path:?}: {e:?}"))?;
-
-        label_cart
-            .write(&mut label_file)
-            .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
     }
 
     // generate metadata file
@@ -920,8 +876,12 @@ async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()>
     Ok(())
 }
 
-async fn write_to_pico8(msg: String) {
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
-    drop(in_pipe);
+async fn stdin_writeln(pico8_process: &mut Child, msg: String) {
+    let mut stdin = pico8_process.stdin.take().unwrap();
+    stdin.write_all(format!("{}\n", msg).as_bytes()).await.unwrap();
+}
+
+async fn stdin_writeraw(pico8_process: &mut Child, msg: &[u8]) {
+    let mut stdin = pico8_process.stdin.take().unwrap();
+    stdin.write_all(msg).await.unwrap();
 }

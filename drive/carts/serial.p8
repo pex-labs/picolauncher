@@ -88,23 +88,35 @@ function serial_spawn_pico8()
   serial_writeline('spawn_pico8:')
 end
 
--- load an image serial-in
+-- load an image in parts through serial-in. image is loaded row-by-row.
 -- image is loaded in the pico-8 4bit image format.
-function serial_load_image(filename, buffer_len)
-  -- buffer_len guaranteed to align to a byte and be up to 1 screen in size.
-  local buffer_len = mid(1, ceil(buffer_len), 128*128/2)
-  serial_writeline('load_image:'..ceil(buffer_len)..","..filename)
-end
+-- return true means the function is done at that frame and doesn't need to be called anymore.
+-- load modes:
+-- - "top_bot" -- load the image from the top to the bottom.
+POSSIBLE_LOAD_MODES = {top_bot=true}
+function serial_load_image(filename, location, scale_width, scale_height, frame, mode, bytes_per_frame)
+  filename = filename..".p8.png"
+  mode = POSSIBLE_LOAD_MODES[mode] and mode or "top_bot" -- load the image top to bottom.
+  bytes_per_frame = bytes_per_frame or 1024 -- 1024 bytes is about 50% cpu on 60 fps.
+  scale_width  = mid(1, scale_width,  128)\1 -- scale_width, scaled down images load can faster
+  scale_height = mid(1, scale_height, 128)\1
+  frame = max(1, frame\1) -- which frame this is. used to determine which part of the image to load.
 
--- buffer_len: how big the image is
--- step_len: how many bytes to read with each step
--- location: where to write data to (eg: 0x8000)
-function serial_read_image(buffer_len, step_len, location)
-  local offset = 0
-  while offset < buffer_len do
-    serial(stdin, location+offset, step_len)
-    offset += step_len
-    yield()
+  local buffer_len = ceil(scale_width*scale_height/2)
+  if bytes_per_frame*(frame-1) >= buffer_len then
+    return true
+  end
+
+  serial_writeline('load_image:'..filename..","..scale_width..","..scale_height..","..bytes_per_frame..","..frame..","..mode)
+  local size = serial(stdin, location+bytes_per_frame*(frame-1), bytes_per_frame) -- TODO: make it read less for the last frame
+  printh(" size "..size.." "..t())
+  local size2 = serial(stdin, 0x0000, 10)
+  printh(" size2 "..size2.." "..t())
+  -- printh(" "..location+bytes_per_frame*(frame-1))
+  -- printh(" "..bytes_per_frame)
+
+  if bytes_per_frame*(frame-1) >= buffer_len then
+    return true
   end
 end
 
@@ -183,7 +195,7 @@ end
 function serial_writeline(buf)
   -- TODO check length of buf to avoid overfloe
   -- TODO not super efficient
-  printh('output len '..#buf .. ' content ' .. buf)
+  -- printh('output len '..#buf .. ' content ' .. buf)
   for i=1,#buf do
     b = ord(sub(buf, i, i))
     -- printh('copy: '..b)
