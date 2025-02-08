@@ -744,7 +744,7 @@ fn impl_wifi_status(nm: &NetworkManager) -> String {
                 network_manager::ConnectionState::Deactivated => "disconnected",
             };
             prop_map.insert("state".into(), Value::String(state_str.into()));
-            break;
+            return serialize_table(&prop_map);
         }
     }
 

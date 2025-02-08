@@ -24,7 +24,9 @@ local show_keyboard = false
 -- main menu
 local main_menu = menu_new({
   {label="theme",func=function()current_screen="theme"end},
-  {label="wifi",func=function()current_screen="wifi"end},
+  {label="wifi",func=function()
+    current_screen="wifi"
+  end},
   {
     label = "bluetooth",
     func = function()
@@ -140,7 +142,7 @@ function _init()
   init_timers()
 
   new_loadable('wifi_list', function(resp)
-    serial_debug('resp'..tostring(resp))
+    serial_debug('wifi_list resp '..tostring(resp))
     local split_wifi=split(resp, ',', false)
     for k, v in pairs(split_wifi) do
       split_wifi[k]=table_from_string(v)
@@ -162,6 +164,10 @@ function _init()
   new_loadable('wifi_status', function(resp)
     serial_debug('resp'..tostring(resp))
     wifi_status=table_from_string(resp)
+
+    -- request status will also trigger request for wifi list
+    -- TODO maybe combine these requests?
+    request_loadable("wifi_list")
   end, 1)
 
   -- bluetooth loadables
@@ -172,8 +178,6 @@ function _init()
   new_loadable('bt_start', function(resp)
     serial_debug('resp'..tostring(resp))
   end, 1)
-
-
 
   request_loadable('wifi_status')
 end
@@ -337,12 +341,14 @@ function draw_wifi_menu()
         print(network.name, 12, y + 2, c_text)
       end
 
-      for j = 1, 3 do
-        local c = 5
-        if (j-1)*25 <= network.strength then
-          c = c_text
+      if network.strength ~= nil then  
+        for j = 1, 3 do
+          local c = 5
+          if (j-1)*25 <= network.strength then
+            c = c_text
+          end
+          line(screen_width - 16 + j*2, y + 8 - j*2, screen_width - 16 + j*2, y + 7, c)
         end
-        line(screen_width - 16 + j*2, y + 8 - j*2, screen_width - 16 + j*2, y + 7, c)
       end
     end
   end

@@ -102,7 +102,7 @@ function update_loadables()
         if loadable.requested == true then
             if curtime - loadable.last_poll > loadable.poll_duration then
                 local resp=serial_readline()
-                if #resp > 0 then
+                if #resp > 0 and resp ~= nil then
                     loadable.requested = false
                     loadable.callback_fn(resp)
                 end
