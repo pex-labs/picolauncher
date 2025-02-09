@@ -46,8 +46,8 @@ end
 
 -- serial interface with the underlying operating system
 
-stdin=0x806
-stdout=0x807
+stdin=0x804
+stdout=0x805
 
 chan_buf=0x4300
 chan_buf_size=0x1000
@@ -108,10 +108,13 @@ function serial_load_image(filename, location, scale_width, scale_height, frame,
   end
 
   serial_writeline('load_image:'..filename..","..scale_width..","..scale_height..","..bytes_per_frame..","..frame..","..mode)
+
+  -- printh("about to read "..bytes_per_frame.." bytes")
   local size = serial(stdin, location+bytes_per_frame*(frame-1), bytes_per_frame) -- TODO: make it read less for the last frame
-  printh(" size "..size.." "..t())
-  local size2 = serial(stdin, 0x0000, 10)
-  printh(" size2 "..size2.." "..t())
+  -- printh("finished reading "..bytes_per_frame.." bytes")
+
+  -- local size2 = serial(stdin, 0x0000, 10)
+  -- printh(" size2 "..size2.." "..t())
   -- printh(" "..location+bytes_per_frame*(frame-1))
   -- printh(" "..bytes_per_frame)
 
@@ -168,45 +171,24 @@ end
 -- read from input file until a newline is reached
 -- TODO this can be refactored into a coroutine?
 function serial_readline()
+  printh("about to read")
   local result=''
-  local got_newline=false
   while true do
     -- also use the argument space to receive the result
-    size = serial(stdin, chan_buf, chan_buf_size)
-    if (size == 0) then return result end
-    -- printh('size: ' .. size)
-    for i=0,size do
-      b = peek(chan_buf+i)
-      -- printh('byte: '..b)
-      if b == 0x0a then
-        got_newline=true
-        break
-      end 
-      result = result..chr(b)
-    end
+    serial(stdin, chan_buf, 1)
+    local byte = @chan_buf
+    if byte == 0x0a then break
+    else result ..= chr(byte) end
   end
-  if not got_newline then
-    printh('warning: newline was not received')
-  end
-  printh('result '..result)
+
+  printh("finished reading")
+
   return result
 end
 
+-- Yep a write is just a printh to stdout.
 function serial_writeline(buf)
-  -- TODO check length of buf to avoid overfloe
-  -- TODO not super efficient
-  -- printh('output len '..#buf .. ' content ' .. buf)
-  for i=1,#buf do
-    b = ord(sub(buf, i, i))
-    -- printh('copy: '..b)
-    poke(chan_buf + i - 1, b)
-  end
-  -- write a newline character
-  poke(chan_buf+#buf, ord('\n'))
-
-  -- TODO currently this means that newlines are not allowed in messages
-  serial(stdout, chan_buf, #buf+1)
-  flip()
+  printh(buf)
 end
 
 function serial_fetch_carts()
@@ -231,7 +213,6 @@ function os_load(path, breadcrumb, param)
   if param == nil then param = '' end
 
   serial_writeline('pushcart:'..path..','..breadcrumb..','..param)
-  serial_readline() -- empty response
   load(path, breadcrumb, param)
 end
 

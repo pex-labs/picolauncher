@@ -23,7 +23,7 @@ use picolauncher::{
     p8util::{self, *},
 };
 use serde_json::{Map, Value};
-use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader}, process::{Child, Command}, runtime::Runtime, sync::Mutex};
+use tokio::{io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter}, process::{Child, ChildStdin, Command}, runtime::Runtime, sync::Mutex};
 
 use crate::db::{schema::CartId, Cart, DB};
 
@@ -124,7 +124,9 @@ async fn main() {
     // drop(in_pipe);
 
     let pico8_stdout = pico8_process.stdout.take().expect("child did not have a handle to stdout");
-    let mut reader = BufReader::new(pico8_stdout).lines();
+    let pico8_stdin  = pico8_process.stdin.take().expect("child did not have a handle to stdin");
+    let mut pico8_writer = BufWriter::new(pico8_stdin);
+    let mut pico8_reader = BufReader::new(pico8_stdout).lines();
 
     // TODO don't crash if browser fails to launch - just disable bbs functionality?
     // spawn browser and create tab for crawling
@@ -202,14 +204,15 @@ async fn main() {
             break;
         }
 
-        let mut line = reader.next_line().await.unwrap().unwrap(); // TODO: better error handling. unwrap for await then line.
+        debug!("Reading input now");
+        let mut line = pico8_reader.next_line().await.unwrap().unwrap(); // TODO: better error handling. unwrap for await then line.
         line = line.trim().to_string();
+        println!("INPUT: {}", line);
 
         // spawn process command
         let mut split = line.splitn(2, ':');
         let cmd = split.next().unwrap_or("");
         let data = split.next().unwrap_or("");
-        debug!("received cmd:{cmd} data:{data}");
 
         match cmd {
             // TODO disable until we port this to windows and support launching external binaries
@@ -301,7 +304,7 @@ async fn main() {
                 }
                 let exes_joined = exes.join(",");
                 debug!("exes_joined {exes_joined}");
-                stdin_writeln(&mut pico8_process, exes_joined).await;
+                stdin_writeln(&mut pico8_writer, exes_joined).await;
             },
             "bbs" => {
                 // Query the bbs
@@ -350,7 +353,7 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                stdin_writeln(&mut pico8_process, cartdatas_encoded).await;
+                stdin_writeln(&mut pico8_writer, cartdatas_encoded).await;
             },
             "download" => {
                 // Download a cart from the bbs
@@ -386,13 +389,13 @@ async fn main() {
                 if frame*bytes_per_frame < scale_height*scale_width/2 {
                     let image_data = image::process(&filename.as_path());
                     stdin_writeraw(
-                        &mut pico8_process,
+                        &mut pico8_writer,
                         &image_data[((frame * bytes_per_frame) as usize)
                                     ..(((frame + 1) * bytes_per_frame) as usize)]
                     ).await;
                 } else {
                     stdin_writeraw(
-                        &mut pico8_process,
+                        &mut pico8_writer,
                         &vec![3u8; bytes_per_frame as usize]
                     ).await;
                 }
@@ -407,7 +410,7 @@ async fn main() {
                 let topcart = cartstack.last().cloned().unwrap_or_default();
                 debug!("popcart topcart is {topcart}");
 
-                stdin_writeln(&mut pico8_process, topcart).await;
+                stdin_writeln(&mut pico8_writer, topcart).await;
             },
             "wifi_list" => {
                 // scan for networks
@@ -420,7 +423,7 @@ async fn main() {
                 // TODO save this to global state
 
                 println!("found networks {}", networks.join(","));
-                stdin_writeln(&mut pico8_process, networks.join(",")).await;
+                stdin_writeln(&mut pico8_writer, networks.join(",")).await;
             },
             "wifi_connect" => {
                 // Grab password and connect to wifi, returning success or failure info
@@ -435,19 +438,19 @@ async fn main() {
                 println!("wifi connection result {res:?}");
 
                 let status = impl_wifi_status(&nm);
-                stdin_writeln(&mut pico8_process, status).await;
+                stdin_writeln(&mut pico8_writer, status).await;
             },
             "wifi_disconnect" => {
                 let res = impl_wifi_disconnect(&nm);
                 println!("wifi disconnection result {res:?}");
 
                 let status = impl_wifi_status(&nm);
-                stdin_writeln(&mut pico8_process, status).await;
+                stdin_writeln(&mut pico8_writer, status).await;
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = impl_wifi_status(&nm);
-                stdin_writeln(&mut pico8_process, status).await;
+                stdin_writeln(&mut pico8_writer, status).await;
             },
             "bt_start" => {
                 println!("HELLO");
@@ -467,7 +470,7 @@ async fn main() {
 
             "bt_status" => {
                 let bt_status_guard = bt_status.lock().await;
-                stdin_writeln(&mut pico8_process, bt_status_guard.get_status_table(&adapter).await.unwrap()).await;
+                stdin_writeln(&mut pico8_writer, bt_status_guard.get_status_table(&adapter).await.unwrap()).await;
             },
             "set_favorite" => {
                 let mut split = data.splitn(2, ",");
@@ -476,7 +479,7 @@ async fn main() {
 
                 // TODO better error handling
                 db.set_favorite(cart_id, is_favorite).unwrap();
-                stdin_writeln(&mut pico8_process, format!("{},{}", cart_id, is_favorite)).await;
+                stdin_writeln(&mut pico8_writer, format!("{},{}", cart_id, is_favorite)).await;
             },
             "list_favorite" => {},
             "bt_connect" => {},
@@ -487,18 +490,18 @@ async fn main() {
                 if let Err(ref e) = res {
                     warn!("download_music failed {e:?}");
                 }
-                stdin_writeln(&mut pico8_process, format!("{}", res.is_ok())).await;
+                stdin_writeln(&mut pico8_writer, format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
                 if imu.is_some() {
                     let imu = Arc::clone(&imu.clone().unwrap());
                     let (pitch, roll) = imu.get_tilt().await;
                     debug!("got imu data {},{}", pitch, roll);
-                    stdin_writeln(&mut pico8_process, format!("{pitch},{roll}")).await;
+                    stdin_writeln(&mut pico8_writer, format!("{pitch},{roll}")).await;
                 } else {
-                    stdin_writeln(&mut pico8_process, format!("0,0")).await;
+                    stdin_writeln(&mut pico8_writer, format!("0,0")).await;
                 }
-                stdin_writeln(&mut pico8_process, format!("0,0")).await;
+                stdin_writeln(&mut pico8_writer, format!("0,0")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
@@ -867,12 +870,14 @@ async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()>
     Ok(())
 }
 
-async fn stdin_writeln(pico8_process: &mut Child, msg: String) {
-    let mut stdin = pico8_process.stdin.take().unwrap();
-    stdin.write_all(format!("{}\n", msg).as_bytes()).await.unwrap();
+async fn stdin_writeln(pico8_writer: &mut BufWriter<ChildStdin>, msg: String) {
+    let msg = format!("{}\n", msg);
+    debug!("writing line: {}", &msg); //&msg[..msg.len().min(10)]);
+    let _ = pico8_writer.write_all(msg.as_bytes()).await;
+    let _ = pico8_writer.flush().await;
 }
 
-async fn stdin_writeraw(pico8_process: &mut Child, msg: &[u8]) {
-    let mut stdin = pico8_process.stdin.take().unwrap();
-    stdin.write_all(msg).await.unwrap();
+async fn stdin_writeraw(pico8_writer: &mut BufWriter<ChildStdin>, msg: &[u8]) {
+    let _ = pico8_writer.write_all(msg).await;
+    let _ = pico8_writer.flush().await;
 }

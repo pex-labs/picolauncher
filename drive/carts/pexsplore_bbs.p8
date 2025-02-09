@@ -75,6 +75,7 @@ function draw_label(x, y, w, slot)
         sspr(i*64, slot*32 + j, 64, 1, x-w/2, y-w/2+j*2+i)
       end
     end
+    -- sspr(0, 0, 128, 128, x-w/2, y-w/2+j*2+i, 64, 64)
   end
 end
 
@@ -511,7 +512,7 @@ function draw_carts_menu()
     else
       local str="❎ load more carts"
       print(str, cart_x_swipe-#str*2, 64, 7) 
-    end 
+    end
   else
     draw_cart(cart_x_swipe, 64.5+cart_y_ease+cart_y_bob, 0)
     local str="❎view"
