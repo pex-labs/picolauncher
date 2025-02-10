@@ -1,5 +1,7 @@
 #[cfg(target_os = "linux")]
 mod linux;
+use std::sync::Arc;
+
 #[cfg(target_os = "linux")]
 pub use linux::*;
 
@@ -15,6 +17,7 @@ pub use windows::*;
 
 mod dummy;
 use anyhow::Result;
+use async_trait::async_trait;
 use dummy::*;
 
 use crate::p8util::serialize_table;
@@ -37,6 +40,14 @@ impl WifiNetwork {
     }
 }
 
+pub trait NetworkHAL {
+    fn scan(&self) -> Result<()>;
+    fn status(&self) -> Result<String>;
+    fn list(&mut self) -> Result<Vec<WifiNetwork>>;
+    fn connect(&mut self, ssid: &str, psk: &str) -> Result<()>;
+    fn disconnect(&mut self) -> Result<()>;
+}
+
 // initialize the network HAL depending on the platform and any compile flags
 pub fn init_network_hal() -> Result<Box<dyn NetworkHAL>> {
     if cfg!(all(feature = "network", target_os = "linux")) {
@@ -50,12 +61,30 @@ pub fn init_network_hal() -> Result<Box<dyn NetworkHAL>> {
     }
 }
 
-pub trait NetworkHAL {
-    fn scan(&self) -> Result<()>;
+pub trait BluetoothHAL {
+    fn connect(&self, device_name: &str) -> Result<()>;
+    fn disconnect(&self) -> Result<()>;
     fn status(&self) -> Result<String>;
-    fn list(&mut self) -> Result<Vec<WifiNetwork>>;
-    fn connect(&mut self, ssid: &str, psk: &str) -> Result<()>;
-    fn disconnect(&mut self) -> Result<()>;
+    fn start_scan(&self) -> Result<()>;
+    fn stop_scan(&self) -> Result<()>;
 }
 
-pub trait BluetoothHAL {}
+pub fn init_ble_hal() -> Result<Box<dyn BluetoothHAL>> {
+    // TODO implementations, we are just falling back to the dummy impl for now
+    Ok(Box::new(DummyBluetoothHAL::new()) as Box<dyn BluetoothHAL>)
+}
+
+#[async_trait]
+pub trait GyroHAL: Send + Sync {
+    /// Start monitoring the gyroscope data
+    async fn start(&self) -> Result<()>;
+    async fn read_tilt(&self) -> (f64, f64);
+}
+
+pub fn init_gyro_hal() -> Result<Arc<dyn GyroHAL>> {
+    if cfg!(all(feature = "gyro", target_os = "linux")) {
+        Ok(Arc::new(LinuxGyroHAL::new("/dev/i2c-5", true).unwrap()) as Arc<dyn GyroHAL>)
+    } else {
+        Ok(Arc::new(DummyGyroHAL::new()) as Arc<dyn GyroHAL>)
+    }
+}

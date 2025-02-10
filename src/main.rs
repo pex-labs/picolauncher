@@ -23,7 +23,6 @@ use notify::event::CreateKind;
 use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{
     bbs::*,
-    bluetooth::*,
     consts::*,
     db,
     exe::ExeMeta,
@@ -66,13 +65,17 @@ async fn main() {
     // TODO choose correct impl based on platform
     let mut network_hal = init_network_hal().expect("failed to initialize network HAL");
 
-    let session = bluer::Session::new().await.unwrap();
-    let adapter = Arc::new(session.default_adapter().await.unwrap());
-    println!("Using Bluetooth adapter: {}", adapter.name());
-    // Ensure the adapter is powered on
-    adapter.set_powered(true).await.unwrap();
+    // initialize bluetooth HAL
+    let mut ble_hal = init_ble_hal().expect("failed to initialize bluetooth HAL");
 
-    let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new(&adapter).await.unwrap()));
+    // initialize gyroscpe HAL
+    // enable IMU
+    // TODO print error message if this failed
+    let gyro_hal = init_gyro_hal().expect("failed to initialize bluetooth HAL");
+    let gyro_hal_clone = Arc::clone(&gyro_hal);
+    tokio::spawn(async move {
+        gyro_hal_clone.start().await.unwrap();
+    });
 
     // create necessary directories
     if let Err(e) = create_dirs() {
@@ -166,23 +169,6 @@ async fn main() {
     let mut db = DB::connect(db::DB_PATH).expect("unable to establish connection with database");
     debug!("established connection to sqlite database");
     db.migrate().expect("failed migrating database");
-
-    // enable IMU
-    // TODO should put this behind a feature flag
-    // TODO print error message if this failed
-    let mut imu: Option<Arc<LSM9DS1>> = match LSM9DS1::new("/dev/i2c-5", true) {
-        Ok(imu) => Some(Arc::new(imu)),
-        Err(e) => {
-            warn!("LSM9DS1 IMU failed to initialize {e:?}");
-            None
-        },
-    };
-    if let Some(ref imu) = imu {
-        let imu = Arc::clone(&imu);
-        tokio::spawn(async move {
-            imu.start().await.unwrap();
-        });
-    }
 
     // db.add_favorite("advent2024-27.p8")
     //     .expect("failed to add to fav");
@@ -438,7 +424,7 @@ async fn main() {
                 drop(in_pipe);
             },
             "bt_start" => {
-                println!("HELLO");
+                /*
                 let _ = update_connected_devices(bt_status.clone(), adapter.clone()).await;
                 tokio::spawn({
                     let bt_status = bt_status.clone();
@@ -447,13 +433,19 @@ async fn main() {
                         discover_devices(bt_status.clone(), adapter).await.unwrap();
                     }
                 });
+                */
+                todo!()
             },
             "bt_stop" => {
+                /*
                 let mut bt_status_guard = bt_status.lock().await;
                 bt_status_guard.stop();
+                */
+                todo!()
             },
 
             "bt_status" => {
+                /*
                 let mut bt_status_guard = bt_status.lock().await;
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -464,6 +456,14 @@ async fn main() {
                 )
                 .expect("failed to write to pipe");
                 drop(in_pipe);
+                */
+                todo!()
+            },
+            "bt_connect" => {
+                todo!()
+            },
+            "bt_disconnect" => {
+                todo!()
             },
             "set_favorite" => {
                 let mut split = data.splitn(2, ",");
@@ -478,8 +478,6 @@ async fn main() {
                 drop(in_pipe);
             },
             "list_favorite" => {},
-            "bt_connect" => {},
-            "bt_disconnect" => {},
             "download_music" => {
                 let cart_id = data.parse::<i32>().unwrap();
                 let res = impl_download_music(&mut db, cart_id).await;
@@ -489,15 +487,10 @@ async fn main() {
                 write_to_pico8(format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
-                if imu.is_some() {
-                    let imu = Arc::clone(&imu.clone().unwrap());
-                    let (pitch, roll) = imu.get_tilt().await;
-                    debug!("got imu data {},{}", pitch, roll);
-                    write_to_pico8(format!("{pitch},{roll}")).await;
-                } else {
-                    write_to_pico8(format!("0,0")).await;
-                }
-                write_to_pico8(format!("0,0")).await;
+                let gyro_hal = Arc::clone(&gyro_hal.clone());
+                let (pitch, roll) = gyro_hal.read_tilt().await;
+                debug!("got imu data {},{}", pitch, roll);
+                write_to_pico8(format!("{pitch},{roll}")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
