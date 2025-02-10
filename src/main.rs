@@ -66,13 +66,8 @@ async fn main() {
     // TODO choose correct impl based on platform
     let mut network_hal = init_network_hal().expect("failed to initialize network HAL");
 
-    let session = bluer::Session::new().await.unwrap();
-    let adapter = Arc::new(session.default_adapter().await.unwrap());
-    println!("Using Bluetooth adapter: {}", adapter.name());
-    // Ensure the adapter is powered on
-    adapter.set_powered(true).await.unwrap();
-
-    let mut bt_status = Arc::new(Mutex::new(BluetoothStatus::new(&adapter).await.unwrap()));
+    // initialize bluetooth HAL
+    let mut ble_hal = init_ble_hal().expect("failed to initialize bluetooth HAL");
 
     // create necessary directories
     if let Err(e) = create_dirs() {
@@ -438,7 +433,7 @@ async fn main() {
                 drop(in_pipe);
             },
             "bt_start" => {
-                println!("HELLO");
+                /*
                 let _ = update_connected_devices(bt_status.clone(), adapter.clone()).await;
                 tokio::spawn({
                     let bt_status = bt_status.clone();
@@ -447,13 +442,19 @@ async fn main() {
                         discover_devices(bt_status.clone(), adapter).await.unwrap();
                     }
                 });
+                */
+                todo!()
             },
             "bt_stop" => {
+                /*
                 let mut bt_status_guard = bt_status.lock().await;
                 bt_status_guard.stop();
+                */
+                todo!()
             },
 
             "bt_status" => {
+                /*
                 let mut bt_status_guard = bt_status.lock().await;
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -464,6 +465,14 @@ async fn main() {
                 )
                 .expect("failed to write to pipe");
                 drop(in_pipe);
+                */
+                todo!()
+            },
+            "bt_connect" => {
+                todo!()
+            },
+            "bt_disconnect" => {
+                todo!()
             },
             "set_favorite" => {
                 let mut split = data.splitn(2, ",");
@@ -478,8 +487,6 @@ async fn main() {
                 drop(in_pipe);
             },
             "list_favorite" => {},
-            "bt_connect" => {},
-            "bt_disconnect" => {},
             "download_music" => {
                 let cart_id = data.parse::<i32>().unwrap();
                 let res = impl_download_music(&mut db, cart_id).await;

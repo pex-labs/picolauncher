@@ -37,6 +37,14 @@ impl WifiNetwork {
     }
 }
 
+pub trait NetworkHAL {
+    fn scan(&self) -> Result<()>;
+    fn status(&self) -> Result<String>;
+    fn list(&mut self) -> Result<Vec<WifiNetwork>>;
+    fn connect(&mut self, ssid: &str, psk: &str) -> Result<()>;
+    fn disconnect(&mut self) -> Result<()>;
+}
+
 // initialize the network HAL depending on the platform and any compile flags
 pub fn init_network_hal() -> Result<Box<dyn NetworkHAL>> {
     if cfg!(all(feature = "network", target_os = "linux")) {
@@ -50,12 +58,17 @@ pub fn init_network_hal() -> Result<Box<dyn NetworkHAL>> {
     }
 }
 
-pub trait NetworkHAL {
-    fn scan(&self) -> Result<()>;
+pub trait BluetoothHAL {
+    fn connect(&self, device_name: &str) -> Result<()>;
+    fn disconnect(&self) -> Result<()>;
     fn status(&self) -> Result<String>;
-    fn list(&mut self) -> Result<Vec<WifiNetwork>>;
-    fn connect(&mut self, ssid: &str, psk: &str) -> Result<()>;
-    fn disconnect(&mut self) -> Result<()>;
+    fn start_scan(&self) -> Result<()>;
+    fn stop_scan(&self) -> Result<()>;
 }
 
-pub trait BluetoothHAL {}
+pub fn init_ble_hal() -> Result<Box<dyn BluetoothHAL>> {
+    // TODO implementations, we are just falling back to the dummy impl for now
+    Ok(Box::new(DummyBluetoothHAL::new()) as Box<dyn BluetoothHAL>)
+}
+
+pub trait GyroHAL {}

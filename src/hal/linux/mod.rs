@@ -1,3 +1,4 @@
+mod bluetooth;
 mod network;
 use std::{
     fs::{File, OpenOptions},
