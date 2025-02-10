@@ -8,10 +8,13 @@ description = ""
 repository = ""
 
 [features]
-default = []
+default = ["network"]
 
 # enable gyroscope driver
 gyro = []
+
+# enable network support
+network = []
 
 [dependencies]
 notify = "6.1"
