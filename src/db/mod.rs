@@ -89,6 +89,26 @@ impl DB {
         Ok(res)
     }
 
+    pub fn get_cart_by_filename(&mut self, filename: String) -> anyhow::Result<Cart> {
+        use crate::db::carts::{dsl::*, filename as _filename};
+
+        let res = carts
+            .filter(_filename.eq(filename))
+            .first::<Cart>(&mut self.conn)?;
+
+        Ok(res)
+    }
+
+    pub fn get_cart_by_filenames(&mut self, filenames: Vec<String>) -> anyhow::Result<Vec<Cart>> {
+        use crate::db::carts::{dsl::*, filename};
+
+        let res = carts
+            .filter(filename.eq_any(filenames))
+            .load::<Cart>(&mut self.conn)?;
+
+        Ok(res)
+    }
+
     pub fn get_conn(&mut self) -> &mut SqliteConnection {
         &mut self.conn
     }
