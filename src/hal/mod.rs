@@ -1,5 +1,7 @@
 #[cfg(target_os = "linux")]
 mod linux;
+use std::sync::Arc;
+
 #[cfg(target_os = "linux")]
 pub use linux::*;
 
@@ -15,6 +17,7 @@ pub use windows::*;
 
 mod dummy;
 use anyhow::Result;
+use async_trait::async_trait;
 use dummy::*;
 
 use crate::p8util::serialize_table;
@@ -71,4 +74,17 @@ pub fn init_ble_hal() -> Result<Box<dyn BluetoothHAL>> {
     Ok(Box::new(DummyBluetoothHAL::new()) as Box<dyn BluetoothHAL>)
 }
 
-pub trait GyroHAL {}
+#[async_trait]
+pub trait GyroHAL: Send + Sync {
+    /// Start monitoring the gyroscope data
+    async fn start(&self) -> Result<()>;
+    async fn read_tilt(&self) -> (f64, f64);
+}
+
+pub fn init_gyro_hal() -> Result<Arc<dyn GyroHAL>> {
+    if cfg!(all(feature = "gyro", target_os = "linux")) {
+        Ok(Arc::new(LinuxGyroHAL::new("/dev/i2c-5", true).unwrap()) as Arc<dyn GyroHAL>)
+    } else {
+        Ok(Arc::new(DummyGyroHAL::new()) as Arc<dyn GyroHAL>)
+    }
+}
