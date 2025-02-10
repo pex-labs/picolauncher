@@ -32,7 +32,6 @@ fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(GAMES_DIR.as_path())?;
     create_dir_all(MUSIC_DIR.as_path())?;
     create_dir_all(LABEL_DIR.as_path())?;
-    create_dir_all(METADATA_DIR.as_path())?;
     create_dir_all(BBS_CART_DIR.as_path())?;
     create_dir_all(RAW_SCREENSHOT_PATH)?;
     create_dir_all(SCREENSHOT_PATH)?;

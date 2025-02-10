@@ -11,7 +11,6 @@ lazy_static! {
     pub static ref GAMES_DIR: PathBuf = PathBuf::from("drive/carts/games");
     pub static ref MUSIC_DIR: PathBuf = PathBuf::from("drive/carts/music");
     pub static ref LABEL_DIR: PathBuf = PathBuf::from("drive/carts/labels");
-    pub static ref METADATA_DIR: PathBuf = PathBuf::from("drive/carts/metadata");
     pub static ref BBS_CART_DIR: PathBuf = PathBuf::from("drive/bbs/carts");
 }
 
