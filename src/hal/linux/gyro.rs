@@ -1,6 +1,6 @@
 use anyhow::Result;
 use async_trait::async_trait;
-use embedded_hal::i2c::{I2c, Operation as I2cOperation};
+use embedded_hal::i2c::I2c;
 use linux_embedded_hal::I2cdev;
 use log::{debug, warn};
 use tokio::sync::RwLock;

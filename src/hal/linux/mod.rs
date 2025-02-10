@@ -12,39 +12,28 @@ use std::{
 };
 
 use anyhow::anyhow;
-use chrono;
-use embedded_hal::i2c::{I2c, Operation as I2cOperation};
+use embedded_hal::i2c::I2c;
 use event::CreateKind;
 pub use gyro::*;
-use linux_embedded_hal::I2cdev;
-use log::{debug, error, info, warn};
+use log::{debug, info, warn};
 use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
 };
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
-use tokio::{
-    process::{Child, Command},
-    sync::RwLock,
-};
+use tokio::process::{Child, Command};
 
 use crate::{
     consts::*,
     p8util::{format_label, screenshot2cart},
 };
 
-pub const IN_PIPE: &'static str = "in_pipe";
-pub const OUT_PIPE: &'static str = "out_pipe";
+pub const IN_PIPE: &str = "in_pipe";
+pub const OUT_PIPE: &str = "out_pipe";
 
 /// create named pipes if they don't exist
 fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
-    use nix::{
-        sys::{
-            signal::{kill, Signal},
-            stat::Mode,
-        },
-        unistd::{mkfifo, Pid},
-    };
+    use nix::{sys::stat::Mode, unistd::mkfifo};
     if !pipe.exists() {
         mkfifo(pipe, Mode::S_IRUSR | Mode::S_IWUSR).expect("failed to create pipe {pipe}");
     }
@@ -54,7 +43,7 @@ fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
 pub fn open_in_pipe() -> anyhow::Result<File> {
     create_pipe(&PathBuf::from(IN_PIPE))?;
 
-    let in_pipe = OpenOptions::new().write(true).open(&*IN_PIPE)?;
+    let in_pipe = OpenOptions::new().write(true).open(IN_PIPE)?;
 
     Ok(in_pipe)
 }
@@ -62,7 +51,7 @@ pub fn open_in_pipe() -> anyhow::Result<File> {
 pub fn open_out_pipe() -> anyhow::Result<File> {
     create_pipe(&PathBuf::from(IN_PIPE))?;
 
-    let out_pipe = OpenOptions::new().read(true).open(&*OUT_PIPE)?;
+    let out_pipe = OpenOptions::new().read(true).open(OUT_PIPE)?;
 
     Ok(out_pipe)
 }
@@ -111,7 +100,7 @@ pub fn screenshot_watcher() {
                         debug!("{event:?}");
 
                         // TODO should do this for each path?
-                        let screenshot_fullpath = event.event.paths.get(0).unwrap();
+                        let screenshot_fullpath = event.event.paths.first().unwrap();
 
                         // TODO don't use unwrap
                         let cart_name = screenshot_fullpath.file_stem().unwrap().to_string_lossy();

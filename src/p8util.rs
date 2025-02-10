@@ -8,8 +8,8 @@ use std::{
     path::Path,
 };
 
-use anyhow::{anyhow, Result};
-use image::{GenericImageView, ImageReader, Pixel, Pixels};
+use anyhow::anyhow;
+use image::{GenericImageView, ImageReader, Pixel};
 use lazy_static::lazy_static;
 use ndarray::{arr1, arr2, Array1, Array2};
 use pino_deref::{Deref, DerefMut};
@@ -63,6 +63,12 @@ impl SectionName {
 #[derive(Deref, DerefMut)]
 pub struct Section(Vec<String>);
 
+impl Default for Section {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Section {
     pub fn new() -> Self {
         Section(Vec::new())
@@ -74,6 +80,12 @@ pub struct CartFile {
     pub sections: HashMap<SectionName, Section>,
 }
 
+impl Default for CartFile {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CartFile {
     pub fn new() -> Self {
         Self {
@@ -82,12 +94,12 @@ impl CartFile {
     }
 
     pub fn get_section(&mut self, section: SectionName) -> &Section {
-        let section = self.sections.entry(section).or_insert(Section::new());
+        let section = self.sections.entry(section).or_default();
         section
     }
 
     pub fn get_section_mut(&mut self, section: SectionName) -> &mut Section {
-        let section = self.sections.entry(section).or_insert(Section::new());
+        let section = self.sections.entry(section).or_default();
         section
     }
 
@@ -134,7 +146,7 @@ impl CartFile {
         )?;
 
         for (name, section) in self.sections.iter() {
-            write!(writer, "{}\n", name.header())?;
+            writeln!(writer, "{}", name.header())?;
 
             for line in section.iter() {
                 writeln!(writer, "{}", line)?;

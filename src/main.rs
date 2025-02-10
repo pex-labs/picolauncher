@@ -2,11 +2,9 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
-    fs::{create_dir_all, read_dir, read_to_string, File, OpenOptions},
-    io::{BufRead, BufReader, Read, Write},
-    ops::ControlFlow,
+    fs::{create_dir_all, read_dir, read_to_string, File},
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
-    ptr,
     sync::Arc,
     thread,
     time::{Duration, Instant},
@@ -16,11 +14,6 @@ use anyhow::anyhow;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions, Tab};
 use log::{debug, error, info, warn};
-use network_manager::{
-    AccessPoint, AccessPointCredentials, Device, DeviceType, NetworkManager, ServiceState,
-};
-use notify::event::CreateKind;
-use notify_debouncer_full::{new_debouncer, notify, DebounceEventResult};
 use picolauncher::{
     bbs::*,
     consts::*,
@@ -29,8 +22,7 @@ use picolauncher::{
     hal::*,
     p8util::{self, *},
 };
-use serde_json::{Map, Value};
-use tokio::{process::Command, runtime::Runtime, sync::Mutex};
+use tokio::process::Command;
 
 use crate::db::{schema::CartId, Cart, DB};
 
@@ -66,7 +58,7 @@ async fn main() {
     let mut network_hal = init_network_hal().expect("failed to initialize network HAL");
 
     // initialize bluetooth HAL
-    let mut ble_hal = init_ble_hal().expect("failed to initialize bluetooth HAL");
+    let ble_hal = init_ble_hal().expect("failed to initialize bluetooth HAL");
 
     // initialize gyroscpe HAL
     // enable IMU
@@ -117,15 +109,15 @@ async fn main() {
     .expect("failed to spawn pico8 process");
 
     // need to drop the in_pipe (for some reason) for the pico8 process to start up
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+    let in_pipe = open_in_pipe().expect("failed to open pipe");
     drop(in_pipe);
 
-    let mut out_pipe = open_out_pipe().expect("failed to open pipe");
+    let out_pipe = open_out_pipe().expect("failed to open pipe");
     let mut reader = BufReader::new(out_pipe);
 
     // TODO don't crash if browser fails to launch - just disable bbs functionality?
     // spawn browser and create tab for crawling
-    let chrome_args = vec![
+    let chrome_args = [
         "--disable-gpu",
         "--disable-images",
         "--disable-css",
@@ -134,7 +126,7 @@ async fn main() {
         "--disable-dev-shm-usage",
     ];
     let options = LaunchOptions::default_builder()
-        .args(chrome_args.iter().map(|s| OsStr::new(s)).collect())
+        .args(chrome_args.iter().map(OsStr::new).collect())
         .sandbox(false)
         .devtools(false)
         .enable_gpu(false)
@@ -189,7 +181,7 @@ async fn main() {
         line = line.trim().to_string();
 
         // TODO this busy loops?
-        if line.len() == 0 {
+        if line.is_empty() {
             continue;
         }
         //println!("received [{}] {}", line.len(), line);
@@ -210,7 +202,7 @@ async fn main() {
                 // TODO ensure no ../ escape
                 let exe_path = EXE_DIR.join(data); // TODO assume exe name is same as the directory name
                 println!("spawning executable {exe_path:?}");
-                let mut child = Command::new(exe_path)
+                let child = Command::new(exe_path)
                     .args(vec!["-home", DRIVE_DIR]) // TODO when spawning should we override the config.txt?
                     .spawn()
                     .unwrap();
@@ -233,7 +225,7 @@ async fn main() {
                 let cart_path = CART_DIR.join(data);
 
                 println!("spawning executable {cart_path:?}");
-                let mut child = Command::new("pico8") // TODO absolute path to pico8?
+                let child = Command::new("pico8") // TODO absolute path to pico8?
                     .args(vec![
                         "-home",
                         DRIVE_DIR,
@@ -563,7 +555,7 @@ async fn postprocess_cart(
     let mut dest_path = GAMES_DIR.join(filestem);
     dest_path.set_extension("p8");
     if !dest_path.exists() {
-        pico8_export(&pico8_bins, path, &dest_path)
+        pico8_export(pico8_bins, path, &dest_path)
             .await
             .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
     }
@@ -613,7 +605,7 @@ async fn impl_bbs(
 ) -> Vec<Cart> {
     info!("querying {url}");
 
-    let res = crawl_bbs(tab.clone(), &url).await;
+    let res = crawl_bbs(tab.clone(), url).await;
 
     let res = match res {
         Ok(res) => res,
@@ -664,7 +656,7 @@ async fn impl_bbs(
         // Download if we don't have a copy of it in our games dir
         let path = BBS_CART_DIR.join(filename);
 
-        if let Err(e) = postprocess_cart(db, &pico8_bins, &cart, &path).await {
+        if let Err(e) = postprocess_cart(db, pico8_bins, cart, &path).await {
             warn!("failed to postprocess cart {e:?}");
             continue;
         }

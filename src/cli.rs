@@ -1,10 +1,4 @@
-use std::{
-    fs,
-    fs::File,
-    io,
-    io::Write,
-    path::{Path, PathBuf},
-};
+use std::{fs, fs::File, io, io::Write, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use picolauncher::{consts::*, db::schema::Cart, p8util};
@@ -64,14 +58,12 @@ fn main() {
                         }
                     }
                 }
-            } else {
-                if let Some(cart_path) = cart_path {
-                    match p8util::cart2music(cart_path) {
-                        Ok(cart) => {
-                            cart.write(&mut io::stdout()).unwrap();
-                        },
-                        Err(e) => eprintln!("{}", e),
-                    }
+            } else if let Some(cart_path) = cart_path {
+                match p8util::cart2music(cart_path) {
+                    Ok(cart) => {
+                        cart.write(&mut io::stdout()).unwrap();
+                    },
+                    Err(e) => eprintln!("{}", e),
                 }
             }
         },
@@ -98,14 +90,12 @@ fn main() {
                         }
                     }
                 }
-            } else {
-                if let Some(cart_path) = cart_path {
-                    match p8util::cart2label(cart_path) {
-                        Ok(cart) => {
-                            cart.write(&mut io::stdout()).unwrap();
-                        },
-                        Err(e) => eprintln!("{}", e),
-                    }
+            } else if let Some(cart_path) = cart_path {
+                match p8util::cart2label(cart_path) {
+                    Ok(cart) => {
+                        cart.write(&mut io::stdout()).unwrap();
+                    },
+                    Err(e) => eprintln!("{}", e),
                 }
             }
         },
@@ -117,7 +107,7 @@ fn main() {
             // TODO we currently don't do any form of checking on if the cart that is passed is valid
 
             let cart_name = cart_path.file_stem().unwrap().to_str().unwrap();
-            let mut game_path = GAMES_DIR.clone().join(cart_name.clone());
+            let mut game_path = GAMES_DIR.clone().join(cart_name);
             game_path.set_extension("p8");
 
             // copy the cart to games directory

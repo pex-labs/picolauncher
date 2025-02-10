@@ -1,14 +1,12 @@
 pub mod schema;
 
-use std::path::Path;
-
 use anyhow;
 use diesel::prelude::*;
 pub use schema::*;
 
 // TODO create initial db migration
 
-pub static DB_PATH: &'static str = "./db.sqlite";
+pub static DB_PATH: &str = "./db.sqlite";
 
 pub struct DB {
     conn: SqliteConnection,
@@ -43,7 +41,7 @@ impl DB {
     }
 
     pub fn insert_cart(&mut self, cart: &Cart) -> anyhow::Result<()> {
-        use crate::db::carts::{dsl::*, id};
+        use crate::db::carts::dsl::*;
 
         // TODO currently doing a no-op if id already exists, but technically could update some
         // fields
@@ -106,7 +104,7 @@ impl DB {
     }
 
     pub fn get_favorites(&mut self, limit: i64) -> anyhow::Result<Vec<Cart>> {
-        use crate::db::carts::{dsl::*, favorite, id};
+        use crate::db::carts::{dsl::*, favorite};
 
         let res = carts
             .filter(favorite.eq(true))

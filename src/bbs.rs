@@ -1,22 +1,16 @@
-use std::{
-    path::{Path, PathBuf},
-    sync::Arc,
-    time::Instant,
-};
+use std::{path::Path, sync::Arc, time::Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
-use headless_chrome::{Browser, LaunchOptions, Tab};
+use headless_chrome::Tab;
 use lazy_static::lazy_static;
-use log::{debug, warn};
+use log::debug;
 use regex::Regex;
 use reqwest::{Client, Url};
 use scraper::{Html, Selector};
-use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::{db::schema::Cart, p8util::serialize_table};
+use crate::db::schema::Cart;
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
@@ -155,7 +149,7 @@ pub async fn scrape_cart(client: &Client, cart_url: &str) -> Result<Cart> {
 
     // extract id from url
     println!("{cart_url:?}");
-    let mut captures = PID_RE.captures(&cart_url).unwrap();
+    let captures = PID_RE.captures(cart_url).unwrap();
     let id = captures
         .get(1)
         .ok_or(anyhow::anyhow!("could not find id in cart url"))?

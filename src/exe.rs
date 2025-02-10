@@ -2,7 +2,7 @@
 
 use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use serde_json::{Map, Value};
+use serde_json::Value;
 
 use crate::p8util::serialize_table;
 

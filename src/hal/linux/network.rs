@@ -51,7 +51,7 @@ impl LinuxNetworkHAL {
         if let Some(index) = index {
             Ok(devices[index].clone())
         } else {
-            return Err(anyhow!("Cannot find a WiFi device"));
+            Err(anyhow!("Cannot find a WiFi device"))
         }
     }
 }
@@ -104,7 +104,7 @@ impl NetworkHAL for LinuxNetworkHAL {
         // store the queried access points in state
         let mut _access_points = wifi_device.get_access_points().unwrap();
         self.access_points.clear();
-        self.access_points.extend(_access_points.drain(..));
+        self.access_points.append(&mut _access_points);
 
         let wifi_networks = self
             .access_points
@@ -123,7 +123,7 @@ impl NetworkHAL for LinuxNetworkHAL {
             .collect::<Vec<_>>();
         networks.extend(wifi_networks);
 
-        return Ok(networks);
+        Ok(networks)
     }
 
     fn connect(&mut self, ssid: &str, psk: &str) -> Result<()> {
@@ -144,7 +144,7 @@ impl NetworkHAL for LinuxNetworkHAL {
         let credentials = AccessPointCredentials::Wpa {
             passphrase: psk.to_string(),
         };
-        if let Err(e) = wifi_device.connect(&ap, &credentials) {
+        if let Err(e) = wifi_device.connect(ap, &credentials) {
             return Err(anyhow!("Failed to connect to access point {e}"));
         }
 

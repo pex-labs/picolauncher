@@ -1,17 +1,10 @@
-use std::{
-    collections::{HashMap, HashSet},
-    sync::Arc,
-    time::Duration,
-};
+use std::{collections::HashSet, sync::Arc};
 
 use anyhow::Result;
-use bluer::{Adapter, AdapterEvent, Address, Device, DeviceEvent};
-use futures::{pin_mut, stream::SelectAll, StreamExt};
+use bluer::{Adapter, Address};
 use log::info;
-use serde_json::{Map, Value};
-use tokio::{sync::Mutex, time::sleep};
 
-use crate::{hal::BluetoothHAL, p8util::serialize_table};
+use crate::hal::BluetoothHAL;
 
 pub struct LinuxBluetoothHAL {
     running: bool,
