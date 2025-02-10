@@ -64,7 +64,7 @@ async fn main() {
 
     // initialize network HAL
     // TODO choose correct impl based on platform
-    let mut network_hal = LinuxNetworkHAL::new().expect("failed to initialize network HAL");
+    let mut network_hal = init_network_hal().expect("failed to initialize network HAL");
 
     let session = bluer::Session::new().await.unwrap();
     let adapter = Arc::new(session.default_adapter().await.unwrap());
