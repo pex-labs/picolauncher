@@ -162,10 +162,6 @@ async fn main() {
     debug!("established connection to sqlite database");
     db.migrate().expect("failed migrating database");
 
-    // db.add_favorite("advent2024-27.p8")
-    //     .expect("failed to add to fav");
-    // db.get_favorites().expect("failed to get fav");
-
     // listen for commands from pico8 process
     loop {
         // check if pico8 process has exited
@@ -297,7 +293,8 @@ async fn main() {
                 // TODO don't need to fetch new carts every time
                 let remote_cartdatas = if query == "local" {
                     // special case, return local files
-                    impl_bbs_local()
+                    // TODO a bit stupid that we need to query DB to get the cart ids, and then query again
+                    impl_bbs_local(&mut db).expect("failed to query local db for games")
                 } else if query == "favorite" {
                     // special case, return favorite carts
                     db.get_favorites(20).unwrap()
@@ -666,36 +663,23 @@ async fn impl_bbs(
 }
 
 // return the contents of the games dir
-fn impl_bbs_local() -> Vec<Cart> {
+fn impl_bbs_local(db: &mut DB) -> anyhow::Result<Vec<Cart>> {
     let dir = &*GAMES_DIR; // TODO watch out for path traversal
-    let mut carts = vec![];
+    let mut filenames = vec![];
     if let Ok(read_dir) = read_dir(dir) {
         for entry in read_dir {
             let entry = entry.unwrap().path();
             if entry.is_file() {
                 // for each file read metadata and pack into table string
-                let filename = entry.file_name().unwrap();
-                let mut metapath = PathBuf::from(filename);
-                metapath.set_extension("json");
-                let metapath = METADATA_DIR.join(metapath);
-
-                let Ok(content) = read_to_string(&metapath) else {
-                    warn!("failed to read {:?}", metapath);
-                    continue;
-                };
-                let Ok(parsed_meta): Result<Cart, serde_json::Error> =
-                    serde_json::from_str(&content)
-                else {
-                    warn!("failed to parse into CartData {:?}", metapath);
-                    continue;
-                };
-
-                carts.push(parsed_meta);
+                let mut filename = entry.file_stem().unwrap().to_str().unwrap().to_owned();
+                filenames.push(filename);
             }
         }
     }
-    // TODO check efficiency for lots of files
-    carts
+
+    debug!("querying {} carts", filenames.len());
+
+    db.get_cart_by_filenames(filenames)
 }
 
 async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()> {
