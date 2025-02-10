@@ -47,6 +47,7 @@ fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(SCREENSHOT_PATH)?;
     Ok(())
 }
+
 #[tokio::main]
 async fn main() {
     // set up logger
@@ -61,28 +62,9 @@ async fn main() {
         screenshot_watcher();
     });
 
-    // set up dbus connection and network manager
-    // TODO linux specific currently
-    // start network manager if not started
-    let did_nm_start = NetworkManager::start_service(1000);
-    match did_nm_start {
-        Ok(_) => {
-            println!("Network manager service started successfully!");
-            let nm_state =
-                NetworkManager::get_service_state().expect("unable to get network manager state");
-            if nm_state != ServiceState::Active {
-                // TODO maybe implement retry loop to attempt starting nm multiple times
-                error!("failed to start network manager");
-                return;
-            }
-        },
-        Err(err) => {
-            println!("Failed to start network manager service: {}", err);
-        },
-    }
-
-    let nm = NetworkManager::new();
-    let mut access_points: Vec<AccessPoint> = vec![];
+    // initialize network HAL
+    // TODO choose correct impl based on platform
+    let mut network_hal = LinuxNetworkHAL::new().expect("failed to initialize network HAL");
 
     let session = bluer::Session::new().await.unwrap();
     let adapter = Arc::new(session.default_adapter().await.unwrap());
@@ -408,13 +390,12 @@ async fn main() {
             },
             "wifi_list" => {
                 // scan for networks
-                let networks = impl_wifi_list(&nm, &mut access_points).unwrap();
+                // TODO should log error at least
+                let networks = network_hal.list().unwrap_or_default();
                 let networks = networks
                     .into_iter()
                     .map(|x| x.to_lua_table())
                     .collect::<Vec<_>>();
-
-                // TODO save this to global state
 
                 println!("found networks {}", networks.join(","));
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -430,20 +411,20 @@ async fn main() {
                 let ssid = split.next().unwrap_or_default();
                 let psk = split.next().unwrap_or_default();
 
-                let res = impl_wifi_connect(&nm, &mut access_points, ssid, psk);
+                let res = network_hal.connect(ssid, psk);
                 println!("wifi connection result {res:?}");
 
-                let status = impl_wifi_status(&nm);
+                let status = network_hal.status().unwrap();
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
                 drop(in_pipe);
             },
             "wifi_disconnect" => {
-                let res = impl_wifi_disconnect(&nm);
+                let res = network_hal.disconnect();
                 println!("wifi disconnection result {res:?}");
 
-                let status = impl_wifi_status(&nm);
+                let status = network_hal.status().unwrap();
 
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
@@ -451,7 +432,7 @@ async fn main() {
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
-                let status = impl_wifi_status(&nm);
+                let status = network_hal.status().unwrap();
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
                 drop(in_pipe);
@@ -628,143 +609,6 @@ async fn postprocess_cart(
     db.insert_cart(cart)?;
 
     Ok(())
-}
-
-pub struct WifiNetwork {
-    pub ssid: String,
-    pub name: String, // Display name of SSID
-    pub strength: u32,
-}
-
-impl WifiNetwork {
-    pub fn to_lua_table(&self) -> String {
-        let mut prop_map = Map::<String, Value>::new();
-        prop_map.insert("ssid".into(), Value::String(self.ssid.clone()));
-        prop_map.insert("name".into(), Value::String(self.name.clone()));
-        prop_map.insert("strength".into(), Value::String(self.strength.to_string()));
-        serialize_table(&prop_map)
-    }
-}
-
-// implementation for specific functions
-fn impl_wifi_list(
-    nm: &NetworkManager,
-    access_points: &mut Vec<AccessPoint>,
-) -> anyhow::Result<Vec<WifiNetwork>> {
-    // TODO give each indexed access point a unique id (just index is fine?) so the
-    // user is able to perform operations on the specific network
-    let mut networks = vec![]; // TODO this should be some global state?
-
-    // need to run find device inside here since WiFiDevice is not exported :(
-    let wifi_device = find_device(nm)?;
-    let wifi_device = wifi_device.as_wifi_device().unwrap();
-
-    // store the queried access points in global state
-    let mut _access_points = wifi_device.get_access_points().unwrap();
-    access_points.clear();
-    access_points.extend(_access_points.drain(..));
-
-    let wifi_networks = access_points
-        .into_iter()
-        .filter_map(|x| {
-            let Ok(ssid) = x.ssid().as_str() else {
-                return None;
-            };
-
-            Some(WifiNetwork {
-                ssid: ssid.to_string(),
-                name: ssid.to_ascii_lowercase(),
-                strength: x.strength,
-            })
-        })
-        .collect::<Vec<_>>();
-    networks.extend(wifi_networks);
-
-    return Ok(networks);
-}
-
-fn impl_wifi_connect(
-    nm: &NetworkManager,
-    access_points: &mut Vec<AccessPoint>,
-    ssid: &str,
-    psk: &str,
-) -> anyhow::Result<()> {
-    let wifi_device = find_device(nm)?;
-    let wifi_device = wifi_device.as_wifi_device().unwrap();
-
-    // TODO seems like we need to disconnect from existing network before connecting to a new one?
-
-    // find the ssid
-    let Some(ap) = access_points
-        .iter()
-        .find(|x| x.ssid().as_str().unwrap() == ssid)
-    else {
-        return Err(anyhow!("Cannot find access point with ssid {ssid}"));
-    };
-
-    let credentials = AccessPointCredentials::Wpa {
-        passphrase: psk.to_string(),
-    };
-    if let Err(e) = wifi_device.connect(&ap, &credentials) {
-        return Err(anyhow!("Failed to connect to access point {e}"));
-    }
-
-    Ok(())
-}
-
-fn impl_wifi_disconnect(nm: &NetworkManager) -> anyhow::Result<()> {
-    let wifi_device = find_device(nm)?;
-    if let Err(e) = wifi_device.disconnect() {
-        return Err(anyhow!("Failed to disconnect from access point {e}"));
-    }
-
-    Ok(())
-}
-
-// just return the serialized lua string directly
-fn impl_wifi_status(nm: &NetworkManager) -> String {
-    let mut prop_map = Map::<String, Value>::new();
-    prop_map.insert("state".into(), Value::String("unknown".into()));
-
-    let conns = nm.get_active_connections().unwrap_or_default();
-    for conn in conns {
-        let settings = conn.settings();
-        // TODO double check this is the right string for all wireless
-        if settings.kind == "802-11-wireless" {
-            let ssid = settings.ssid.as_str().unwrap().to_string();
-            let state = conn.get_state().unwrap();
-            println!("wifi_status ssid={:?} state={state:?}", conn.settings());
-            prop_map.insert("ssid".into(), Value::String(ssid));
-            // TODO just doing the tostring impl here lol
-            let state_str = match state {
-                network_manager::ConnectionState::Unknown => "unknown",
-                network_manager::ConnectionState::Activating => "connecting",
-                network_manager::ConnectionState::Activated => "connected",
-                network_manager::ConnectionState::Deactivating => "disconnecting",
-                network_manager::ConnectionState::Deactivated => "disconnected",
-            };
-            prop_map.insert("state".into(), Value::String(state_str.into()));
-            return serialize_table(&prop_map);
-        }
-    }
-
-    warn!("wifi interface not found");
-    serialize_table(&prop_map)
-}
-
-fn find_device(manager: &NetworkManager) -> anyhow::Result<Device> {
-    // TODO error handling pretty lmao
-    let devices = manager.get_devices().map_err(|e| anyhow!(format!("{e}")))?;
-
-    let index = devices
-        .iter()
-        .position(|d| *d.device_type() == DeviceType::WiFi);
-
-    if let Some(index) = index {
-        Ok(devices[index].clone())
-    } else {
-        return Err(anyhow!("Cannot find a WiFi device"));
-    }
 }
 
 async fn impl_bbs(

@@ -1,3 +1,4 @@
+mod network;
 use std::{
     fs::{File, OpenOptions},
     path::{Path, PathBuf},
@@ -10,6 +11,7 @@ use embedded_hal::i2c::{I2c, Operation as I2cOperation};
 use event::CreateKind;
 use linux_embedded_hal::I2cdev;
 use log::{debug, error, info, warn};
+pub use network::*;
 use nix::{
     sys::signal::{kill, Signal},
     unistd::Pid,
