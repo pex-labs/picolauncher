@@ -191,7 +191,7 @@ function make_cart_swipe_tween(dir)
   end)
 
   cart_swipe_tween:register_step_callback(function(_, frame)
-    serial_load_image("bbs/"..carts:cur().filename, 0x0000, 128, 128, frame)
+    serial_load_image("bbs/"..carts:cur().filename, 0x0000, 64, 64, frame)
   end)
 
   cart_swipe_tween:register_finished_callback(function(tween)
@@ -467,7 +467,7 @@ function build_new_cart_menu(resp)
     item.menuitem = menuitem.cart
     add(new_menuitems, item)
   end
-    
+
   -- TODO would like to disable this option for local categories, but also need to make sure we don't have an empty menu
   add(new_menuitems, {menuitem=menuitem.load})
 

@@ -204,7 +204,6 @@ async fn main() {
             break;
         }
 
-        debug!("Reading input now");
         let mut line = pico8_reader.next_line().await.unwrap().unwrap(); // TODO: better error handling. unwrap for await then line.
         line = line.trim().to_string();
         println!("INPUT: {}", line);
@@ -387,7 +386,7 @@ async fn main() {
                 let mode            = split.next().unwrap_or_default();
 
                 if frame*bytes_per_frame < scale_height*scale_width/2 {
-                    let image_data = image::process(&filename.as_path());
+                    let image_data = image::process(&filename.as_path(), scale_width, scale_height);
                     stdin_writeraw(
                         &mut pico8_writer,
                         &image_data[((frame * bytes_per_frame) as usize)

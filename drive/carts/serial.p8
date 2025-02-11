@@ -100,7 +100,7 @@ function serial_load_image(filename, location, scale_width, scale_height, frame,
   bytes_per_frame = bytes_per_frame or 1024 -- 1024 bytes is about 50% cpu on 60 fps.
   scale_width  = mid(1, scale_width,  128)\1 -- scale_width, scaled down images load can faster
   scale_height = mid(1, scale_height, 128)\1
-  frame = max(1, frame\1) -- which frame this is. used to determine which part of the image to load.
+  frame = max(0, frame\1) -- which frame this is. used to determine which part of the image to load.
 
   local buffer_len = ceil(scale_width*scale_height/2)
   if bytes_per_frame*(frame-1) >= buffer_len then
@@ -109,14 +109,9 @@ function serial_load_image(filename, location, scale_width, scale_height, frame,
 
   serial_writeline('load_image:'..filename..","..scale_width..","..scale_height..","..bytes_per_frame..","..frame..","..mode)
 
-  -- printh("about to read "..bytes_per_frame.." bytes")
-  local size = serial(stdin, location+bytes_per_frame*(frame-1), bytes_per_frame) -- TODO: make it read less for the last frame
-  -- printh("finished reading "..bytes_per_frame.." bytes")
-
-  -- local size2 = serial(stdin, 0x0000, 10)
-  -- printh(" size2 "..size2.." "..t())
-  -- printh(" "..location+bytes_per_frame*(frame-1))
-  -- printh(" "..bytes_per_frame)
+  printh("about to read "..bytes_per_frame.." bytes")
+  local size = serial(stdin, location+bytes_per_frame*frame, bytes_per_frame) -- TODO: make it read less for the last frame
+  printh("finished reading "..bytes_per_frame.." bytes size "..size.." | "..(location+bytes_per_frame*frame))
 
   if bytes_per_frame*(frame-1) >= buffer_len then
     return true

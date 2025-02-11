@@ -617,7 +617,7 @@ function __tween:update()
 
     if #self.step_callbacks > 0 then
         for v in all(self.step_callbacks) do
-            v(self.value, self.frame)
+            v(self.value, self.frame-1)
         end
     end
 

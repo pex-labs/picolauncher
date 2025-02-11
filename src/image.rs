@@ -30,12 +30,11 @@
 
 use image::{DynamicImage, GenericImageView, ImageReader};
 use lazy_static::lazy_static;
+use log::debug;
 use ndarray::{arr1, arr2, Array1, Array2};
 use std::cmp::Ordering;
 use std::env;
 use std::path::Path;
-
-type Pico8Screen = [u8; 8192];
 
 lazy_static! {
     static ref DEFAULT_PALETTE: Array2<u8> = arr2(&[
@@ -106,35 +105,36 @@ fn rgba_to_pico8(palette: &Array2<u8>, img: &DynamicImage, x: u32, y: u32) -> us
 
 // coords for where the label image starts. (16, 24)
 // dimensions to verify p8.png file: 160 x 205
-pub fn process(filepath: &Path) -> Pico8Screen {
-    match process_(filepath) {
-        Err(_) => [0; 8192],
+pub fn process(filepath: &Path, width: u32, height: u32) -> Vec<u8> {
+    let width = width + width%2; // Width is changed because each row must be even since there are 2 pixels per row.
+    match process_(filepath, width, height) {
+        Err(_) => vec![0; ((width/2)*height) as usize],
         Ok(value) => value,
     }
 }
 
-// intermediate function
-fn process_(filepath: &Path) -> anyhow::Result<Pico8Screen> {
-    let current_dir = env::current_dir()?;
-    println!("{}", current_dir.display());
-    println!("1 {}", filepath.display());
+// intermediate function. width must be even
+fn process_(filepath: &Path, width: u32, height: u32) -> anyhow::Result<Vec<u8>> {
     let img_path = ImageReader::open(filepath)?;
     let _img_format = img_path.format();
     let img = img_path.decode()?;
-    let mut imgdata = [0; 8192]; // this is the default value
+    let mut imgdata = vec![0; ((width/2)*height) as usize]; // this is the default value
 
     // assume these exact dimensions mean the image is a pico8 cartridge.
     if img.width() == 160 && img.height() == 205 {
-        println!("Ya Yes");
-        for y in 0..128 {
-            for x in 0..64 {
-                let p1 = rgba_to_pico8(&DEFAULT_PALETTE, &img, 16 + x * 2, y + 24);
-                let p2 = rgba_to_pico8(&DEFAULT_PALETTE, &img, 16 + x * 2 + 1, y + 24);
-                imgdata[(y * 64 + x) as usize] = (p1 << 4 | p2) as u8;
+        let halfwidth = width/2;
+        for y in 0..height {
+            let img_y = (128.0/(height as f64)*(y as f64)) as u32;
+            for x in 0..halfwidth {
+                let img_x1 = (128.0/(width as f64)*((x*2+0) as f64)) as u32;
+                let img_x2 = (128.0/(width as f64)*((x*2+1) as f64)) as u32;
+                // println!("imgy is {} | x is {} | img_x1 is {} | img_x2 is {}", img_y, x, img_x1, img_x2);
+
+                let p1 = rgba_to_pico8(&DEFAULT_PALETTE, &img, 16+img_x1, img_y+24);
+                let p2 = rgba_to_pico8(&DEFAULT_PALETTE, &img, 16+img_x2, img_y+24);
+                imgdata[(y * halfwidth + x) as usize] = (p2 << 4 | p1) as u8;
             }
         }
-    } else {
-        println!("Nope no");
     }
 
     Ok(imgdata)
@@ -142,12 +142,21 @@ fn process_(filepath: &Path) -> anyhow::Result<Pico8Screen> {
 
 #[cfg(test)]
 mod tests {
+    use std::path::PathBuf;
+
     use super::*;
 
     #[test]
     fn test_printdata() -> anyhow::Result<()> {
-        let _cart = process("./testcarts/test1.p8.png");
+        let _cart = process(PathBuf::from("./testcarts/test1.p8.png").as_path(), 128, 128);
         assert_eq!(_cart, [17; 8192]); // 17 means 0b00010001 or 0x11, so dark blue (1) in every pixel, which is what this test cart is
+        Ok(())
+    }
+
+    #[test]
+    fn test_printdata_64() -> anyhow::Result<()> {
+        let _cart = process(PathBuf::from("./testcarts/test1.p8.png").as_path(), 64, 64);
+        assert_eq!(_cart, [17; 32*64]); // 17 means 0b00010001 or 0x11, so dark blue (1) in every pixel, which is what this test cart is
         Ok(())
     }
 }
