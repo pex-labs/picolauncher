@@ -49,7 +49,7 @@ cart_options=menu_new({
 
   end},
   {label='similar carts',func=function()sfx(1)end},
-  {label='back',func=function()
+  {label='[back]',func=function()
     sfx(3)
     cart_tween_up()
     cart_tween_state = 1
@@ -121,10 +121,12 @@ cart_y_bob=0
 cart_x_swipe=64
 -- 1 is up, -1 is down
 cart_tween_state=1
+cart_title_pan_x = 0
 
 cart_tween={}
 cart_swipe_tween={}
 cart_bobble_tween={}
+cart_title_pan_tween = {}
 
 function cart_tween_bobble()
   bob_amplitude=2
@@ -215,6 +217,25 @@ function make_cart_swipe_tween_2(dir)
   cart_swipe_tween:restart()
 end
 
+function make_cart_title_pan_tween(pan_distance)
+  cart_title_pan_tween=tween_machine:add_tween({
+    func=inOutSine,
+    v_start=2,
+    v_end=pan_distance,
+    duration=6
+  })
+  cart_title_pan_tween:register_step_callback(function(pos)
+    cart_title_pan_x=pos
+  end)
+  cart_title_pan_tween:register_finished_callback(function(tween)
+    local temp_start = tween.v_start
+    tween.v_start=tween.v_end 
+    tween.v_end=temp_start
+    tween:restart()
+  end)
+  cart_title_pan_tween:restart()
+end
+
 transition_radius=0
 transition_tween={}
 function make_transition_tween(cart)
@@ -274,6 +295,8 @@ function _init()
     carts=build_new_cart_menu(split_carts)
     carts:set_index(old_index) -- set the correct position of the menu
     load_label(carts:cur(), 0)
+
+    on_switch_cart()
   end, 1) 
 
   new_loadable('set_favorite', function(resp)
@@ -379,6 +402,21 @@ function _init()
   init_title_bar(12)
 end
 
+function on_switch_cart()
+
+  -- reset to first menu item
+  cart_options:set_index(1)
+
+  -- scroll the title text if too long
+  local cart_title = tostring(carts:cur().title)
+  if #cart_title*4 > 68 then
+    make_cart_title_pan_tween(68-#cart_title*4)
+  else
+    cart_title_pan_x=0
+    cart_title_pan_tween:remove() 
+  end
+end
+
 function _update60()
   tween_machine:update()
   update_anim()
@@ -391,6 +429,8 @@ function _update60()
         sfx(0)
         carts:up()
         make_cart_swipe_tween(1)
+
+        on_switch_cart()
       end
     elseif btnp(1) then
       if carts:index() == carts:len() then
@@ -399,6 +439,8 @@ function _update60()
         sfx(0)
         carts:down()
         make_cart_swipe_tween(-1)
+
+        on_switch_cart()
       end
     elseif btnp(4) then
       os_back()
@@ -495,6 +537,12 @@ function _draw()
   circfill(64, 128, transition_radius, 0)
 end
 
+function draw_cursor(x, y, c)
+  line(x, y, x, y+4, c)
+  line(x+1, y+1, x+1, y+3, c)
+  pset(x+2, y+2, c)
+end
+
 function draw_carts_menu()
   -- draw the cartridge
   if carts:cur().menuitem == menuitem.load then
@@ -524,12 +572,20 @@ function draw_carts_menu()
   end
 
   -- draw menu
-  menu_x=36
-  menu_y=-10
-  print(tostring(carts:cur().title), menu_x, -(#cart_options.items*7)+menu_y-10+cart_y_ease, 14)
-  print('by ' .. tostring(carts:cur().author), menu_x, -(#cart_options.items*7)+menu_y-3+cart_y_ease, 15)
+  local menu_x=30
+  local menu_y=-10
+
+  -- scroll the title text if too long
+  local title_y = -(#cart_options.items*7)+menu_y+cart_y_ease
+  print(tostring(carts:cur().title), menu_x+cart_title_pan_x, title_y-10, 14)
+  print('by ' .. tostring(carts:cur().author), menu_x, title_y-3, 15)
   line_y=-(#cart_options.items*7)+menu_y+3+cart_y_ease
-  line(menu_x, line_y, 88, line_y, 6)
+  line(menu_x, line_y, 98, line_y, 6)
+
+  -- TODO total hack but we're just gonna draw a rect with same color as bg to crop the text for now
+  rectfill(0, title_y-12, 29, title_y+3, 1)
+  rectfill(99, title_y-12, 128, title_y+3, 1)
+
   for i, menuitem in ipairs(cart_options.items) do
     is_sel=cart_options:index() == i
     if is_sel then
@@ -540,6 +596,10 @@ function draw_carts_menu()
       x_off=2
     end
 
+    local menuitem_x = menu_x+x_off
+    local menuitem_len = #menuitem.label*4
+    local menuitem_y = -(#cart_options.items*7)+menu_y+i*7+cart_y_ease
+
     if menuitem.label == "favorite" then
       -- special case for favorite
       local frame=nil
@@ -548,30 +608,33 @@ function draw_carts_menu()
         c=8
       else
         frame = unfavorite_anim:get_frame()
-        c=6
       end
-
-      print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
+      print(menuitem.label, menuitem_x, menuitem_y, c)
 
       -- draw favorite icon
-      sspr(frame[1], frame[2], frame[3], frame[4], menu_x+x_off+#menuitem.label*4, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease)
+      sspr(frame[1], frame[2], frame[3], frame[4], menuitem_x+menuitem_len, menuitem_y)
+
     elseif menuitem.label == 'save music' then
 
-      -- draw favorite icon
+      -- draw download music icon
       if music_dl_icon_state == 1 then
         frame = loading_anim:get_frame()
-        sspr(frame[1], frame[2], frame[3], frame[4], menu_x+x_off+#menuitem.label*4, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease)
+        sspr(frame[1], frame[2], frame[3], frame[4], menuitem_x+menuitem_len, menuitem_y)
       elseif music_dl_icon_state == 2 then
         frame = check_anim:get_frame()
-        sspr(frame[1], frame[2], frame[3], frame[4], menu_x+x_off+#menuitem.label*4, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease)
+        sspr(frame[1], frame[2], frame[3], frame[4], menuitem_x+menuitem_len, menuitem_y)
       end
 
-      print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
+      print(menuitem.label, menu_x+x_off, menuitem_y, c)
     else
-      print(menuitem.label, menu_x+x_off, -(#cart_options.items*7)+menu_y+i*7+cart_y_ease, c)
+      print(menuitem.label, menu_x+x_off, menuitem_y, c)
+    end
+
+    -- draw cursor
+    if is_sel then
+      draw_cursor(menuitem_x-5, menuitem_y, 7)
     end
   end
-
 end
 
 __gfx__
