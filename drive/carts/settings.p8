@@ -8,6 +8,7 @@ __lua__
 #include menu.p8
 #include vkeyboard.p8
 #include tween.lua
+#include ui.p8
 
 local screen_width = 128
 local screen_height = 128
@@ -180,6 +181,9 @@ function _init()
   end, 1)
 
   request_loadable('wifi_status')
+
+  -- graphics
+  init_title_bar(14, 2)
 end
 
 function _update60()
@@ -218,16 +222,13 @@ function _draw()
   end
   -- TODO would be nice to wrap around show keyboard, since we are wasting draw calls here?
   keyboard:draw()
-  draw_banner()
-end
 
-function draw_banner()
-  rectfill(0, 0, screen_width, 8, c_banner)
+  -- draw title
   local breadcrumb = "settings"
   if current_screen != "main" then
     breadcrumb = breadcrumb .. "/" .. current_screen
   end
-  print(breadcrumb, 2, 2, c_selected)
+  draw_title_bar(breadcrumb, 14, 7)
 end
 
 -- main menu

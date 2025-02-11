@@ -8,6 +8,7 @@ __lua__
 #include menu.p8
 #include vkeyboard.p8
 #include tween.lua
+#include ui.p8
 
 local show_keyboard = false
 local keyboard_up_y = 78
@@ -99,6 +100,9 @@ function _init()
   categories:add_hook(7, function(self)
     cam_scroll_tween(cam_y, 100)
   end)
+
+  -- graphics
+  init_title_bar(12)
 end
 
 function _update60()
@@ -155,10 +159,9 @@ end
 
 function _draw()
   cls(1)
-  rectfill(0, 0, 128, 8, 12)
   -- TODO scale text
   -- https://www.lexaloffle.com/bbs/?tid=29612
-  print('PEXsplore', 86, 2, 7)
+  draw_title_bar('PEXsplore', 12, 7, false)
 
   -- categories section
   print('categories', 8, 30, 6)

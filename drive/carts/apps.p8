@@ -6,6 +6,7 @@ __lua__
 #include menu.p8
 #include utils.p8
 #include tween.lua
+#include ui.p8
 
 bg_color=129
 bar_color_1=8
@@ -24,6 +25,8 @@ function _init()
   add(exes, {name="pico8", author="zep", path=nil, cmd=function()serial_spawn_pico8()end}, 1)
   add(exes, {name="splore", author="zep", path=nil, cmd=function()serial_spawn_splore()end}, 2)
   exe_menu=menu_new(exes)
+
+  init_title_bar(8)
 end
 
 function _update()
@@ -59,7 +62,5 @@ function _draw()
   end
 
   -- draw top bar
-  rectfill(0, 0, 128, 8, bar_color_1)
-  print("웃 ", 2, 2, 7)
-  print("my apps", 12, 2, 7)
+  draw_title_bar('my apps', 8, 7, true, '웃', 7)
 end

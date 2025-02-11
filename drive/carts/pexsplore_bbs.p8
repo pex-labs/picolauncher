@@ -10,6 +10,7 @@ __lua__
 #include tween.lua
 #include timer.p8
 #include anim.p8
+#include ui.p8
 
 bg_color=129
 bar_color_1=12
@@ -373,6 +374,9 @@ function _init()
   -- automatically make first query
   loaded_pages = loaded_pages+1
   request_loadable('bbs', {loaded_pages, games_category})
+
+  -- graphics
+  init_title_bar(12)
 end
 
 function _update60()
@@ -485,9 +489,7 @@ function _draw()
   draw_carts_menu()
 
   -- top bar
-  rectfill(0, 0, 128, 8, bar_color_1)
-  print("★", 2, 2, 10)
-  print('pexsplore>'..games_category, 12, 2, 7)
+  draw_title_bar('pexsplore>'..games_category, 12, 7, true, '★', 10)
 
   -- transition
   circfill(64, 128, transition_radius, 0)

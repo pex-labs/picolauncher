@@ -6,6 +6,7 @@ __lua__
 #include menu.p8
 #include utils.p8
 #include tween.lua
+#include ui.p8
 
 -- screenshot and recording viewer
 
@@ -27,6 +28,9 @@ function _init()
   cartdata("screenshot_gallery_data")
   load_photos()
   make_thumbnail_freeq()
+
+  -- graphics
+  init_title_bar(9)
 end
 
 function _update60()
@@ -152,8 +156,7 @@ function draw_gallery()
   end
 
   -- draw header
-  rectfill(0, 0, 128, 8, 9) 
-  print("photos", 2, 2, 7)
+  draw_title_bar('photos', 9, 7)
 
   -- print some text if you don't have any photos
   if tsize(photos) == 0 then

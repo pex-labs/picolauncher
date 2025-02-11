@@ -6,6 +6,7 @@ __lua__
 #include utils.p8
 #include menu.p8
 #include tween.lua
+#include ui.p8
 
 song_dir='music'
 label_dir='labels'
@@ -15,6 +16,9 @@ local song_menu=menu_new(ls(song_dir))
 function _init()
   load_label()
   load_song()
+
+  -- graphics
+  init_title_bar(11)
 end
 
 -- load song art of current song into memory
@@ -146,8 +150,7 @@ function _draw()
   cls(1) -- dark blue background
   
   -- header
-  rectfill(0, 0, 128, 7, 11) -- green header
-  print("♪ tunes", 4, 1, 7)
+  draw_title_bar('tunes', 11, 0, true, '♪', 0)
 
   print(song_menu:cur(), 64-#(song_menu:cur())*2, 20, 12)
   print(song_menu:cur(), 64-#(song_menu:cur())*2, 19, 7)
