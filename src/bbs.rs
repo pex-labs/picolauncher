@@ -281,6 +281,7 @@ pub fn filename_from_url(url: &str) -> Option<String> {
 }
 
 // TODO can maybe use the memoize crate, but it's a bit weird with futures
+// TODO can also maybe persist to disk and have a TTL option
 
 type BBSCacheEntry = Vec<Cart>;
 
