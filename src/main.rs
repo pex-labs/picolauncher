@@ -161,6 +161,10 @@ async fn main() {
     debug!("established connection to sqlite database");
     db.migrate().expect("failed migrating database");
 
+    // cache for bbs queries
+    // TODO move this into struct of some sort
+    let mut bbs_cache = BBSCache::new();
+
     // listen for commands from pico8 process
     loop {
         // check if pico8 process has exited
@@ -299,13 +303,13 @@ async fn main() {
                     db.get_favorites(20).unwrap()
                 } else if let Some(search_query) = query.strip_prefix("search:") {
                     let url = bbs_url_for_search(search_query, page);
-                    impl_bbs(&mut db, &tab, &pico8_bins, &url, page).await
+                    impl_bbs(&mut bbs_cache, &mut db, &tab, &pico8_bins, &url, page).await
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
                     let url = bbs_url_for_category(query, page);
-                    impl_bbs(&mut db, &tab, &pico8_bins, &url, page).await
+                    impl_bbs(&mut bbs_cache, &mut db, &tab, &pico8_bins, &url, page).await
                 };
 
                 // fetch desired cartdatas from db
@@ -592,7 +596,9 @@ async fn postprocess_cart(
     Ok(())
 }
 
+// TODO i don't really like how the cache is implemented, it's sorta just slapped on
 async fn impl_bbs(
+    bbs_cache: &mut BBSCache,
     db: &mut DB,
     tab: &Arc<Tab>,
     pico8_bins: &Vec<String>,
@@ -601,13 +607,24 @@ async fn impl_bbs(
 ) -> Vec<Cart> {
     info!("querying {url}");
 
-    let res = crawl_bbs(tab.clone(), url).await;
-
-    let res = match res {
-        Ok(res) => res,
-        Err(e) => {
-            error!("failed to crawl bbs {e:?}");
-            return vec![];
+    // memoize crawl_bbs
+    // TODO this is disgusting code
+    let res = match bbs_cache.query(url) {
+        Some(cached) => cached.to_vec(),
+        None => {
+            // actually make the request
+            let res = crawl_bbs(tab.clone(), url).await;
+            match res {
+                Ok(res) => {
+                    // cache the query
+                    bbs_cache.insert(url, res.to_vec());
+                    res
+                },
+                Err(e) => {
+                    error!("failed to crawl bbs {e:?}");
+                    return vec![];
+                },
+            }
         },
     };
 
@@ -658,7 +675,7 @@ async fn impl_bbs(
         }
     }
 
-    res
+    res.to_vec()
 }
 
 // return the contents of the games dir

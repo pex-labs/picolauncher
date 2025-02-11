@@ -1,4 +1,4 @@
-use std::{path::Path, sync::Arc, time::Instant};
+use std::{collections::HashMap, path::Path, sync::Arc, time::Instant};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -278,4 +278,39 @@ pub fn filename_from_url(url: &str) -> Option<String> {
     let parsed = Url::parse(url).ok()?;
     let segments = parsed.path_segments()?;
     segments.last().map(|name| name.to_string())
+}
+
+// TODO can maybe use the memoize crate, but it's a bit weird with futures
+
+type BBSCacheEntry = Vec<Cart>;
+
+/// BBS caching
+///
+/// Store the existing requests in RAM to limit the amount of scraping that needs to be done
+/// In particular, this is used to memoize the response of crawl_bbs
+pub struct BBSCache {
+    /// Key is given by the query string
+    cache: HashMap<String, BBSCacheEntry>,
+    // TODO can add more functionality like time to live or cache capacity in the future
+}
+
+// just a hashmap wrapper for now lol
+impl BBSCache {
+    pub fn new() -> Self {
+        Self {
+            cache: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, query: &str, data: BBSCacheEntry) {
+        self.cache.insert(query.to_owned(), data);
+    }
+
+    pub fn query(&self, query: &str) -> Option<&BBSCacheEntry> {
+        self.cache.get(query)
+    }
+
+    pub fn flush(&mut self) {
+        self.cache.clear()
+    }
 }
