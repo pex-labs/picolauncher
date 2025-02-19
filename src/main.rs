@@ -3,6 +3,7 @@ use std::{
     collections::HashMap, ffi::OsStr, fs::{create_dir_all, read_dir, read_to_string, File}, path::{Path, PathBuf}, sync::Arc, thread, time::{Duration, Instant}
 };
 
+use moka::future::Cache;
 use anyhow::anyhow;
 use futures::future::join_all;
 use headless_chrome::{Browser, LaunchOptions, Tab};
@@ -39,6 +40,7 @@ fn create_dirs() -> anyhow::Result<()> {
     create_dir_all(SCREENSHOT_PATH)?;
     Ok(())
 }
+
 #[tokio::main]
 async fn main() {
     // set up logger
@@ -52,6 +54,9 @@ async fn main() {
     let screenshot_handle = thread::spawn(|| {
         screenshot_watcher();
     });
+
+    // A cache where key=file_string, value=128x128 image (128*128/2 = 8192 bytes).
+    let pico8_image_cache: Cache<String, Arc<[u8; 8192]>> = Cache::new(1_000); // 1000 is arbitrary and probably good enough.
 
     // set up dbus connection and network manager
     // TODO linux specific currently
@@ -370,12 +375,82 @@ async fn main() {
                 // Get system information like operating system, etc
             },
 
+            "image_cache" => { // the total image cache can hold 128 frames/images. This equates to 1024KB of image data in memory at any point in time.
+                // image_cache:filename,framestart,framelen // start an async thread to cache an image. if the image is a gif/video, framelen frames from framestart are loaded.
+                // if the image is already cached, nothing happens.
+                // resets the frames count also with each call.
+                // returns: empty
+                let mut split   = data.splitn(3, ",");
+                let filename    = CART_DIR.join(split.next().unwrap_or_default());
+                let frame_start = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let frame_len   = split.next().unwrap().parse::<u32>().unwrap(); // TODO better error handlng here
+                let imcache = pico8_image_cache.clone();
+                tokio::spawn(async move {
+                    // // Insert 64 entries. (NUM_KEYS_PER_TASK = 64)
+                    // for key in start..end {
+                    //     // insert() is an async method, so await it.
+                    //     my_cache.insert(key, value(key)).await;
+                    //     // get() returns Option<String>, a clone of the stored value.
+                    //     assert_eq!(my_cache.get(&key).await, Some(value(key)));
+                    // }
+
+                    // // Invalidate every 4 element of the inserted entries.
+                    // for key in (start..end).step_by(4) {
+                    //     // invalidate() is an async method, so await it.
+                    //     my_cache.invalidate(&key).await;
+                    // }
+                });
+            },
+
+            "image_checkcache" => { // :filename,frame // check if the frame of a file is cached or not.
+                // returns: 0=image is not cached. 1=image is caching. 2=image is cached.
+            },
+
+            "image_frames" => { // :filename // How many frames are in the image. 1 for png files. >1 for images/vids. returns 1 by default if the image is not cached.
+                // returns: 2 bytes: framecount. 1-16384 (14 bits, so there are 2 extra bits...)
+            },
+
+            // TODO: implement a frame info for more complex images.
+            // "image_frameinfo" => {
+            //     // image_info:filename,frame // Gets image palettes/scanline orientation for the image, or frame of a video/gif.
+            //     // returns: 1 byte: 1bit vertical/horizontal scan lines. 1 bit gradient or scanline. 4 bits gradient color. then 16 bytes for pal1. then 16 bytes for pal2.
+            //     // and need to represent gradient...
+            //     // then 16 bytes specifying the palette for each line, 1 bit per scan line
+            // },
+
+            // Caches an image in the background.
+            "cache_image" => {
+                let mut split = data.splitn(6, ",");
+                let filename        = CART_DIR.join(split.next().unwrap_or_default());
+                tokio::spawn(async move {
+                    let image_data = image::process(&filename.as_path(), scale_width, scale_height);
+
+                    // Insert 64 entries. (NUM_KEYS_PER_TASK = 64)
+                    for key in start..end {
+                        // insert() is an async method, so await it.
+                        my_cache.insert(key, value(key)).await;
+                        // get() returns Option<String>, a clone of the stored value.
+                        assert_eq!(my_cache.get(&key).await, Some(value(key)));
+                    }
+
+                    // Invalidate every 4 element of the inserted entries.
+                    for key in (start..end).step_by(4) {
+                        // invalidate() is an async method, so await it.
+                        my_cache.invalidate(&key).await;
+                    }
+                });
+
+
+
+            },
+
+            // will return a black stream if the image is not cached.
             // PARAMS: filename, img_num, frame_num, bytes_per_frame
             // filename: which file to load
             // img_num: which image in a gif to load. not used for non-gifs.
             // frame_num: which frame this is for loading the image.
             // bytes_per_frame: how many bytes you are loading each frame.
-            "load_image" => {
+            "image_load" => {
                 let mut split = data.splitn(6, ",");
                 // filename..","..scale_width..","..scale_height..","..bytes_per_frame..","..frame..","..mode)
                 let filename        = CART_DIR.join(split.next().unwrap_or_default());
@@ -386,7 +461,6 @@ async fn main() {
                 let mode            = split.next().unwrap_or_default();
 
                 if frame*bytes_per_frame < scale_height*scale_width/2 {
-                    let image_data = image::process(&filename.as_path(), scale_width, scale_height);
                     stdin_writeraw(
                         &mut pico8_writer,
                         &image_data[((frame * bytes_per_frame) as usize)

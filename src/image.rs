@@ -28,10 +28,10 @@
 
 // frames can be loaded 10 frames can be loaded in 1 se
 
-use image::{DynamicImage, GenericImageView, ImageReader};
+use image::{DynamicImage, RgbaImage};
 use lazy_static::lazy_static;
-use log::debug;
 use ndarray::{arr1, arr2, Array1, Array2};
+use tokio::{fs, task};
 use std::cmp::Ordering;
 use std::env;
 use std::path::Path;
@@ -75,7 +75,22 @@ lazy_static! {
     ]);
 }
 
-fn rgba_to_pico8(palette: &Array2<u8>, img: &DynamicImage, x: u32, y: u32) -> usize {
+type P8Screen = [u8; 8192];
+
+#[derive(PartialEq, Eq, Debug)]
+pub struct ImageCacheData {
+    data: P8Screen,
+    state: ImageCacheState,
+}
+
+#[derive(PartialEq, Eq, Debug)]
+pub enum ImageCacheState {
+    NotCached,
+    Caching,
+    Cached,
+}
+
+fn rgba_to_pico8(palette: &Array2<u8>, img: &RgbaImage, x: u32, y: u32) -> usize {
     let pixel: Array1<u8> = arr1(&img.get_pixel(x, y).0);
 
     let dist = palette
@@ -105,20 +120,37 @@ fn rgba_to_pico8(palette: &Array2<u8>, img: &DynamicImage, x: u32, y: u32) -> us
 
 // coords for where the label image starts. (16, 24)
 // dimensions to verify p8.png file: 160 x 205
-pub fn process(filepath: &Path, width: u32, height: u32) -> Vec<u8> {
-    let width = width + width%2; // Width is changed because each row must be even since there are 2 pixels per row.
-    match process_(filepath, width, height) {
-        Err(_) => vec![0; ((width/2)*height) as usize],
-        Ok(value) => value,
+pub async fn process(filepath: &Path) -> ImageCacheData {
+    match process_(filepath).await {
+        Err(_) => ImageCacheData {
+            data: [0; 8192],
+            state: ImageCacheState::Cached,
+        },
+        Ok(value) => ImageCacheData {
+            data: value,
+            state: ImageCacheState::Cached,
+        },
     }
 }
 
+// TODO: this should take a Cursor? and do guessed format from that. on io error, an image that is black should be saved into the cache.
+
 // intermediate function. width must be even
-fn process_(filepath: &Path, width: u32, height: u32) -> anyhow::Result<Vec<u8>> {
-    let img_path = ImageReader::open(filepath)?;
-    let _img_format = img_path.format();
-    let img = img_path.decode()?;
-    let mut imgdata = vec![0; ((width/2)*height) as usize]; // this is the default value
+async fn process_(filepath: &Path) -> anyhow::Result<P8Screen> {
+    let width = 128;
+    let height = 128;
+
+    let image_bytes = fs::read(filepath).await?;
+
+    let raw_image: DynamicImage = task::spawn_blocking(move || {
+        image::load_from_memory(&image_bytes)
+    })
+    .await??; // TODO error handling.
+
+    // Optionally, convert the image to a specific color format,
+    // such as RGBA8 (each pixel has 4 u8 values)
+    let img = raw_image.to_rgba8();
+    let mut imgdata = [0; 8192 as usize]; // this is the default value
 
     // assume these exact dimensions mean the image is a pico8 cartridge.
     if img.width() == 160 && img.height() == 205 {
@@ -148,8 +180,11 @@ mod tests {
 
     #[test]
     fn test_printdata() -> anyhow::Result<()> {
-        let _cart = process(PathBuf::from("./testcarts/test1.p8.png").as_path(), 128, 128);
-        assert_eq!(_cart, [17; 8192]); // 17 means 0b00010001 or 0x11, so dark blue (1) in every pixel, which is what this test cart is
+        let _cart = process(PathBuf::from("./testcarts/test1.p8.png").as_path()).await?;
+        assert_eq!(_cart, ImageCacheData {
+          state: ImageCacheState::Cached,
+          data: [17; 8192]
+        }); // 17 means 0b00010001 or 0x11, so dark blue (1) in every pixel, which is what this test cart is
         Ok(())
     }
 
@@ -160,3 +195,4 @@ mod tests {
         Ok(())
     }
 }
+
