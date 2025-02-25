@@ -575,20 +575,6 @@ async fn postprocess_cart(
             .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
     }
 
-    // generate metadata file
-    /*
-    let mut metadata_path = METADATA_DIR.clone().join(filestem);
-    metadata_path.set_extension("json");
-    if !metadata_path.exists() {
-        let metadata_serialized = serde_json::to_string_pretty(cart).unwrap();
-
-        let mut metadata_file = File::create(metadata_path.clone()).unwrap();
-        metadata_file
-            .write_all(metadata_serialized.as_bytes())
-            .unwrap();
-    }
-    */
-
     // save metadata to db
     // TODO might be nicer to do batch insert instead of single query per cart?
     db.insert_cart(cart)?;
