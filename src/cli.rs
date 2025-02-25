@@ -133,31 +133,6 @@ fn main() {
             cart.write(&mut label_file).unwrap();
             println!("generated label {label_path:?}");
 
-            // generate metadata file
-            let metadata = Cart {
-                id: 0,
-                title: name.clone().unwrap_or(cart_name.to_owned()),
-                filename: cart_name.to_owned(),
-                author: author.clone().unwrap_or_default(),
-                tags: String::new(),
-                likes: 0,
-                lid: String::new(),
-                download_url: String::new(),
-                description: String::new(),
-                thumb_url: String::new(),
-                favorite: false,
-            };
-
-            let metadata_serialized = serde_json::to_string_pretty(&metadata).unwrap();
-
-            let mut metadata_path = METADATA_DIR.clone().join(cart_name);
-            metadata_path.set_extension("json");
-            let mut metadata_file = File::create(metadata_path.clone()).unwrap();
-            metadata_file
-                .write_all(metadata_serialized.as_bytes())
-                .unwrap();
-            println!("generated metadata {metadata_path:?}");
-
             // generate music file
             let music_cart = match p8util::cart2music(&game_path) {
                 Ok(cart) => cart,
