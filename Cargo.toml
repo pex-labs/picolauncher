@@ -39,8 +39,6 @@ log = "0.4"
 env_logger = "0.11"
 
 network-manager = { version = "0.13.3", git = "https://github.com/balena-io-modules/network-manager" }
-dbus = "0.9"
-bluer = { version = "0.17.3", features = ["full"] }
 embedded-hal = "1"
 linux-embedded-hal = { version = "0.4", features = ["i2cdev"] } 
 
@@ -54,6 +52,8 @@ futures = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 nix = { version = "0.29", features = ["fs", "process", "signal"] }
+dbus = { version = "0.9" }
+bluer = { version = "0.17.3", features = ["full"] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
 winapi = { version = "0.3", features = ["namedpipeapi", "handleapi", "winbase"] }
