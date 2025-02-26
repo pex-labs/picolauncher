@@ -1,4 +1,4 @@
-use std::{collections::HashMap, path::Path, sync::Arc, time::Instant};
+use std::{collections::HashMap, path::Path, sync::Arc, time::Instant, fmt};
 
 use anyhow::Result;
 use futures::future::join_all;
@@ -40,11 +40,11 @@ pub enum OrderBy {
     New,
 }
 
-impl ToString for OrderBy {
-    fn to_string(&self) -> String {
+impl fmt::Display for OrderBy {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            OrderBy::Featured => String::from("featured"),
-            OrderBy::New => String::from("ts"),
+            OrderBy::Featured => write!(f, "featured"),
+            OrderBy::New => write!(f, "ts"),
         }
     }
 }
@@ -201,7 +201,7 @@ pub fn build_bbs_url(
         url.push_str(&format!("&tag={}", urlencoding::encode(&tag)));
     }
     if let Some(orderby) = orderby {
-        url.push_str(&format!("&orderby={}", orderby.to_string()));
+        url.push_str(&format!("&orderby={}", orderby));
     }
     url
 }
@@ -264,7 +264,7 @@ pub async fn download_cart(client: Client, url: String, dest: &Path) -> anyhow::
     let res = client.get(url).send().await?;
     let bytes = res.bytes().await?;
     let mut file = OpenOptions::new()
-        .create(true)
+        .truncate(true)
         .write(true)
         .open(dest)
         .await?;
@@ -313,5 +313,11 @@ impl BBSCache {
 
     pub fn flush(&mut self) {
         self.cache.clear()
+    }
+}
+
+impl Default for BBSCache {
+    fn default() -> Self {
+        Self::new()
     }
 }

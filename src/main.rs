@@ -2,9 +2,9 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
-    fs::{create_dir_all, read_dir, read_to_string, File},
+    fs::{create_dir_all, read_dir, File},
     io::{BufRead, BufReader, Write},
-    path::{Path, PathBuf},
+    path::Path,
     sync::Arc,
     thread,
     time::{Duration, Instant},
@@ -673,7 +673,7 @@ fn impl_bbs_local(db: &mut DB) -> anyhow::Result<Vec<Cart>> {
             let entry = entry.unwrap().path();
             if entry.is_file() {
                 // for each file read metadata and pack into table string
-                let mut filename = entry.file_stem().unwrap().to_str().unwrap().to_owned();
+                let filename = entry.file_stem().unwrap().to_str().unwrap().to_owned();
                 filenames.push(filename);
             }
         }

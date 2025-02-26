@@ -9,7 +9,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use image::{GenericImageView, ImageReader, Pixel};
+use image::{GenericImageView, ImageReader};
 use lazy_static::lazy_static;
 use ndarray::{arr1, arr2, Array1, Array2};
 use pino_deref::{Deref, DerefMut};
