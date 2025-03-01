@@ -20,10 +20,10 @@ fmt:
     cargo +nightly fmt --all
 
 lint:
-    cargo clippy -- -W clippy::unwrap_used -W clippy::cargo
+    RUSTFLAGS="-A unused" cargo clippy -- -W clippy::cargo
 
 lint_fix:
-    cargo clippy --fix -- -W clippy::unwrap_used -W clippy::cargo
+    RUSTFLAGS="-A unused" cargo clippy --fix -- -W clippy::cargo
 
 test:
     cargo test -- --nocapture

@@ -12,7 +12,6 @@ use std::{
 };
 
 use anyhow::anyhow;
-use embedded_hal::i2c::I2c;
 use event::CreateKind;
 pub use gyro::*;
 use log::{debug, info, warn};
@@ -135,7 +134,8 @@ pub fn screenshot_watcher() {
 
     info!("screenshot watcher registered");
 
-    loop {} // TODO this might consume a lot of cpu?
+    // ensure this thread remains alive
+    std::thread::park();
 }
 
 /// Suspend the pico8 process until child process exits
