@@ -1,4 +1,4 @@
-use std::{fs, fs::File, io, io::Write, path::PathBuf};
+use std::{fs, fs::File, io, path::PathBuf};
 
 use clap::{Parser, Subcommand};
 use log::{debug, error};
@@ -12,12 +12,14 @@ use picolauncher::{
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    cart2music {
+    #[command(name = "cart2music")]
+    CartToMusic {
         cart_path: Option<PathBuf>,
         #[arg(short, long)]
         all: bool,
     },
-    cart2label {
+    #[command(name = "cart2label")]
+    CartToLabel {
         cart_path: Option<PathBuf>,
         #[arg(short, long)]
         all: bool,
@@ -38,7 +40,7 @@ fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match &cli.command {
-        Commands::cart2music { cart_path, all } => {
+        Commands::CartToMusic { cart_path, all } => {
             // TODO this is duplicate logic
             if *all {
                 let entries = fs::read_dir(GAMES_DIR.as_path()).unwrap();
@@ -70,7 +72,7 @@ fn main() -> anyhow::Result<()> {
                 }
             }
         },
-        Commands::cart2label { cart_path, all } => {
+        Commands::CartToLabel { cart_path, all } => {
             if *all {
                 let entries = fs::read_dir(GAMES_DIR.as_path()).unwrap();
                 for entry in entries {
@@ -120,8 +122,5 @@ fn main() -> anyhow::Result<()> {
                 postprocess_cart(&mut db, &PICO8_BINS, &cart, &dl_path).await?;
                 anyhow::Ok(())
             })?;
-        },
-    }
-
-    Ok(())
+      }
 }

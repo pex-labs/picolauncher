@@ -2,9 +2,9 @@
 use std::{
     collections::HashMap,
     ffi::OsStr,
-    fs::{create_dir_all, read_dir, read_to_string, File},
+    fs::{create_dir_all, read_dir, File},
     io::{BufRead, BufReader, Write},
-    path::{Path, PathBuf},
+    path::Path,
     sync::Arc,
     thread,
     time::{Duration, Instant},
@@ -530,6 +530,7 @@ fn bbs_url_for_search(search_query: &str, page: u32) -> String {
     )
 }
 
+
 // TODO i don't really like how the cache is implemented, it's sorta just slapped on
 async fn impl_bbs(
     bbs_cache: &mut BBSCache,
@@ -621,7 +622,7 @@ fn impl_bbs_local(db: &mut DB) -> anyhow::Result<Vec<Cart>> {
             let entry = entry.unwrap().path();
             if entry.is_file() {
                 // for each file read metadata and pack into table string
-                let mut filename = entry.file_stem().unwrap().to_str().unwrap().to_owned();
+                let filename = entry.file_stem().unwrap().to_str().unwrap().to_owned();
                 filenames.push(filename);
             }
         }
