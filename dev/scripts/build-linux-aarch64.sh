@@ -17,7 +17,7 @@ mkdir -p $build_dir/drive/carts/screenshots/
 cross build --release --target aarch64-unknown-linux-gnu
 
 # install files
-cp -r drive/carts/{games,labels,metadata,music} $build_dir/drive/carts
+cp -r drive/carts/{games,labels,music} $build_dir/drive/carts
 cp -r drive/carts/{*.p8,*.lua} $build_dir/drive/carts/
 cp drive/config_template.txt $build_dir/drive/config.txt
 
