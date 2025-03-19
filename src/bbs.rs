@@ -1,6 +1,6 @@
-use std::{collections::HashMap, path::Path, sync::Arc, time::Instant, fmt};
+use std::{collections::HashMap, fmt, fs::File, path::Path, sync::Arc, time::Instant};
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use futures::future::join_all;
 use headless_chrome::Tab;
 use lazy_static::lazy_static;
@@ -10,7 +10,12 @@ use reqwest::{Client, Url};
 use scraper::{Html, Selector};
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
-use crate::db::schema::Cart;
+use crate::{
+    consts::{GAMES_DIR, LABEL_DIR},
+    db::{schema::Cart, DB},
+    hal::pico8_export,
+    p8util::{cart2label, filename_from_url},
+};
 
 lazy_static! {
     static ref GALLERY_RE: Regex = Regex::new(r#"<div id="pdat_(\d+)""#).unwrap();
@@ -273,11 +278,61 @@ pub async fn download_cart(client: Client, url: String, dest: &Path) -> anyhow::
     Ok(())
 }
 
-/// Extract the filename of the file to be downloaded from a given url
-pub fn filename_from_url(url: &str) -> Option<String> {
-    let parsed = Url::parse(url).ok()?;
-    let segments = parsed.path_segments()?;
-    segments.last().map(|name| name.to_string())
+// TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
+pub async fn postprocess_cart(
+    db: &mut DB,
+    pico8_bins: &Vec<String>,
+    cart: &Cart,
+    path: &Path,
+) -> anyhow::Result<()> {
+    // TODO: since path.file_prefix is still unstable, we need to split on the first period
+    let filename = path.file_name().unwrap().to_str().unwrap();
+    let mut split = filename.splitn(2, ".");
+    let filestem = split.next().unwrap();
+
+    // generate p8 file from p8.png file
+    let mut dest_path = GAMES_DIR.join(filestem);
+    dest_path.set_extension("p8");
+    if !dest_path.exists() {
+        pico8_export(pico8_bins, path, &dest_path)
+            .await
+            .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
+    }
+
+    // generate label file
+    let mut label_path = LABEL_DIR.join(filestem);
+    label_path.set_extension("64.p8");
+    if !label_path.exists() {
+        let label_cart = cart2label(&dest_path)
+            .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
+
+        let mut label_file = File::create(label_path.clone())
+            .map_err(|e| anyhow!("failed to create label file {label_path:?}: {e:?}"))?;
+
+        label_cart
+            .write(&mut label_file)
+            .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
+    }
+
+    // generate metadata file
+    /*
+    let mut metadata_path = METADATA_DIR.clone().join(filestem);
+    metadata_path.set_extension("json");
+    if !metadata_path.exists() {
+        let metadata_serialized = serde_json::to_string_pretty(cart).unwrap();
+
+        let mut metadata_file = File::create(metadata_path.clone()).unwrap();
+        metadata_file
+            .write_all(metadata_serialized.as_bytes())
+            .unwrap();
+    }
+    */
+
+    // save metadata to db
+    // TODO might be nicer to do batch insert instead of single query per cart?
+    db.insert_cart(cart)?;
+
+    Ok(())
 }
 
 // TODO can maybe use the memoize crate, but it's a bit weird with futures
