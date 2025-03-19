@@ -269,6 +269,7 @@ pub async fn download_cart(client: Client, url: String, dest: &Path) -> anyhow::
     let res = client.get(url).send().await?;
     let bytes = res.bytes().await?;
     let mut file = OpenOptions::new()
+        .create(true)
         .truncate(true)
         .write(true)
         .open(dest)
