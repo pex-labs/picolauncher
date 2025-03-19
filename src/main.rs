@@ -75,16 +75,16 @@ async fn main() {
 
     // launch pico8 binary
     let pico8_bin_override = std::env::var("PICO8_BINARY");
-
-    // if let Ok(bin_override) = pico8_bin_override {
-    //     PICO8_BINS.insert(0, bin_override);
-    // }
+    let pico8_bins = PICO8_BINS.clone();
+    if let Ok(bin_override) = pico8_bin_override {
+        pico8_bins.clone().insert(0, bin_override);
+    }
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let init_cart = "main_menu.p8";
     let mut pico8_process = launch_pico8_binary(
-        &PICO8_BINS,
+        &pico8_bins,
         vec![
             "-home",
             DRIVE_DIR,
@@ -200,13 +200,13 @@ async fn main() {
                 pico8_to_bg(&pico8_process, child).await;
             },
             "spawn_pico8" => {
-                let child = launch_pico8_binary(&PICO8_BINS, vec!["-home", DRIVE_DIR]).unwrap();
+                let child = launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR]).unwrap();
 
                 pico8_to_bg(&pico8_process, child).await;
             },
             "spawn_splore" => {
                 let child =
-                    launch_pico8_binary(&PICO8_BINS, vec!["-home", DRIVE_DIR, "-splore"]).unwrap();
+                    launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR, "-splore"]).unwrap();
 
                 pico8_to_bg(&pico8_process, child).await;
             },
@@ -294,13 +294,13 @@ async fn main() {
                     db.get_favorites(20).unwrap()
                 } else if let Some(search_query) = query.strip_prefix("search:") {
                     let url = bbs_url_for_search(search_query, page);
-                    impl_bbs(&mut bbs_cache, &mut db, &tab, &PICO8_BINS, &url, page).await
+                    impl_bbs(&mut bbs_cache, &mut db, &tab, &pico8_bins, &url, page).await
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
                     let url = bbs_url_for_category(query, page);
-                    impl_bbs(&mut bbs_cache, &mut db, &tab, &PICO8_BINS, &url, page).await
+                    impl_bbs(&mut bbs_cache, &mut db, &tab, &pico8_bins, &url, page).await
                 };
 
                 // fetch desired cartdatas from db
