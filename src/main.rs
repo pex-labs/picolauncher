@@ -75,9 +75,9 @@ async fn main() {
 
     // launch pico8 binary
     let pico8_bin_override = std::env::var("PICO8_BINARY");
-    let pico8_bins = PICO8_BINS.clone();
+    let mut pico8_bins = PICO8_BINS.clone();
     if let Ok(bin_override) = pico8_bin_override {
-        pico8_bins.clone().insert(0, bin_override);
+        pico8_bins.insert(0, bin_override);
     }
 
     // spawn pico8 process and setup pipes
