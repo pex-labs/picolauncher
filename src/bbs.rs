@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, path::Path, sync::Arc, time::Instant};
+use std::{collections::HashMap, fmt, fs::File, path::Path, sync::Arc, time::Instant};
 
 use anyhow::{anyhow, Result};
 use futures::future::join_all;

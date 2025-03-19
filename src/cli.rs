@@ -122,5 +122,7 @@ fn main() -> anyhow::Result<()> {
                 postprocess_cart(&mut db, &PICO8_BINS, &cart, &dl_path).await?;
                 anyhow::Ok(())
             })?;
-      }
+        },
+    }
+    Ok(())
 }

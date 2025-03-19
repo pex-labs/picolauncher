@@ -530,7 +530,6 @@ fn bbs_url_for_search(search_query: &str, page: u32) -> String {
     )
 }
 
-
 // TODO i don't really like how the cache is implemented, it's sorta just slapped on
 async fn impl_bbs(
     bbs_cache: &mut BBSCache,
