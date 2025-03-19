@@ -31,6 +31,10 @@ use crate::{
 pub const IN_PIPE: &str = "in_pipe";
 pub const OUT_PIPE: &str = "out_pipe";
 
+lazy_static::lazy_static! {
+    pub static ref PICO8_BINS: Vec<String> = vec!["pico8".into(), "pico8_64".into(), "pico8_dyn".into()];
+}
+
 /// create named pipes if they don't exist
 fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
     use nix::{sys::stat::Mode, unistd::mkfifo};

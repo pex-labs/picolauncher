@@ -17,6 +17,13 @@ use winapi::um::{
 pub const IN_PIPE: &'static str = "\\\\.\\pipe\\in_pipe";
 pub const OUT_PIPE: &'static str = "\\\\.\\pipe\\out_pipe";
 
+lazy_static::lazy_static! {
+    pub static ref PICO8_BINS: Vec<String> = vec![
+        "pico8.exe".into(),
+        "C:\\Program Files (x86)\\PICO-8\\pico8.exe".into(),
+    ];
+}
+
 fn to_wstring(str: &str) -> Vec<u16> {
     use std::{ffi::OsStr, os::windows::ffi::OsStrExt};
 

@@ -14,6 +14,7 @@ use lazy_static::lazy_static;
 use ndarray::{arr1, arr2, Array1, Array2};
 use pino_deref::{Deref, DerefMut};
 use regex::Regex;
+use reqwest::Url;
 use serde_json::Map;
 use strum::IntoEnumIterator;
 
@@ -318,6 +319,13 @@ fn escape_string(s: &str) -> String {
 // Convert metadata into lua table so it's parseable on the pico8 side
 pub fn serialize_table(table: &Map<String, serde_json::Value>) -> String {
     escape_string(&stringify_table(table))
+}
+
+/// Extract the filename of the file to be downloaded from a given url
+pub fn filename_from_url(url: &str) -> Option<String> {
+    let parsed = Url::parse(url).ok()?;
+    let segments = parsed.path_segments()?;
+    segments.last().map(|name| name.to_string())
 }
 
 #[cfg(test)]

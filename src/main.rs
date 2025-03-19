@@ -76,24 +76,15 @@ async fn main() {
     // launch pico8 binary
     let pico8_bin_override = std::env::var("PICO8_BINARY");
 
-    #[cfg(target_os = "linux")]
-    let mut pico8_bins: Vec<String> = vec!["pico8".into(), "pico8_64".into(), "pico8_dyn".into()];
-
-    #[cfg(target_os = "windows")]
-    let mut pico8_bins = vec![
-        "pico8.exe".into(),
-        "C:\\Program Files (x86)\\PICO-8\\pico8.exe".into(),
-    ];
-
-    if let Ok(bin_override) = pico8_bin_override {
-        pico8_bins.insert(0, bin_override);
-    }
+    // if let Ok(bin_override) = pico8_bin_override {
+    //     PICO8_BINS.insert(0, bin_override);
+    // }
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
     let init_cart = "main_menu.p8";
     let mut pico8_process = launch_pico8_binary(
-        &pico8_bins,
+        &PICO8_BINS,
         vec![
             "-home",
             DRIVE_DIR,
@@ -209,13 +200,13 @@ async fn main() {
                 pico8_to_bg(&pico8_process, child).await;
             },
             "spawn_pico8" => {
-                let child = launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR]).unwrap();
+                let child = launch_pico8_binary(&PICO8_BINS, vec!["-home", DRIVE_DIR]).unwrap();
 
                 pico8_to_bg(&pico8_process, child).await;
             },
             "spawn_splore" => {
                 let child =
-                    launch_pico8_binary(&pico8_bins, vec!["-home", DRIVE_DIR, "-splore"]).unwrap();
+                    launch_pico8_binary(&PICO8_BINS, vec!["-home", DRIVE_DIR, "-splore"]).unwrap();
 
                 pico8_to_bg(&pico8_process, child).await;
             },
@@ -303,13 +294,13 @@ async fn main() {
                     db.get_favorites(20).unwrap()
                 } else if let Some(search_query) = query.strip_prefix("search:") {
                     let url = bbs_url_for_search(search_query, page);
-                    impl_bbs(&mut bbs_cache, &mut db, &tab, &pico8_bins, &url, page).await
+                    impl_bbs(&mut bbs_cache, &mut db, &tab, &PICO8_BINS, &url, page).await
                 } else {
                     let query = query
                         .parse::<PexsploreCategory>()
                         .unwrap_or(PexsploreCategory::Featured);
                     let url = bbs_url_for_category(query, page);
-                    impl_bbs(&mut bbs_cache, &mut db, &tab, &pico8_bins, &url, page).await
+                    impl_bbs(&mut bbs_cache, &mut db, &tab, &PICO8_BINS, &url, page).await
                 };
 
                 // fetch desired cartdatas from db
@@ -537,63 +528,6 @@ fn bbs_url_for_search(search_query: &str, page: u32) -> String {
         None,
         Some(OrderBy::Featured),
     )
-}
-
-// TODO this function is pretty similar to the functionality in cli.rs - should aggerate this
-async fn postprocess_cart(
-    db: &mut DB,
-    pico8_bins: &Vec<String>,
-    cart: &Cart,
-    path: &Path,
-) -> anyhow::Result<()> {
-    // TODO: since path.file_prefix is still unstable, we need to split on the first period
-    let filename = path.file_name().unwrap().to_str().unwrap();
-    let mut split = filename.splitn(2, ".");
-    let filestem = split.next().unwrap();
-
-    // generate p8 file from p8.png file
-    let mut dest_path = GAMES_DIR.join(filestem);
-    dest_path.set_extension("p8");
-    if !dest_path.exists() {
-        pico8_export(pico8_bins, path, &dest_path)
-            .await
-            .map_err(|e| anyhow!("failed to convert cart to p8 from file {path:?}: {e:?}"))?;
-    }
-
-    // generate label file
-    let mut label_path = LABEL_DIR.join(filestem);
-    label_path.set_extension("64.p8");
-    if !label_path.exists() {
-        let label_cart = cart2label(&dest_path)
-            .map_err(|_| anyhow!("failed to generate label cart from {dest_path:?}"))?;
-
-        let mut label_file = File::create(label_path.clone())
-            .map_err(|e| anyhow!("failed to create label file {label_path:?}: {e:?}"))?;
-
-        label_cart
-            .write(&mut label_file)
-            .map_err(|e| anyhow!("failed to write label file {label_path:?}: {e:?}"))?;
-    }
-
-    // generate metadata file
-    /*
-    let mut metadata_path = METADATA_DIR.clone().join(filestem);
-    metadata_path.set_extension("json");
-    if !metadata_path.exists() {
-        let metadata_serialized = serde_json::to_string_pretty(cart).unwrap();
-
-        let mut metadata_file = File::create(metadata_path.clone()).unwrap();
-        metadata_file
-            .write_all(metadata_serialized.as_bytes())
-            .unwrap();
-    }
-    */
-
-    // save metadata to db
-    // TODO might be nicer to do batch insert instead of single query per cart?
-    db.insert_cart(cart)?;
-
-    Ok(())
 }
 
 // TODO i don't really like how the cache is implemented, it's sorta just slapped on
