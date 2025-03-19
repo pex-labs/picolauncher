@@ -396,7 +396,9 @@ function _init()
 
   -- automatically make first query
   loaded_pages = loaded_pages+1
-  request_loadable('bbs', {loaded_pages, games_category})
+  if not is_local then
+    request_loadable('bbs', {loaded_pages, games_category})
+  end
 
   -- graphics
   init_title_bar(12)

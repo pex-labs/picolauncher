@@ -23,5 +23,6 @@ cp drive/config_template.txt $build_dir/drive/config.txt
 
 cp target/aarch64-unknown-linux-gnu/release/picolauncher $build_dir/picolauncher
 cp target/aarch64-unknown-linux-gnu/release/p8util $build_dir/p8util
+cp db.sqlite3 $build_dir/db.sqlite3
 
 zip -r picolauncher-linux-aarch64.zip $build_dir

@@ -315,7 +315,7 @@ sfx(-1,i)
 end
 reload()
 memcpy(0x8000,0x0,0x4300)
-load("poom_1",nil,skill..","..id)
+load("games/poom_1",nil,skill..","..id)
 end
 launch_ttl-=1
 end,
