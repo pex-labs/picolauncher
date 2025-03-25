@@ -50,15 +50,19 @@ pub trait NetworkHAL {
 
 // initialize the network HAL depending on the platform and any compile flags
 pub fn init_network_hal() -> Result<Box<dyn NetworkHAL>> {
-    if cfg!(all(feature = "network", target_os = "linux")) {
-        LinuxNetworkHAL::new().map(|x| Box::new(x) as Box<dyn NetworkHAL>)
-    } else if cfg!(all(feature = "network", target_os = "macos")) {
-        // TODO MACOS is dummy for now
-        Ok(Box::new(DummyNetworkHAL::new()) as Box<dyn NetworkHAL>)
-    } else {
-        // fallback to the dummy
-        Ok(Box::new(DummyNetworkHAL::new()) as Box<dyn NetworkHAL>)
+    #[cfg(all(feature = "network", target_os = "linux"))]
+    {
+        return LinuxNetworkHAL::new().map(|x| Box::new(x) as Box<dyn NetworkHAL>);
     }
+
+    #[cfg(all(feature = "network", target_os = "macos"))]
+    {
+        // TODO MACOS is dummy for now
+        return Ok(Box::new(DummyNetworkHAL::new()) as Box<dyn NetworkHAL>);
+    }
+
+    // fallback to the dummy
+    Ok(Box::new(DummyNetworkHAL::new()) as Box<dyn NetworkHAL>)
 }
 
 pub trait BluetoothHAL {
@@ -82,9 +86,10 @@ pub trait GyroHAL: Send + Sync {
 }
 
 pub fn init_gyro_hal() -> Result<Arc<dyn GyroHAL>> {
-    if cfg!(all(feature = "gyro", target_os = "linux")) {
-        Ok(Arc::new(LinuxGyroHAL::new("/dev/i2c-5", true).unwrap()) as Arc<dyn GyroHAL>)
-    } else {
-        Ok(Arc::new(DummyGyroHAL::new()) as Arc<dyn GyroHAL>)
+    #[cfg(all(feature = "gyro", target_os = "linux"))]
+    {
+        return Ok(Arc::new(LinuxGyroHAL::new("/dev/i2c-5", true).unwrap()) as Arc<dyn GyroHAL>);
     }
+
+    Ok(Arc::new(DummyGyroHAL::new()) as Arc<dyn GyroHAL>)
 }
