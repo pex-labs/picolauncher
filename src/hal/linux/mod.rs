@@ -151,39 +151,3 @@ pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
     child.wait().await.unwrap();
     resume_pico8_process(pico8_process);
 }
-
-/// Attempts to spawn pico8 binary by trying multiple potential binary names depending on the
-/// platform
-pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::Result<Child> {
-    for bin_name in bin_names {
-        let pico8_process = Command::new(bin_name.clone())
-            .args(args.clone())
-            // .stdout(Stdio::piped())
-            .spawn();
-
-        match pico8_process {
-            Ok(process) => return Ok(process),
-            Err(e) => warn!("failed launching {bin_name}: {e}"),
-        }
-    }
-    Err(anyhow!("failed to launch pico8"))
-}
-
-/// Use the pico8 binary to export games from *.p8.png to *.p8
-pub async fn pico8_export(
-    bin_names: &Vec<String>,
-    in_file: &Path,
-    out_file: &Path,
-) -> anyhow::Result<()> {
-    let mut pico8_process = launch_pico8_binary(
-        bin_names,
-        vec![
-            "-x",
-            in_file.to_str().unwrap(),
-            "-export",
-            out_file.to_str().unwrap(),
-        ],
-    )?;
-    pico8_process.wait().await?;
-    Ok(())
-}
