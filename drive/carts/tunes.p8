@@ -30,7 +30,7 @@ music_events = {
 
 local bars = {0, 0, 0, 0}
 local bar_colors = {8, 9, 12, 14}
-local note_particles = {}
+-- local note_particles = {}
 local wave_intensity = {0, 0, 0, 0}
 
 function _init()
@@ -39,7 +39,7 @@ function _init()
 
   init_title_bar(11)
   
-  note_particles = {}
+  -- note_particles = {}
 end
 
 function music_events:update()
@@ -92,7 +92,7 @@ function music_events:update_channel(i)
       local bin = pitch % 12 + 1
       
       if show_visualizer then
-        add_note_particles(i, pitch, volume)
+        -- add_note_particles(i, pitch, volume)
       end
       
       -- wave intensity, idk if I like this, too noisy 
@@ -247,7 +247,7 @@ function on_song_change()
     wave_intensity[i] = 0
   end
   
-  note_particles = {}
+  -- note_particles = {}
 end
 
 function _update60()
@@ -267,7 +267,7 @@ function _update60()
     on_song_change()
   elseif btnp(2) then -- toggle  visualizer
     show_visualizer = not show_visualizer
-    note_particles = {} -- Clear particles when toggling
+    -- note_particles = {} -- Clear particles 
   elseif btnp(4) then
     os_back()
   elseif btnp(5) then -- pause/play
@@ -289,7 +289,7 @@ function _update60()
   if play_state then
     music_events:update()
     if show_visualizer then
-      update_particles()
+      -- update_particles()
     end
   end
 end
@@ -334,13 +334,13 @@ end
 function draw_full_visualizer()
 
   
-  for p in all(note_particles) do
-    if p.size <= 1 then
-      pset(p.x, p.y, p.color)
-    else
-      circfill(p.x, p.y, p.size * (p.life / 25), p.color)
-    end
-  end
+  -- for p in all(note_particles) do
+    -- if p.size <= 1 then
+      -- pset(p.x, p.y, p.color)
+    -- else
+      -- circfill(p.x, p.y, p.size * (p.life / 25), p.color)
+    -- end
+  -- end
   
   for i=1, 4 do
     local bar_height = min(bars[i] * 12, 50)  -- Make taller
