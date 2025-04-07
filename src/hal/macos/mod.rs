@@ -1,20 +1,19 @@
 mod network;
-use tokio::process::Child;
-
-use log::warn;
-use nix::{
-    sys::signal::{kill, Signal},
-    unistd::Pid,
-};
 use std::{
     fs::{File, OpenOptions},
     path::{Path, PathBuf},
     time::Duration,
 };
 
+use log::warn;
+use nix::{
+    sys::signal::{kill, Signal},
+    unistd::Pid,
+};
+use tokio::process::Child;
+
 pub const IN_PIPE: &str = "in_pipe";
 pub const OUT_PIPE: &str = "out_pipe";
-
 
 lazy_static::lazy_static! {
     pub static ref PICO8_BINS: Vec<String> = vec!["pico8".into(), "pico8_64".into(), "pico8_dyn".into()];
@@ -22,9 +21,7 @@ lazy_static::lazy_static! {
 
 /// Suspend the pico8 process until child process exits
 pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
-
     warn!("pico8_to_bg not implemented for macos")
-   
 }
 
 // create named pipes if they don't exist

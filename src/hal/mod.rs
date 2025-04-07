@@ -2,7 +2,6 @@
 mod linux;
 use std::{path::Path, sync::Arc};
 
-
 #[cfg(target_os = "linux")]
 pub use linux::*;
 
@@ -18,11 +17,10 @@ mod windows;
 pub use windows::*;
 
 mod dummy;
-use anyhow::Result;
-use anyhow::anyhow;
+use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use dummy::*;
-use tokio::process::{Command,Child};
+use tokio::process::{Child, Command};
 
 use crate::p8util::serialize_table;
 

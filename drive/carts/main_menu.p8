@@ -8,12 +8,11 @@ __lua__
 
 -- TODO should make this menu scroll too
 app_menu=menu_new({
-  {label='games', icon=6, func=function()os_load('pexsplore_bbs.p8', '', 'local')end},
+  --{label='games', icon=6, func=function()os_load('pexsplore_bbs.p8', '', 'local')end},
   {label='pexsplore', icon=1, func=function()os_load('pexsplore_home.p8')end},
   -- {label='files', icon=7, func=function()os_load('pexsplore_bbs.p8', '', 'local')end}, -- load local games only
   -- {label='apps', icon=6, func=function()os_load('apps.p8')end},
   {label='photos', icon=2, func=function()os_load('gallery.p8')end},
-  -- {label='gyro_demo', icon=2, func=function()os_load('cherrybomb-0.p8')end},
   {label='tunes', icon=3, func=function()os_load('tunes.p8')end},
   {label='settings', icon=4, func=function()os_load('settings.p8')end},
   -- TODO: only quits to prompt if not in exported binary

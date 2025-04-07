@@ -413,7 +413,7 @@ function on_switch_cart()
     make_cart_title_pan_tween(68-#cart_title*4)
   else
     cart_title_pan_x=0
-    cart_title_pan_tween:remove() 
+    --cart_title_pan_tween:remove() 
   end
 end
 
