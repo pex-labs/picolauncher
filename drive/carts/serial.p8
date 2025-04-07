@@ -46,8 +46,8 @@ end
 
 -- serial interface with the underlying operating system
 
-stdin=0x806
-stdout=0x807
+stdin=0x804
+stdout=0x805
 
 chan_buf=0x4300
 chan_buf_size=0x1000
@@ -136,16 +136,17 @@ end
 -- read from input file until a newline is reached
 -- TODO this can be refactored into a coroutine?
 function serial_readline()
+  printh('waiting for input')
   local result=''
   local got_newline=false
   while true do
     -- also use the argument space to receive the result
     size = serial(stdin, chan_buf, chan_buf_size)
     if (size == 0) then return result end
-    -- printh('size: ' .. size)
+    --printh('size: ' .. size)
     for i=0,size do
       b = peek(chan_buf+i)
-      -- printh('byte: '..b)
+      --printh('byte: '..b)
       if b == 0x0a then
         got_newline=true
         break
@@ -199,9 +200,8 @@ function os_load(path, breadcrumb, param)
   if param == nil then param = '' end
 
   serial_writeline('pushcart:'..path..','..breadcrumb..','..param)
-  serial_readline() -- empty response
-  load(path, breadcrumb, param)
-end
+  serial_readline() -- wait for ack from rust process
+  load(path, breadcrumb, param) end
 
 -- return to the previous cart
 -- no-op if previous cart doesn't exist

@@ -1,6 +1,6 @@
 #[cfg(target_os = "linux")]
 mod linux;
-use std::{path::Path, sync::Arc};
+use std::{path::Path, process::Stdio, sync::Arc};
 
 #[cfg(target_os = "linux")]
 pub use linux::*;
@@ -102,7 +102,8 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
     for bin_name in bin_names {
         let pico8_process = Command::new(bin_name.clone())
             .args(args.clone())
-            // .stdout(Stdio::piped())
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
             .spawn();
 
         match pico8_process {

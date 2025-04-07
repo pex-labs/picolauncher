@@ -3,7 +3,7 @@ use std::{
     collections::HashMap,
     ffi::OsStr,
     fs::{create_dir_all, read_dir, File},
-    io::{BufRead, BufReader, Write},
+    io::Write,
     path::Path,
     sync::Arc,
     thread,
@@ -22,7 +22,11 @@ use picolauncher::{
     hal::*,
     p8util::{self, *},
 };
-use tokio::process::Command;
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader, BufWriter},
+    process::{ChildStdin, Command},
+    time::sleep,
+};
 
 use crate::db::{schema::CartId, Cart, DB};
 
@@ -90,20 +94,22 @@ async fn main() {
             DRIVE_DIR,
             "-run",
             &format!("drive/carts/{init_cart}"),
-            "-i",
-            "in_pipe",
-            "-o",
-            "out_pipe",
         ],
     )
     .expect("failed to spawn pico8 process");
 
-    // need to drop the in_pipe (for some reason) for the pico8 process to start up
-    let in_pipe = open_in_pipe().expect("failed to open pipe");
-    drop(in_pipe);
+    let mut pico8_stdin = pico8_process
+        .stdin
+        .take()
+        .expect("failed to grab pico8 stdin");
+    // let mut pico8_stdin = BufWriter::new(pico8_stdin);
 
+    let mut pico8_stdout = pico8_process
+        .stdout
+        .take()
+        .expect("failed to grab pico8 stdout");
     let out_pipe = open_out_pipe().expect("failed to open pipe");
-    let mut reader = BufReader::new(out_pipe);
+    let mut stdout_reader = BufReader::new(pico8_stdout);
 
     // TODO don't crash if browser fails to launch - just disable bbs functionality?
     // spawn browser and create tab for crawling
@@ -165,8 +171,9 @@ async fn main() {
         }
 
         let mut line = String::new();
-        reader
+        stdout_reader
             .read_line(&mut line)
+            .await
             .expect("failed to read line from pipe");
         line = line.trim().to_string();
 
@@ -174,13 +181,13 @@ async fn main() {
         if line.is_empty() {
             continue;
         }
-        //println!("received [{}] {}", line.len(), line);
+        // println!("received [{}] {}", line.len(), line);
 
         // spawn process command
         let mut split = line.splitn(2, ':');
         let cmd = split.next().unwrap_or("");
         let data = split.next().unwrap_or("");
-        debug!("received cmd:{cmd} data:{data}");
+        //debug!("received cmd:{cmd} data:{data}");
 
         match cmd {
             // TODO disable until we port this to windows and support launching external binaries
@@ -273,8 +280,7 @@ async fn main() {
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 let exes_joined = exes.join(",");
                 debug!("exes_joined {exes_joined}");
-                writeln!(in_pipe, "{}", exes_joined).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, exes_joined).await;
             },
             "bbs" => {
                 // Query the bbs
@@ -324,9 +330,7 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", cartdatas_encoded).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, cartdatas_encoded).await;
             },
             "download" => {
                 // Download a cart from the bbs
@@ -346,16 +350,14 @@ async fn main() {
             "pushcart" => {
                 // when loading a new cart, can push the current cart and use as breadcrumb
                 cartstack.push(data.into());
+                write_to_pico8(&mut pico8_stdin, "OK".into()).await;
             },
             "popcart" => {
                 // remove latest cart from stack
                 let _ = cartstack.pop();
                 let topcart = cartstack.last().cloned().unwrap_or_default();
                 debug!("popcart topcart is {topcart}");
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", topcart).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, topcart).await;
             },
             "wifi_list" => {
                 // scan for networks
@@ -367,9 +369,7 @@ async fn main() {
                     .collect::<Vec<_>>();
 
                 println!("found networks {}", networks.join(","));
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", networks.join(",")).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, networks.join(",")).await;
             },
             "wifi_connect" => {
                 // Grab password and connect to wifi, returning success or failure info
@@ -384,27 +384,19 @@ async fn main() {
                 println!("wifi connection result {res:?}");
 
                 let status = network_hal.status().unwrap();
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, status).await;
             },
             "wifi_disconnect" => {
                 let res = network_hal.disconnect();
                 println!("wifi disconnection result {res:?}");
 
                 let status = network_hal.status().unwrap();
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, status).await;
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = network_hal.status().unwrap();
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, status).await;
             },
             "bt_start" => {
                 /*
@@ -456,9 +448,7 @@ async fn main() {
                 // TODO better error handling
                 db.set_favorite(cart_id, is_favorite).unwrap();
 
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{cart_id},{is_favorite}").expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(&mut pico8_stdin, format!("{cart_id},{is_favorite}")).await;
             },
             "list_favorite" => {},
             "download_music" => {
@@ -467,20 +457,21 @@ async fn main() {
                 if let Err(ref e) = res {
                     warn!("download_music failed {e:?}");
                 }
-                write_to_pico8(format!("{}", res.is_ok())).await;
+                write_to_pico8(&mut pico8_stdin, format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
                 let gyro_hal = Arc::clone(&gyro_hal.clone());
                 let (pitch, roll) = gyro_hal.read_tilt().await;
                 debug!("got imu data {},{}", pitch, roll);
-                write_to_pico8(format!("{pitch},{roll}")).await;
+                write_to_pico8(&mut pico8_stdin, format!("{pitch},{roll}")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
                 kill_pico8_process(&pico8_process).unwrap();
             },
             _ => {
-                warn!("unhandled command");
+                // pass through any other prints as a debug message
+                debug!("{}", line);
             },
         }
 
@@ -663,8 +654,17 @@ async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()>
     Ok(())
 }
 
-async fn write_to_pico8(msg: String) {
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
-    drop(in_pipe);
+async fn write_to_pico8(stdin: &mut ChildStdin, msg: String) {
+    let mut writer = BufWriter::new(stdin);
+
+    if let Err(e) = writer.write_all(msg.as_bytes()).await {
+        warn!("failed to write: {e:?}");
+        return;
+    }
+    if let Err(e) = writer.write_all(b"\n").await {
+        warn!("failed to write: {e:?}");
+        return;
+    }
+    writer.flush().await;
+    drop(writer);
 }
