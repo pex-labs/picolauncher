@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::anyhow;
 use log::warn;
-use tokio::process::Child;
+use tokio::process::{Child, Command};
 use winapi::um::{
     fileapi::{CreateFileW, OPEN_EXISTING},
     handleapi::INVALID_HANDLE_VALUE,
@@ -60,14 +60,14 @@ pub fn stop_pico8_process(pico8_process: Child) -> anyhow::Result<()> {
 }
 
 pub fn screenshot_watcher() {
-    warn!("screenshot_watcher is not implemented for windows");
+    warn!("screenshot_watcher does not work in windows");
 }
 
 pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
-    warn!("pico8_to_bg is not implemented for windows");
+    warn!("pico8_to_bg not implemented for windows")
 }
 
 pub fn kill_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
-    warn!("kill_pico8_process is not implemented for windows");
+    warn!("kill_pico8_process not implemented for windows");
     Ok(())
 }
