@@ -40,7 +40,7 @@ PICO-8 powered games launcher for the [PeX Console](https://pex-labs.com/)
 |linux x86_64|✅|
 |linux armv7 (rpi)|✅|
 |linux aarch64 (rpi)|✅|
-|windows (64-bit)|🚧|
+|windows (64-bit)|✅|
 
 ✅ - full support, 🚧 - WIP, ❌ - not (yet) supported
 
@@ -129,8 +129,6 @@ When launching **PicoLauncher** and supplying the binary explicitly, if you are 
 
 ### Windows
 
-⚠ Support co️ming in future ⚠
-<!--details>
 <summary>click to expand</summary>
 
 Download the `picolauncher-windows.zip` zip file from the latest releases and unzip it. If your pico8 binary doesn't reside at the default location of `C:\Program Files (x86)\PICO-8\pico8.exe`, you need to set the environment variable `PICO8_BINARY` before launching.
@@ -150,8 +148,6 @@ Locate the variable titled 'Path' and click the 'Edit' button.
 
 Add a new path and set the value to the directory where you have installed pico8. If you used the windows installer for pico8, this should be set to `C:\Program Files (x86)\PICO-8\pico8.exe`
 <img src="media/windows_install/step4.png" width=50%/>
-
-</details-->
 
 ### Build from source
 
