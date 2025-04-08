@@ -113,8 +113,16 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
 }
 
 pub fn launch_pico8_main(bin_names: &Vec<String>) -> anyhow::Result<Child> {
+    let init_cart_path = format!("drive/carts/{INIT_CART}");
     let args = vec![
-        "-home", DRIVE_DIR, "-run", INIT_CART, "-i", "in_pipe", "-o", "out_pipe",
+        "-home",
+        DRIVE_DIR,
+        "-run",
+        &init_cart_path,
+        "-i",
+        "in_pipe",
+        "-o",
+        "out_pipe",
     ];
     let mut pico8_process = launch_pico8_binary(bin_names, args);
     pico8_process

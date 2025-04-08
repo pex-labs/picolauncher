@@ -226,6 +226,7 @@ function os_back()
     -- split to get previous path and breadcrumb too
     parts=split(prev_cart, ',', false)
     load(parts[1], parts[2], parts[3])
+    printh("failed to load "..parts[1])
   end
 end
 
