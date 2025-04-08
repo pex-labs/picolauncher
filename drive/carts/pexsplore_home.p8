@@ -94,12 +94,13 @@ end
 
 function _init()
   categories:set_wrap(false)
-  categories:add_hook(6, function(self)
-    cam_scroll_tween(cam_y, 0)
-  end)
-  categories:add_hook(7, function(self)
-    cam_scroll_tween(cam_y, 100)
-  end)
+  -- disable scrolling for now
+  -- categories:add_hook(6, function(self)
+  --   cam_scroll_tween(cam_y, 0)
+  -- end)
+  -- categories:add_hook(7, function(self)
+  --   cam_scroll_tween(cam_y, 100)
+  -- end)
 
   -- graphics
   init_title_bar(12)
