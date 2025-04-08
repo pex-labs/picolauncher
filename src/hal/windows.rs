@@ -16,8 +16,8 @@ use winapi::um::{
     winnt::{FILE_SHARE_READ, GENERIC_READ, GENERIC_WRITE, HANDLE},
 };
 
-pub const IN_PIPE: &'static str = "\\\\.\\pipe\\in_pipe";
-pub const OUT_PIPE: &'static str = "\\\\.\\pipe\\out_pipe";
+pub const IN_PIPE: &'static str = "in_pipe";
+pub const OUT_PIPE: &'static str = "out_pipe";
 
 lazy_static::lazy_static! {
     pub static ref PICO8_BINS: Vec<String> = vec![
@@ -36,14 +36,26 @@ fn to_wstring(str: &str) -> Vec<u16> {
 }
 
 // just create a normal file
+fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
+    if !Path::new(pipe).exists() {
+        OpenOptions::new()
+            .write(true)
+            .create(true)
+            .open(pipe)?;
+    }
+    Ok(())
+}
+
 pub fn open_in_pipe() -> anyhow::Result<File> {
+    create_pipe(&PathBuf::from(IN_PIPE))?;
     let in_pipe = OpenOptions::new().write(true).open(IN_PIPE)?;
 
     Ok(in_pipe)
 }
 
 pub fn open_out_pipe() -> anyhow::Result<File> {
-    let out_pipe = OpenOptions::new().write(true).open(OUT_PIPE)?;
+    create_pipe(&PathBuf::from(OUT_PIPE))?;
+    let out_pipe = OpenOptions::new().read(true).open(OUT_PIPE)?;
 
     Ok(out_pipe)
 }
