@@ -60,6 +60,12 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
     Ok(out_pipe)
 }
 
+async fn write_to_pico8(msg: String) {
+    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
+    drop(in_pipe);
+}
+
 pub fn kill_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
     let pico8_pid = Pid::from_raw(
         pico8_process

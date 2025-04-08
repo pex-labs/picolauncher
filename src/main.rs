@@ -310,8 +310,6 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                println!("cartdatas_encoded {cartdatas_encoded}");
-
                 // format: number of carts N, followed by N comma separate cartdatas
                 let data = if cartdatas.len() == 0 {
                     "0".to_string()
@@ -641,12 +639,6 @@ async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()>
     music_cart.write(&mut music_file)?;
 
     Ok(())
-}
-
-async fn write_to_pico8(msg: String) {
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
-    drop(in_pipe);
 }
 
 #[derive(Default, Debug)]

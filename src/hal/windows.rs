@@ -3,6 +3,7 @@ use std::{
     os::windows::{io::RawHandle, prelude::*},
     path::{Path, PathBuf},
     ptr,
+    io::Write,
 };
 
 use anyhow::anyhow;
@@ -41,7 +42,7 @@ fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
         OpenOptions::new()
             .write(true)
             .create(true)
-            .truncate(true)
+            //.truncate(true)
             .open(pipe)?;
     }
     Ok(())
@@ -59,6 +60,12 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
     let out_pipe = OpenOptions::new().read(true).open(OUT_PIPE)?;
 
     Ok(out_pipe)
+}
+
+async fn write_to_pico8(msg: String) {
+    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
+    drop(in_pipe);
 }
 
 // search start menu for pico8.exe
