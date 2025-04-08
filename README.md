@@ -145,9 +145,11 @@ Then in the 'System Properties' page, click the button titled 'Environment Varia
 <img src="media/windows_install/step2.png" width=50%/>
 
 Locate the variable titled 'Path' and click the 'Edit' button.
+
 <img src="media/windows_install/step3.png" width=50%/>
 
 Add a new path and set the value to the directory where you have installed pico8. If you used the windows installer for pico8, this should be set to `C:\Program Files (x86)\PICO-8\pico8.exe`
+
 <img src="media/windows_install/step4.png" width=50%/>
 
 </details>
