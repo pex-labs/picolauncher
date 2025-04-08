@@ -85,12 +85,7 @@ async fn main() {
     // TODO capture stdout of pico8 and log it
     let mut pico8_process = launch_pico8_main(&pico8_bins).expect("failed to spawn pico8 process");
 
-    // need to drop the in_pipe (for some reason) for the pico8 process to start up
-    let in_pipe = open_in_pipe().expect("failed to open pipe");
-    drop(in_pipe);
-
-    let out_pipe = open_out_pipe().expect("failed to open pipe");
-    let mut reader = BufReader::new(out_pipe);
+    let mut pipe_hal = init_pipe_hal().expect("failed to initialize pipe hal");
 
     // TODO don't crash if browser fails to launch - just disable bbs functionality?
     // spawn browser and create tab for crawling
@@ -151,9 +146,9 @@ async fn main() {
             break;
         }
 
-        let mut line = String::new();
-        reader
-            .read_line(&mut line)
+        let mut line = pipe_hal
+            .read_from_pico8()
+            .await
             .expect("failed to read line from pipe");
         line = line.trim().to_string();
 
@@ -257,10 +252,10 @@ async fn main() {
                         exes.push(meta_string);
                     }
                 }
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                let exes_joined = exes.join(",");
-                debug!("exes_joined {exes_joined}");
-                write_to_pico8(exes_joined).await;
+                // let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+                // let exes_joined = exes.join(",");
+                // debug!("exes_joined {exes_joined}");
+                // pipe_hal.write_to_pico8(exes_joined).await;
             },
             "bbs" => {
                 // Query the bbs
@@ -310,15 +305,13 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                println!("cartdatas_encoded {cartdatas_encoded}");
-
                 // format: number of carts N, followed by N comma separate cartdatas
                 let data = if cartdatas.len() == 0 {
                     "0".to_string()
                 } else {
                     format!("{},{}", cartdatas.len(), cartdatas_encoded)
                 };
-                write_to_pico8(data).await;
+                pipe_hal.write_to_pico8(data).await;
             },
             "download" => {
                 // Download a cart from the bbs
@@ -332,7 +325,7 @@ async fn main() {
             "info" => {
                 let info = impl_info();
                 println!("{info:?}");
-                write_to_pico8(info.to_lua_table()).await;
+                pipe_hal.write_to_pico8(info.to_lua_table()).await;
             },
             "debug" => {
                 info!("debug:{}", data);
@@ -349,7 +342,7 @@ async fn main() {
                 let _ = cartstack.pop();
                 let topcart = cartstack.last().cloned().unwrap_or_default();
                 debug!("popcart topcart is {topcart}");
-                write_to_pico8(topcart).await;
+                pipe_hal.write_to_pico8(topcart).await;
             },
             "wifi_list" => {
                 // scan for networks
@@ -361,7 +354,7 @@ async fn main() {
                     .collect::<Vec<_>>();
 
                 println!("found networks {}", networks.join(","));
-                write_to_pico8(networks.join(",")).await;
+                pipe_hal.write_to_pico8(networks.join(",")).await;
             },
             "wifi_connect" => {
                 // Grab password and connect to wifi, returning success or failure info
@@ -376,19 +369,19 @@ async fn main() {
                 println!("wifi connection result {res:?}");
 
                 let status = network_hal.status().unwrap();
-                write_to_pico8(status).await;
+                pipe_hal.write_to_pico8(status).await;
             },
             "wifi_disconnect" => {
                 let res = network_hal.disconnect();
                 println!("wifi disconnection result {res:?}");
 
                 let status = network_hal.status().unwrap();
-                write_to_pico8(status).await;
+                pipe_hal.write_to_pico8(status).await;
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = network_hal.status().unwrap();
-                write_to_pico8(status).await;
+                pipe_hal.write_to_pico8(status).await;
             },
             "bt_start" => {
                 /*
@@ -439,7 +432,9 @@ async fn main() {
 
                 // TODO better error handling
                 db.set_favorite(cart_id, is_favorite).unwrap();
-                write_to_pico8(format!("{cart_id},{is_favorite}")).await;
+                pipe_hal
+                    .write_to_pico8(format!("{cart_id},{is_favorite}"))
+                    .await;
             },
             "download_music" => {
                 let cart_id = data.parse::<i32>().unwrap();
@@ -447,13 +442,13 @@ async fn main() {
                 if let Err(ref e) = res {
                     warn!("download_music failed {e:?}");
                 }
-                write_to_pico8(format!("{}", res.is_ok())).await;
+                pipe_hal.write_to_pico8(format!("{}", res.is_ok())).await;
             },
             "gyro_read" => {
                 let gyro_hal = Arc::clone(&gyro_hal.clone());
                 let (pitch, roll) = gyro_hal.read_tilt().await;
                 debug!("got imu data {},{}", pitch, roll);
-                write_to_pico8(format!("{pitch},{roll}")).await;
+                pipe_hal.write_to_pico8(format!("{pitch},{roll}")).await;
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
@@ -641,12 +636,6 @@ async fn impl_download_music(db: &mut DB, cart_id: CartId) -> anyhow::Result<()>
     music_cart.write(&mut music_file)?;
 
     Ok(())
-}
-
-async fn write_to_pico8(msg: String) {
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-    writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
-    drop(in_pipe);
 }
 
 #[derive(Default, Debug)]

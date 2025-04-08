@@ -1,4 +1,5 @@
 mod network;
+use async_trait::async_trait;
 pub use network::*;
 
 mod bluetooth;
@@ -7,6 +8,7 @@ pub use bluetooth::*;
 mod gyro;
 use std::{
     fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -22,7 +24,7 @@ use nix::{
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use tokio::process::{Child, Command};
 
-use super::launch_pico8_binary;
+use super::{launch_pico8_binary, PipeHAL};
 use crate::{
     consts::*,
     p8util::{format_label, screenshot2cart},
@@ -151,4 +153,38 @@ pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
     // unsuspend when child finishes
     child.wait().await.unwrap();
     resume_pico8_process(pico8_process);
+}
+
+pub struct LinuxPipeHAL {
+    reader: BufReader<File>,
+}
+
+impl LinuxPipeHAL {
+    pub fn init() -> anyhow::Result<Self> {
+        // need to drop the in_pipe (for some reason) for the pico8 process to start up
+        let in_pipe = open_in_pipe()?;
+        drop(in_pipe);
+
+        let out_pipe = open_out_pipe()?;
+        let mut reader = BufReader::new(out_pipe);
+
+        Ok(Self { reader })
+    }
+}
+
+#[async_trait]
+impl PipeHAL for LinuxPipeHAL {
+    async fn write_to_pico8(&mut self, msg: String) -> anyhow::Result<()> {
+        let mut in_pipe = open_in_pipe()?;
+        writeln!(in_pipe, "{msg}",)?;
+        drop(in_pipe);
+        Ok(())
+    }
+
+    async fn read_from_pico8(&mut self) -> anyhow::Result<String> {
+        let mut line = String::new();
+        self.reader.read_line(&mut line)?;
+
+        Ok(line)
+    }
 }

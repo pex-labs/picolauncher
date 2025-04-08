@@ -146,3 +146,23 @@ pub async fn pico8_export(
     pico8_process.wait().await?;
     Ok(())
 }
+
+#[async_trait]
+pub trait PipeHAL {
+    async fn write_to_pico8(&mut self, msg: String) -> anyhow::Result<()>;
+    async fn read_from_pico8(&mut self) -> anyhow::Result<String>;
+}
+
+pub fn init_pipe_hal() -> Result<Box<dyn PipeHAL>> {
+    #[cfg(target_os = "linux")]
+    {
+        return Ok(Box::new(LinuxPipeHAL::init().unwrap()) as Box<dyn PipeHAL>);
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        return Ok(Box::new(WindowsPipeHAL::init().unwrap()) as Box<dyn PipeHAL>);
+    }
+
+    Ok(Box::new(DummyPipeHAL::init()) as Box<dyn PipeHAL>)
+}
