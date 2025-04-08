@@ -73,7 +73,10 @@ function serial_info()
   if #info == 0 then
     return nil
   end
-  return table_from_string(info)
+  local info_table = table_from_string(info)
+  info_table.wifi_enabled = (info_table.wifi_enabled == "true")
+  info_table.bt_enabled = (info_table.bt_enabled == "true")
+  return info_table
 end
 
 -- TODO this is rly similar to serial_ls

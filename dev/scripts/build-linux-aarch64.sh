@@ -14,7 +14,7 @@ mkdir -p $build_dir/drive/carts/
 mkdir -p $build_dir/drive/carts/screenshots/
 
 # build executables
-cross build --release --target aarch64-unknown-linux-gnu
+cross build --release --target aarch64-unknown-linux-gnu --no-default-features --features "network bluetooth"
 
 # install files
 cp -r drive/carts/{games,labels,music} $build_dir/drive/carts
