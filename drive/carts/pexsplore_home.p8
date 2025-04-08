@@ -70,7 +70,7 @@ categories=menu_new({
     {label='arcade',c1=8,c2=0,icon=4,cmd=pexsplore_category('arcade')},
     {label='action',c1=14,c2=0,icon=5,cmd=pexsplore_category('action')},
     {label='puzzle',c1=10,c2=0,icon=6,cmd=pexsplore_category('puzzle')},
-    {label='favorites',c1=10,c2=0,icon=7,cmd=pexsplore_category('favorite')},
+    {label='favorites',c1=10,c2=0,icon=7,cmd=pexsplore_category('favorites')},
     -- {label='different menu',cmd=function()end},
 })
 

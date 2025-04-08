@@ -275,7 +275,7 @@ async fn main() {
                     // special case, return local files
                     // TODO a bit stupid that we need to query DB to get the cart ids, and then query again
                     impl_bbs_local(&mut db).expect("failed to query local db for games")
-                } else if query == "favorite" {
+                } else if query == "favorites" {
                     // special case, return favorite carts
                     db.get_favorites(20).unwrap()
                 } else if let Some(search_query) = query.strip_prefix("search:") {
@@ -310,7 +310,15 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                write_to_pico8(cartdatas_encoded).await;
+                println!("cartdatas_encoded {cartdatas_encoded}");
+
+                // format: number of carts N, followed by N comma separate cartdatas
+                let data = if cartdatas.len() == 0 {
+                    "0".to_string()
+                } else {
+                    format!("{},{}", cartdatas.len(), cartdatas_encoded)
+                };
+                write_to_pico8(data).await;
             },
             "download" => {
                 // Download a cart from the bbs
@@ -433,7 +441,6 @@ async fn main() {
                 db.set_favorite(cart_id, is_favorite).unwrap();
                 write_to_pico8(format!("{cart_id},{is_favorite}")).await;
             },
-            "list_favorite" => {},
             "download_music" => {
                 let cart_id = data.parse::<i32>().unwrap();
                 let res = impl_download_music(&mut db, cart_id).await;

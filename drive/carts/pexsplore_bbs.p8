@@ -281,16 +281,15 @@ function _init()
   new_loadable('bbs', function(resp)
     printh('bbs_load response '..tostring(resp))
     local split_carts=split(resp, ',', false)
+    local num_carts = tonum(deli(split_carts, 1))
+    -- printh('found '..tostring(num_carts)..' carts')
     for k, v in pairs(split_carts) do
       split_carts[k]=table_from_string(v)
 
       -- parse into bool
-      if split_carts[k].favorite == 'true' then
-        split_carts[k].favorite = true
-      else
-        split_carts[k].favorite = false
-      end
+      split_carts[k].favorite = split_carts[k].favorite == 'true'
     end
+
     local old_index = carts:index()
     carts=build_new_cart_menu(split_carts)
     carts:set_index(old_index) -- set the correct position of the menu
@@ -508,6 +507,7 @@ function build_new_cart_menu(resp)
   end
     
   -- TODO would like to disable this option for local categories, but also need to make sure we don't have an empty menu
+  -- psuedo menu item to display button to load more carts
   add(new_menuitems, {menuitem=menuitem.load})
 
   local new_carts=menu_new(new_menuitems)
@@ -553,8 +553,13 @@ function draw_carts_menu()
       end
       print(str, cart_x_swipe-#str*2, 64, 7)
     else
-      local str="❎ load more carts"
-      print(str, cart_x_swipe-#str*2, 64, 7) 
+      if #carts > 1 then
+        local str="❎ load more carts"
+        print(str, cart_x_swipe-#str*2, 64, 7) 
+      else
+        local str="no carts found"
+        print(str, cart_x_swipe-#str*2, 64, 7) 
+      end
     end 
   else
     draw_cart(cart_x_swipe, 64.5+cart_y_ease+cart_y_bob, 0)
