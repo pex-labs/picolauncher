@@ -22,7 +22,10 @@ use async_trait::async_trait;
 use dummy::*;
 use tokio::process::{Child, Command};
 
-use crate::p8util::serialize_table;
+use crate::{
+    consts::{DRIVE_DIR, INIT_CART},
+    p8util::serialize_table,
+};
 
 pub struct WifiNetwork {
     pub ssid: String,
@@ -96,14 +99,10 @@ pub fn init_gyro_hal() -> Result<Arc<dyn GyroHAL>> {
     Ok(Arc::new(DummyGyroHAL::new()) as Arc<dyn GyroHAL>)
 }
 
-/// Attempts to spawn pico8 binary by trying multiple potential binary names depending on the
-/// platform
+/// Attempts to spawn pico8 binary by trying multiple potential binary names
 pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::Result<Child> {
     for bin_name in bin_names {
-        let pico8_process = Command::new(bin_name.clone())
-            .args(args.clone())
-            // .stdout(Stdio::piped())
-            .spawn();
+        let pico8_process = Command::new(bin_name.clone()).args(args.clone()).spawn();
 
         match pico8_process {
             Ok(process) => return Ok(process),
@@ -111,6 +110,14 @@ pub fn launch_pico8_binary(bin_names: &Vec<String>, args: Vec<&str>) -> anyhow::
         }
     }
     Err(anyhow!("failed to launch pico8"))
+}
+
+pub fn launch_pico8_main(bin_names: &Vec<String>) -> anyhow::Result<Child> {
+    let args = vec![
+        "-home", DRIVE_DIR, "-run", INIT_CART, "-i", "in_pipe", "-o", "out_pipe",
+    ];
+    let mut pico8_process = launch_pico8_binary(bin_names, args);
+    pico8_process
 }
 
 /// Use the pico8 binary to export games from *.p8.png to *.p8

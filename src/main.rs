@@ -82,21 +82,7 @@ async fn main() {
 
     // spawn pico8 process and setup pipes
     // TODO capture stdout of pico8 and log it
-    let init_cart = "main_menu.p8";
-    let mut pico8_process = launch_pico8_binary(
-        &pico8_bins,
-        vec![
-            "-home",
-            DRIVE_DIR,
-            "-run",
-            &format!("drive/carts/{init_cart}"),
-            "-i",
-            "in_pipe",
-            "-o",
-            "out_pipe",
-        ],
-    )
-    .expect("failed to spawn pico8 process");
+    let mut pico8_process = launch_pico8_main(&pico8_bins).expect("failed to spawn pico8 process");
 
     // need to drop the in_pipe (for some reason) for the pico8 process to start up
     let in_pipe = open_in_pipe().expect("failed to open pipe");
@@ -145,7 +131,7 @@ async fn main() {
     // TODO theres a lot of state in main.rs, should abstract into own state struct or something
     // cart stack
     let mut cartstack = Vec::<String>::new();
-    cartstack.push(init_cart.into());
+    cartstack.push(INIT_CART.into());
 
     // connect to database
     let mut db = DB::connect(db::DB_PATH).expect("unable to establish connection with database");

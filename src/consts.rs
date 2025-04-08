@@ -19,3 +19,5 @@ pub const RAW_SCREENSHOT_PATH: &str = "drive/screenshots";
 
 // path of scaled cart screenshots
 pub const SCREENSHOT_PATH: &str = "drive/carts/screenshots";
+
+pub const INIT_CART: &str = "drive/carts/main_menu.p8";

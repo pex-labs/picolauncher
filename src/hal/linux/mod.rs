@@ -22,6 +22,7 @@ use nix::{
 use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use tokio::process::{Child, Command};
 
+use super::launch_pico8_binary;
 use crate::{
     consts::*,
     p8util::{format_label, screenshot2cart},
@@ -52,7 +53,7 @@ pub fn open_in_pipe() -> anyhow::Result<File> {
 }
 
 pub fn open_out_pipe() -> anyhow::Result<File> {
-    create_pipe(&PathBuf::from(IN_PIPE))?;
+    create_pipe(&PathBuf::from(OUT_PIPE))?;
 
     let out_pipe = OpenOptions::new().read(true).open(OUT_PIPE)?;
 
