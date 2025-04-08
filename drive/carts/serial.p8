@@ -66,6 +66,19 @@ function serial_hello()
   end
 end
 
+-- fetch system information
+function serial_info()
+  serial_writeline('info:')
+  local info=serial_readline()
+  if #info == 0 then
+    return nil
+  end
+  local info_table = table_from_string(info)
+  info_table.wifi_enabled = (info_table.wifi_enabled == "true")
+  info_table.bt_enabled = (info_table.bt_enabled == "true")
+  return info_table
+end
+
 -- TODO this is rly similar to serial_ls
 function serial_ls_exe()
   serial_writeline('ls_exe:')

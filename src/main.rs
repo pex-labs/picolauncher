@@ -22,6 +22,7 @@ use picolauncher::{
     hal::*,
     p8util::{self, *},
 };
+use serde_json::{Map, Value};
 use tokio::process::Command;
 
 use crate::db::{schema::CartId, Cart, DB};
@@ -259,8 +260,7 @@ async fn main() {
                 let mut in_pipe = open_in_pipe().expect("failed to open pipe");
                 let exes_joined = exes.join(",");
                 debug!("exes_joined {exes_joined}");
-                writeln!(in_pipe, "{}", exes_joined).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(exes_joined).await;
             },
             "bbs" => {
                 // Query the bbs
@@ -310,9 +310,7 @@ async fn main() {
                     .collect::<Vec<_>>()
                     .join(",");
 
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", cartdatas_encoded).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(cartdatas_encoded).await;
             },
             "download" => {
                 // Download a cart from the bbs
@@ -322,6 +320,11 @@ async fn main() {
             },
             "hello" => {
                 info!("hello message acknowledged - connection established to pico8 process");
+            },
+            "info" => {
+                let info = impl_info();
+                println!("{info:?}");
+                write_to_pico8(info.to_lua_table()).await;
             },
             "debug" => {
                 info!("debug:{}", data);
@@ -338,10 +341,7 @@ async fn main() {
                 let _ = cartstack.pop();
                 let topcart = cartstack.last().cloned().unwrap_or_default();
                 debug!("popcart topcart is {topcart}");
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", topcart).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(topcart).await;
             },
             "wifi_list" => {
                 // scan for networks
@@ -353,9 +353,7 @@ async fn main() {
                     .collect::<Vec<_>>();
 
                 println!("found networks {}", networks.join(","));
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", networks.join(",")).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(networks.join(",")).await;
             },
             "wifi_connect" => {
                 // Grab password and connect to wifi, returning success or failure info
@@ -370,27 +368,19 @@ async fn main() {
                 println!("wifi connection result {res:?}");
 
                 let status = network_hal.status().unwrap();
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(status).await;
             },
             "wifi_disconnect" => {
                 let res = network_hal.disconnect();
                 println!("wifi disconnection result {res:?}");
 
                 let status = network_hal.status().unwrap();
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(status).await;
             },
             "wifi_status" => {
                 // Get if wifi is connected or not, the current network, and the strength of connection
                 let status = network_hal.status().unwrap();
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{}", status).expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(status).await;
             },
             "bt_start" => {
                 /*
@@ -441,10 +431,7 @@ async fn main() {
 
                 // TODO better error handling
                 db.set_favorite(cart_id, is_favorite).unwrap();
-
-                let mut in_pipe = open_in_pipe().expect("failed to open pipe");
-                writeln!(in_pipe, "{cart_id},{is_favorite}").expect("failed to write to pipe");
-                drop(in_pipe);
+                write_to_pico8(format!("{cart_id},{is_favorite}")).await;
             },
             "list_favorite" => {},
             "download_music" => {
@@ -653,4 +640,63 @@ async fn write_to_pico8(msg: String) {
     let mut in_pipe = open_in_pipe().expect("failed to open pipe");
     writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
     drop(in_pipe);
+}
+
+#[derive(Default, Debug)]
+pub struct SystemInfo {
+    platform: String,
+    wifi_enabled: bool,
+    bt_enabled: bool,
+}
+
+impl SystemInfo {
+    pub fn to_lua_table(&self) -> String {
+        let mut prop_map = Map::<String, Value>::new();
+        prop_map.insert("platform".into(), Value::String(self.platform.to_string()));
+        prop_map.insert(
+            "wifi_enabled".into(),
+            Value::String(self.wifi_enabled.to_string()),
+        );
+        prop_map.insert(
+            "bt_enabled".into(),
+            Value::String(self.bt_enabled.to_string()),
+        );
+        serialize_table(&prop_map)
+    }
+}
+
+fn impl_info() -> SystemInfo {
+    let mut info = SystemInfo::default();
+
+    // set the platform
+    {
+        info.platform = "unknown".into();
+
+        #[cfg(target_os = "macos")]
+        {
+            info.platform = "macos".into();
+        }
+
+        #[cfg(target_os = "linux")]
+        {
+            info.platform = "linux".into();
+        }
+
+        #[cfg(target_os = "windows")]
+        {
+            info.platform = "windows".into();
+        }
+    }
+
+    #[cfg(feature = "network")]
+    {
+        info.wifi_enabled = true;
+    }
+
+    #[cfg(feature = "bluetooth")]
+    {
+        info.bt_enabled = true;
+    }
+
+    info
 }

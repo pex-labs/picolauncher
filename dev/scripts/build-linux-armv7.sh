@@ -14,7 +14,7 @@ mkdir -p $build_dir/drive/carts/
 mkdir -p $build_dir/drive/carts/screenshots/
 
 # build executables
-cross build --release --target armv7-unknown-linux-gnueabihf
+cross build --release --target armv7-unknown-linux-gnueabihf --no-default-features --features "network bluetooth"
 
 # install files
 cp -r drive/carts/{games,labels,music} $build_dir/drive/carts
