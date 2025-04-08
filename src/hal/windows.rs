@@ -1,12 +1,13 @@
 use std::{
     fs::{remove_file, File, OpenOptions},
-    io::Write,
+    io::{BufRead, BufReader, BufWriter, Write},
     os::windows::{io::RawHandle, prelude::*},
     path::{Path, PathBuf},
     ptr,
 };
 
 use anyhow::anyhow;
+use async_trait::async_trait;
 use log::warn;
 use tokio::process::{Child, Command};
 use winapi::um::{
@@ -16,6 +17,8 @@ use winapi::um::{
     winbase::{PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_WAIT},
     winnt::{FILE_SHARE_READ, GENERIC_READ, GENERIC_WRITE, HANDLE},
 };
+
+use crate::hal::PipeHAL;
 
 pub const IN_PIPE: &'static str = "in_pipe";
 pub const OUT_PIPE: &'static str = "out_pipe";
@@ -91,4 +94,38 @@ pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
 pub fn kill_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
     warn!("kill_pico8_process not implemented for windows");
     Ok(())
+}
+
+pub struct WindowsPipeHAL {
+    reader: BufReader<File>,
+    writer: BufWriter<File>,
+}
+
+impl WindowsPipeHAL {
+    pub fn init() -> anyhow::Result<Self> {
+        // need to drop the in_pipe (for some reason) for the pico8 process to start up
+        let in_pipe = open_in_pipe()?;
+        let mut writer = BufWriter::new(in_pipe);
+
+        let out_pipe = open_out_pipe()?;
+        let mut reader = BufReader::new(out_pipe);
+
+        Ok(Self { reader, writer })
+    }
+}
+
+#[async_trait]
+impl PipeHAL for WindowsPipeHAL {
+    async fn write_to_pico8(&mut self, msg: String) -> anyhow::Result<()> {
+        writeln!(self.writer, "{}", msg)?;
+        self.writer.flush()?;
+        Ok(())
+    }
+
+    async fn read_from_pico8(&mut self) -> anyhow::Result<String> {
+        let mut line = String::new();
+        self.reader.read_line(&mut line)?;
+
+        Ok(line)
+    }
 }
