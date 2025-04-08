@@ -23,21 +23,7 @@ local current_screen = "main"
 local show_keyboard = false
 
 -- main menu
-local main_menu = menu_new({
-  {label="theme",func=function()current_screen="theme"end},
-  {label="wifi",func=function()
-    current_screen="wifi"
-  end},
-  {
-    label = "bluetooth",
-    func = function()
-        current_screen = "bluetooth"
-        request_loadable("bt_start")
-
-    end
-  },
-  {label="controls",func=function()current_screen="controls"end}
-})
+local main_menu = menu_new({})
 local scroll_offset = 0
 
 -- wifi related
@@ -45,6 +31,95 @@ local scroll_offset = 0
 -- create new wifi menu
 local wifi_status = {ssid="", state="unknown"}
 local airplane_mode = false
+
+function _init()
+  -- TODO fetch the platform to do platform specific settings pages
+  local info=serial_info()
+  printh(tostring(info))
+
+  init_timers()
+
+  -- oonstruct the main menu
+  local main_menu_items = { }
+
+  add(main_menu_items,
+    {label="theme",func=function()current_screen="theme"end}
+  )
+
+  if info.wifi_enabled then
+    add(main_menu_items,
+      {label="wifi",func=function()
+        current_screen="wifi"
+      end}
+    )
+  end
+
+  if info.bt_enabled then
+    add(main_menu_items,
+      {
+        label = "bluetooth",
+        func = function()
+            current_screen = "bluetooth"
+            request_loadable("bt_start")
+        end
+      }
+    )
+  end
+
+  add(main_menu_items,
+    {label="controls",func=function()current_screen="controls"end}
+  )
+
+  main_menu = menu_new(main_menu_items)
+
+  if info.wifi_enabled then
+    new_loadable('wifi_list', function(resp)
+      serial_debug('wifi_list resp '..tostring(resp))
+      local split_wifi=split(resp, ',', false)
+      for k, v in pairs(split_wifi) do
+        split_wifi[k]=table_from_string(v)
+        split_wifi[k].strength=tonum(split_wifi[k].strength)
+      end
+      wifi_menu=new_wifi_menu(split_wifi)
+    end, 1)
+
+    new_loadable('wifi_connect', function(resp)
+      serial_debug('resp'..tostring(resp))
+      wifi_status=table_from_string(resp)
+    end, 1)
+
+    new_loadable('wifi_disconnect', function(resp)
+      serial_debug('resp'..tostring(resp))
+      wifi_status=table_from_string(resp)
+    end, 1)
+
+    new_loadable('wifi_status', function(resp)
+      serial_debug('resp'..tostring(resp))
+      wifi_status=table_from_string(resp)
+
+      -- request status will also trigger request for wifi list
+      -- TODO maybe combine these requests?
+      request_loadable("wifi_list")
+    end, 1)
+
+    request_loadable('wifi_status')
+  end
+
+  -- bluetooth loadables
+  if info.bt_enabled then
+    new_loadable('bt_status', function(resp)
+      serial_debug('resp'..tostring(resp))
+    end, 1)
+
+    new_loadable('bt_start', function(resp)
+      serial_debug('resp'..tostring(resp))
+    end, 1)
+  end
+
+  -- graphics
+  init_title_bar(14, 2)
+end
+
 
 function new_wifi_menu(networks)
   wifi_menu_items = {
@@ -138,53 +213,6 @@ function make_vkeyboard_tween(show_keyboard)
   vkeyboard_tween:restart()
 end
 
-
-function _init()
-  init_timers()
-
-  new_loadable('wifi_list', function(resp)
-    serial_debug('wifi_list resp '..tostring(resp))
-    local split_wifi=split(resp, ',', false)
-    for k, v in pairs(split_wifi) do
-      split_wifi[k]=table_from_string(v)
-      split_wifi[k].strength=tonum(split_wifi[k].strength)
-    end
-    wifi_menu=new_wifi_menu(split_wifi)
-  end, 1)
-
-  new_loadable('wifi_connect', function(resp)
-    serial_debug('resp'..tostring(resp))
-    wifi_status=table_from_string(resp)
-  end, 1)
-
-  new_loadable('wifi_disconnect', function(resp)
-    serial_debug('resp'..tostring(resp))
-    wifi_status=table_from_string(resp)
-  end, 1)
-
-  new_loadable('wifi_status', function(resp)
-    serial_debug('resp'..tostring(resp))
-    wifi_status=table_from_string(resp)
-
-    -- request status will also trigger request for wifi list
-    -- TODO maybe combine these requests?
-    request_loadable("wifi_list")
-  end, 1)
-
-  -- bluetooth loadables
-  new_loadable('bt_status', function(resp)
-    serial_debug('resp'..tostring(resp))
-  end, 1)
-
-  new_loadable('bt_start', function(resp)
-    serial_debug('resp'..tostring(resp))
-  end, 1)
-
-  request_loadable('wifi_status')
-
-  -- graphics
-  init_title_bar(14, 2)
-end
 
 function _update60()
   update_loadables()

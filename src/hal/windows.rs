@@ -41,6 +41,7 @@ fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
         OpenOptions::new()
             .write(true)
             .create(true)
+            .truncate(true)
             .open(pipe)?;
     }
     Ok(())

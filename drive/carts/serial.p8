@@ -66,6 +66,16 @@ function serial_hello()
   end
 end
 
+-- fetch system information
+function serial_info()
+  serial_writeline('info:')
+  local info=serial_readline()
+  if #info == 0 then
+    return nil
+  end
+  return table_from_string(info)
+end
+
 -- TODO this is rly similar to serial_ls
 function serial_ls_exe()
   serial_writeline('ls_exe:')
