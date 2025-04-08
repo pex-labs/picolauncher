@@ -60,7 +60,7 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
     Ok(out_pipe)
 }
 
-async fn write_to_pico8(msg: String) {
+pub async fn write_to_pico8(msg: String) {
     let mut in_pipe = open_in_pipe().expect("failed to open pipe");
     writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
     drop(in_pipe);

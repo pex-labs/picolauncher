@@ -1,5 +1,5 @@
 use std::{
-    fs::{File, OpenOptions},
+    fs::{File, OpenOptions, remove_file},
     os::windows::{io::RawHandle, prelude::*},
     path::{Path, PathBuf},
     ptr,
@@ -38,13 +38,13 @@ fn to_wstring(str: &str) -> Vec<u16> {
 
 // just create a normal file
 fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
-    if !Path::new(pipe).exists() {
-        OpenOptions::new()
-            .write(true)
-            .create(true)
-            //.truncate(true)
-            .open(pipe)?;
+    if Path::new(pipe).exists() {
+        remove_file(pipe)?;
     }
+    OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(pipe)?;
     Ok(())
 }
 
@@ -62,8 +62,9 @@ pub fn open_out_pipe() -> anyhow::Result<File> {
     Ok(out_pipe)
 }
 
-async fn write_to_pico8(msg: String) {
-    let mut in_pipe = open_in_pipe().expect("failed to open pipe");
+pub async fn write_to_pico8(msg: String) {
+    let mut in_pipe = OpenOptions::new().write(true).open(IN_PIPE).expect("failed to open pipe");
+
     writeln!(in_pipe, "{msg}",).expect("failed to write to pipe");
     drop(in_pipe);
 }
