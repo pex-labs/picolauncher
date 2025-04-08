@@ -127,6 +127,7 @@ cart_tween={}
 cart_swipe_tween={}
 cart_bobble_tween={}
 cart_title_pan_tween = {}
+cart_title_pan_tween_disabled = false
 
 function cart_tween_bobble()
   bob_amplitude=2
@@ -218,6 +219,7 @@ function make_cart_swipe_tween_2(dir)
 end
 
 function make_cart_title_pan_tween(pan_distance)
+  cart_title_pan_tween_disabled = false  
   cart_title_pan_tween=tween_machine:add_tween({
     func=inOutSine,
     v_start=2,
@@ -225,13 +227,17 @@ function make_cart_title_pan_tween(pan_distance)
     duration=6
   })
   cart_title_pan_tween:register_step_callback(function(pos)
-    cart_title_pan_x=pos
+    if not cart_title_pan_tween_disabled then
+      cart_title_pan_x=pos
+    end
   end)
   cart_title_pan_tween:register_finished_callback(function(tween)
     local temp_start = tween.v_start
     tween.v_start=tween.v_end 
     tween.v_end=temp_start
-    tween:restart()
+    if not cart_title_pan_tween_disabled then
+      tween:restart()
+    end
   end)
   cart_title_pan_tween:restart()
 end
@@ -401,19 +407,27 @@ function _init()
   init_title_bar(12)
 end
 
+function check_cart_title_pan()
+  -- scroll the title text if too long
+  local cart_title = tostring(carts:cur().title)
+  cart_title_pan_x=0
+  if #cart_title*4 > 68 then
+    make_cart_title_pan_tween(68-#cart_title*4)
+  else
+    cart_title_pan_tween_disabled = true
+    if cart_title_pan_tween.remove ~= nil then
+      cart_title_pan_tween:remove() 
+    end
+  end
+end
+
 function on_switch_cart()
 
   -- reset to first menu item
   cart_options:set_index(1)
 
-  -- scroll the title text if too long
-  local cart_title = tostring(carts:cur().title)
-  if #cart_title*4 > 68 then
-    make_cart_title_pan_tween(68-#cart_title*4)
-  else
-    cart_title_pan_x=0
-    --cart_title_pan_tween:remove() 
-  end
+  check_cart_title_pan()
+
 end
 
 function _update60()
@@ -459,6 +473,8 @@ function _update60()
         cart_bobble_tween:remove()
         cart_tween_down()
         cart_tween_state = -1
+
+        check_cart_title_pan()
       end
     end
   else
