@@ -144,9 +144,10 @@ pub fn screenshot_watcher() {
         match res {
             Ok(events) => {
                 for event in events.iter() {
-                    if event.event.kind == EventKind::Create(CreateKind::File) {
-                        debug!("{event:?}");
-
+                    debug!("{event:?}");
+                    if event.event.kind == EventKind::Create(CreateKind::Any)
+                        || event.event.kind == EventKind::Create(CreateKind::File)
+                    {
                         // TODO should do this for each path?
                         let screenshot_fullpath = event.event.paths.first().unwrap();
 
