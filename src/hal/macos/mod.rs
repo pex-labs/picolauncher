@@ -82,7 +82,3 @@ pub fn resume_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
     kill(pico8_pid, Signal::SIGCONT)?;
     Ok(())
 }
-
-pub fn screenshot_watcher() {
-    warn!("screenshot_watcher does not work in macos");
-}

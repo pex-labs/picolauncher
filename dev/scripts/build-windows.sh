@@ -14,14 +14,14 @@ mkdir -p $build_dir/drive/carts/
 mkdir -p $build_dir/drive/carts/screenshots/
 
 # build executables
-cross build --release --target x86_64-pc-windows-msvc --no-default-features
+cross build --release --target x86_64-pc-windows-gnu --no-default-features
 
 # install files
 cp -r drive/carts/{games,labels,music} $build_dir/drive/carts
 cp -r drive/carts/{*.p8,*.lua} $build_dir/drive/carts/
 cp drive/config_template.txt $build_dir/drive/config.txt
 
-cp target/x86_64-pc-windows-msvc/release/picolauncher.exe $build_dir/picolauncher.exe
-cp target/x86_64-pc-windows-msvc/release/p8util.exe $build_dir/p8util.exe
+cp target/x86_64-pc-windows-gnu/release/picolauncher.exe $build_dir/picolauncher.exe
+cp target/x86_64-pc-windows-gnu/release/p8util.exe $build_dir/p8util.exe
 
 zip -r picolauncher-windows.zip $build_dir

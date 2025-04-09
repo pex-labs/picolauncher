@@ -83,10 +83,6 @@ pub fn stop_pico8_process(pico8_process: Child) -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn screenshot_watcher() {
-    warn!("screenshot_watcher does not work in windows");
-}
-
 pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
     warn!("pico8_to_bg not implemented for windows")
 }

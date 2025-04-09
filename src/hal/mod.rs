@@ -1,30 +1,40 @@
 #[cfg(target_os = "linux")]
 mod linux;
-use std::{path::Path, sync::Arc};
 
 #[cfg(target_os = "linux")]
 pub use linux::*;
 
 #[cfg(target_os = "macos")]
 mod macos;
-use log::warn;
+
 #[cfg(target_os = "macos")]
 pub use macos::*;
 
 #[cfg(target_os = "windows")]
 mod windows;
+
 #[cfg(target_os = "windows")]
 pub use windows::*;
 
 mod dummy;
+use std::{
+    fs::File,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::Duration,
+};
+
 use anyhow::{anyhow, Result};
 use async_trait::async_trait;
 use dummy::*;
+use event::CreateKind;
+use log::{debug, info, warn};
+use notify_debouncer_full::{new_debouncer, notify::*, DebounceEventResult};
 use tokio::process::{Child, Command};
 
 use crate::{
-    consts::{DRIVE_DIR, INIT_CART},
-    p8util::serialize_table,
+    consts::{DRIVE_DIR, INIT_CART, SCREENSHOT_PATH},
+    p8util::{format_label, screenshot2cart, serialize_table},
 };
 
 pub struct WifiNetwork {
@@ -126,6 +136,55 @@ pub fn launch_pico8_main(bin_names: &Vec<String>) -> anyhow::Result<Child> {
     ];
     let mut pico8_process = launch_pico8_binary(bin_names, args);
     pico8_process
+}
+
+// Watch screenshot directory for new screenshots and then convert to a cartridge + downscale
+pub fn screenshot_watcher() {
+    let mut debouncer = new_debouncer(Duration::from_secs(2), None, |res: DebounceEventResult| {
+        match res {
+            Ok(events) => {
+                for event in events.iter() {
+                    if event.event.kind == EventKind::Create(CreateKind::File) {
+                        debug!("{event:?}");
+
+                        // TODO should do this for each path?
+                        let screenshot_fullpath = event.event.paths.first().unwrap();
+
+                        // TODO don't use unwrap
+                        let cart_name = screenshot_fullpath.file_stem().unwrap().to_string_lossy();
+
+                        // preprocess newly created screenshot and downscale to png
+                        let mut cart_128 = screenshot2cart(screenshot_fullpath).unwrap();
+                        let cart_32 = format_label(&mut cart_128, 32).unwrap();
+
+                        let mut out_128_file = File::create(PathBuf::from(format!(
+                            "{SCREENSHOT_PATH}/{cart_name}.128.p8"
+                        )))
+                        .unwrap();
+                        let mut out_32_file = File::create(PathBuf::from(format!(
+                            "{SCREENSHOT_PATH}/{cart_name}.32.p8"
+                        )))
+                        .unwrap();
+
+                        cart_128.write(&mut out_128_file);
+                        cart_32.write(&mut out_32_file);
+                    }
+                }
+            },
+            Err(errors) => errors.iter().for_each(|error| println!("{error:?}")),
+        }
+    })
+    .unwrap();
+
+    debouncer
+        .watcher()
+        .watch(Path::new("drive/screenshots"), RecursiveMode::Recursive)
+        .unwrap();
+
+    info!("screenshot watcher registered");
+
+    // ensure this thread remains alive
+    std::thread::park();
 }
 
 /// Use the pico8 binary to export games from *.p8.png to *.p8
