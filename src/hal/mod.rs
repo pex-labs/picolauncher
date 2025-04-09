@@ -216,12 +216,17 @@ pub trait PipeHAL {
 pub fn init_pipe_hal() -> Result<Box<dyn PipeHAL>> {
     #[cfg(target_os = "linux")]
     {
-        return Ok(Box::new(LinuxPipeHAL::init().unwrap()) as Box<dyn PipeHAL>);
+        return Ok(Box::new(MacosPipeHAL::init().unwrap()) as Box<dyn PipeHAL>);
     }
 
     #[cfg(target_os = "windows")]
     {
         return Ok(Box::new(WindowsPipeHAL::init().unwrap()) as Box<dyn PipeHAL>);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return Ok(Box::new(MacosPipeHAL::init().unwrap()) as Box<dyn PipeHAL>);
     }
 
     Ok(Box::new(DummyPipeHAL::init()) as Box<dyn PipeHAL>)
