@@ -311,6 +311,8 @@ async fn main() {
                 } else {
                     format!("{},{}", cartdatas.len(), cartdatas_encoded)
                 };
+                println!("got {} carts", cartdatas.len());
+                println!("{data}");
                 pipe_hal.write_to_pico8(data).await;
             },
             "download" => {

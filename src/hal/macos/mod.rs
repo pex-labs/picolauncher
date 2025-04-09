@@ -1,6 +1,7 @@
 mod network;
 use std::{
     fs::{File, OpenOptions},
+    io::{BufRead, BufReader, Write},
     path::{Path, PathBuf},
     time::Duration,
 };
@@ -11,6 +12,9 @@ use nix::{
     unistd::Pid,
 };
 use tokio::process::Child;
+use super::{launch_pico8_binary, PipeHAL};
+use async_trait::async_trait;
+use std::fs::remove_file;
 
 pub const IN_PIPE: &str = "in_pipe";
 pub const OUT_PIPE: &str = "out_pipe";
@@ -24,6 +28,7 @@ pub async fn pico8_to_bg(pico8_process: &Child, mut child: Child) {
     warn!("pico8_to_bg not implemented for macos")
 }
 
+/*
 // create named pipes if they don't exist
 fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
     use nix::{sys::stat::Mode, unistd::mkfifo};
@@ -44,6 +49,30 @@ pub fn open_in_pipe() -> anyhow::Result<File> {
 pub fn open_out_pipe() -> anyhow::Result<File> {
     create_pipe(&PathBuf::from(IN_PIPE))?;
 
+    let out_pipe = OpenOptions::new().read(true).open(OUT_PIPE)?;
+
+    Ok(out_pipe)
+}
+*/
+
+// just create a normal file
+fn create_pipe(pipe: &Path) -> anyhow::Result<()> {
+    if Path::new(pipe).exists() {
+        remove_file(pipe)?;
+    }
+    OpenOptions::new().write(true).create(true).open(pipe)?;
+    Ok(())
+}
+
+pub fn open_in_pipe() -> anyhow::Result<File> {
+    create_pipe(&PathBuf::from(IN_PIPE))?;
+    let in_pipe = OpenOptions::new().write(true).open(IN_PIPE)?;
+
+    Ok(in_pipe)
+}
+
+pub fn open_out_pipe() -> anyhow::Result<File> {
+    create_pipe(&PathBuf::from(OUT_PIPE))?;
     let out_pipe = OpenOptions::new().read(true).open(OUT_PIPE)?;
 
     Ok(out_pipe)
@@ -81,4 +110,38 @@ pub fn resume_pico8_process(pico8_process: &Child) -> anyhow::Result<()> {
     );
     kill(pico8_pid, Signal::SIGCONT)?;
     Ok(())
+}
+
+pub struct MacosPipeHAL {
+    reader: BufReader<File>,
+}
+
+impl MacosPipeHAL {
+    pub fn init() -> anyhow::Result<Self> {
+        // need to drop the in_pipe (for some reason) for the pico8 process to start up
+        let in_pipe = open_in_pipe()?;
+        drop(in_pipe);
+
+        let out_pipe = open_out_pipe()?;
+        let mut reader = BufReader::new(out_pipe);
+
+        Ok(Self { reader })
+    }
+}
+
+#[async_trait]
+impl PipeHAL for MacosPipeHAL {
+    async fn write_to_pico8(&mut self, msg: String) -> anyhow::Result<()> {
+        let mut in_pipe = open_in_pipe()?;
+        writeln!(in_pipe, "{msg}")?;
+        drop(in_pipe);
+        Ok(())
+    }
+
+    async fn read_from_pico8(&mut self) -> anyhow::Result<String> {
+        let mut line = String::new();
+        self.reader.read_line(&mut line)?;
+
+        Ok(line)
+    }
 }
