@@ -337,11 +337,15 @@ function draw_wifi_menu()
   print(text, 10, wifi_menu_start_y + wifi_menu_scroll, 6)
   print(wifi_status.state, 10 + #text*4, wifi_menu_start_y + wifi_menu_scroll, text_c)
 
+  text = "ip address: "
+  print(text, 10, wifi_menu_start_y + 8 + wifi_menu_scroll, 6)
+  print(wifi_status.ip_address, 10 + #text*4, wifi_menu_start_y + 8 + wifi_menu_scroll, 6)
+
   if wifi_menu:index() == 1 then c=c_selected else c=c_text end
-  print("[scan]", 10, wifi_menu_start_y + 8 + wifi_menu_scroll, c)
+  print("[scan]", 10, wifi_menu_start_y + 16 + wifi_menu_scroll, c)
 
   if wifi_menu:index() == 2 then c=c_selected else c=c_text end
-  print("[disconnect]", 10, wifi_menu_start_y + 16 + wifi_menu_scroll, c)
+  print("[disconnect]", 10, wifi_menu_start_y + 24 + wifi_menu_scroll, c)
 
   -- local airplane_y = wifi_menu_start_y + 10
   -- if current_item == 2 then
@@ -352,15 +356,15 @@ function draw_wifi_menu()
   -- end
   -- print(airplane_mode and "on" or "off", screen_width - 20, airplane_y + 2, airplane_mode and 11 or 8)
 
-  print("networks", 10, wifi_menu_start_y + 26 + wifi_menu_scroll, c_selected)
-  line(10, wifi_menu_start_y + 32 + wifi_menu_scroll, screen_width - 10, wifi_menu_start_y + 32 + wifi_menu_scroll, c_selected)
+  print("networks", 10, wifi_menu_start_y + 34 + wifi_menu_scroll, c_selected)
+  line(10, wifi_menu_start_y + 40 + wifi_menu_scroll, screen_width - 10, wifi_menu_start_y + 40 + wifi_menu_scroll, c_selected)
 
   -- TODO scrolling
   -- TODO wifi strength level
   for i, network in ipairs(wifi_menu.items) do
     -- skip the non network menu items
     if i > 2 then
-      local y = wifi_menu_start_y + wifi_menu_scroll + 36 + (i-3) * 8
+      local y = wifi_menu_start_y + wifi_menu_scroll + 44 + (i-3) * 8
       local is_selected = (i == wifi_menu:index())
 
       if is_selected then

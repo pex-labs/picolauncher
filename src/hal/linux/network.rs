@@ -83,6 +83,13 @@ impl NetworkHAL for LinuxNetworkHAL {
                     network_manager::ConnectionState::Deactivated => "disconnected",
                 };
                 prop_map.insert("state".into(), Value::String(state_str.into()));
+
+                // grab the ip address
+                let local_ip = local_ip_address::local_ip()
+                    .map(|x| x.to_string())
+                    .unwrap_or("[unknown]".into());
+                prop_map.insert("ip_address".into(), Value::String(local_ip));
+
                 return Ok(serialize_table(&prop_map));
             }
         }
