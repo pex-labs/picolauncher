@@ -13,6 +13,7 @@ default = ["network", "bluetooth"]
 gyro = []
 network = []
 bluetooth = []
+multiplayer = []
 
 [dependencies]
 notify = "6.1"

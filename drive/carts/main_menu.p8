@@ -10,6 +10,7 @@ __lua__
 app_menu=menu_new({
   --{label='games', icon=6, func=function()os_load('pexsplore_bbs.p8', '', 'local')end},
   {label='pexsplore', icon=1, func=function()os_load('pexsplore_home.p8')end},
+  {label='mirror', icon=2, func=function()os_load('mirror.p8')end},
   -- {label='files', icon=7, func=function()os_load('pexsplore_bbs.p8', '', 'local')end}, -- load local games only
   -- {label='apps', icon=6, func=function()os_load('apps.p8')end},
   {label='photos', icon=2, func=function()os_load('gallery.p8')end},
