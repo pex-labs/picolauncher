@@ -457,13 +457,21 @@ async fn main() {
                     let child = Command::new("vncviewer")
                         .args(vec![format!("{ip:?}:0")])
                         .env("DISPLAY", ":-")
-                        .spawn()
-                        .unwrap();
+                        .spawn();
 
                     // TODO error check and send status to pico8
-
-                    pico8_to_bg(&pico8_process, child).await;
+                    match child {
+                        Ok(child) => {
+                            pipe_hal.write_to_pico8("ok".into()).await;
+                            pico8_to_bg(&pico8_process, child).await;
+                        },
+                        Err(e) => {
+                            warn!("failed to spawn vncviewer: {:?}", e);
+                            pipe_hal.write_to_pico8("failed".into()).await;
+                        },
+                    }
                 } else {
+                    warn!("invalid ip address: {}", data);
                     pipe_hal.write_to_pico8("failed".into()).await;
                 }
             },

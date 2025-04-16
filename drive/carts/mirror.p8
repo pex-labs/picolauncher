@@ -14,6 +14,15 @@ __lua__
 local show_keyboard = false
 
 function _init()
+    new_loadable('vnc_join', function(resp)
+        -- TODO display some visual indication
+        if resp == 'ok' then
+            -- success, vnc viewer launched
+        elseif resp == 'failed' then
+            -- failed to launch vnc viewer
+        end
+    end)
+
 end
 
 local keyboard_up_y = 78
@@ -24,7 +33,7 @@ local keyboard = Keyboard:new(7, 0, 8, 14, keyboard_down_y, function(text)
 
     if text == "" then return end
 
-    serial_writeline('vnc_join:'..text)
+    request_loadable('vnc_join', {text})
 end)
 
 -- TODO this is copied from settings completely
