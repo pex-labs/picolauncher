@@ -28,7 +28,6 @@ local scroll_offset = 0
 
 -- wifi related
 
--- create new wifi menu
 local wifi_status = {ssid="", state="unknown"}
 local airplane_mode = false
 
@@ -140,7 +139,8 @@ function new_wifi_menu(networks)
   return _wifi_menu
 end
 
-local wifi_menu = new_wifi_menu({})
+-- create new wifi menu
+wifi_menu = new_wifi_menu({})
 
 wifi_menu_scroll_tween = {}
 wifi_menu_scroll = 0
