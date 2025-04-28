@@ -33,7 +33,24 @@ local airplane_mode = false
 
 function _init()
   -- TODO fetch the platform to do platform specific settings pages
-  local info=serial_info()
+  -- info is pretty important to get, so retry a couple times
+  local info=nil
+  for i=1, 5 do
+    info=serial_info()
+    if info ~= nil then
+      break
+    end
+  end
+
+  -- use safe defaults if we couldn't get info
+  if info == nil then
+    info = {
+      platform = "unknown",
+      wifi_enabled = false,
+      bt_enabled = false,
+    }
+  end
+
   printh(tostring(info))
 
   init_timers()
