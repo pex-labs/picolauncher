@@ -4,6 +4,7 @@ use std::{
     ffi::OsStr,
     fs::{create_dir_all, read_dir, File},
     io::{BufRead, BufReader, Write},
+    net::Ipv4Addr,
     path::Path,
     sync::Arc,
     thread,
@@ -449,6 +450,30 @@ async fn main() {
                 let (pitch, roll) = gyro_hal.read_tilt().await;
                 debug!("got imu data {},{}", pitch, roll);
                 pipe_hal.write_to_pico8(format!("{pitch},{roll}")).await;
+            },
+            //#[cfg(feature = "multiplayer")]
+            "vnc_join" => {
+                if let Ok(ip) = data.parse::<Ipv4Addr>() {
+                    let child = Command::new("vncviewer")
+                        .args(vec!["FullScreen=1".into(), format!("{ip:?}:0")])
+                        .env("DISPLAY", ":0")
+                        .spawn();
+
+                    // TODO error check and send status to pico8
+                    match child {
+                        Ok(child) => {
+                            pipe_hal.write_to_pico8("ok".into()).await;
+                            pico8_to_bg(&pico8_process, child).await;
+                        },
+                        Err(e) => {
+                            warn!("failed to spawn vncviewer: {:?}", e);
+                            pipe_hal.write_to_pico8("failed".into()).await;
+                        },
+                    }
+                } else {
+                    warn!("invalid ip address: {}", data);
+                    pipe_hal.write_to_pico8("failed".into()).await;
+                }
             },
             "shutdown" => {
                 // shutdown() call in pico8 only escapes to the pico8 shell, so implement special command that kills pico8 process
