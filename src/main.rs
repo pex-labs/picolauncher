@@ -43,10 +43,26 @@ fn create_dirs() -> anyhow::Result<()> {
 async fn main() {
     // set up logger
     let crate_name = env!("CARGO_PKG_NAME");
-    env_logger::builder()
+
+    let mut env_builder = env_logger::builder();
+    env_builder
         .format_timestamp(None)
-        .filter(Some(crate_name), log::LevelFilter::Debug)
-        .init();
+        .filter(Some(crate_name), log::LevelFilter::Debug);
+
+    // create log dir
+    if let Err(e) = create_dir_all(LOG_DIR.as_path()) {
+        println!("failed to create log directory: {e:?}");
+    }
+
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S");
+    let log_file_path = LOG_DIR.join(format!("{}.txt", timestamp));
+    if let Ok(log_file) = File::create(log_file_path) {
+        env_builder.target(env_logger::Target::Pipe(Box::new(log_file)));
+    } else {
+        println!("failed to create log file, logging to console only");
+    }
+
+    env_builder.init();
 
     // set up screenshot watcher process
     let screenshot_handle = thread::spawn(|| {
@@ -173,7 +189,7 @@ async fn main() {
                 // spawn an executable of given name
                 // TODO ensure no ../ escape
                 let exe_path = EXE_DIR.join(data); // TODO assume exe name is same as the directory name
-                println!("spawning executable {exe_path:?}");
+                debug!("spawning executable {exe_path:?}");
                 let child = Command::new(exe_path)
                     .args(vec!["-home", DRIVE_DIR]) // TODO when spawning should we override the config.txt?
                     .spawn()
@@ -196,7 +212,7 @@ async fn main() {
                 // execute a pico8 cart as an external process
                 let cart_path = CART_DIR.join(data);
 
-                println!("spawning executable {cart_path:?}");
+                debug!("spawning executable {cart_path:?}");
                 let child = Command::new("pico8") // TODO absolute path to pico8?
                     .args(vec![
                         "-home",
@@ -243,7 +259,7 @@ async fn main() {
                             continue;
                         };
 
-                        println!("{meta_parsed:?}");
+                        //println!("{meta_parsed:?}");
                         let Ok(meta_string) = meta_parsed.to_lua_table() else {
                             warn!("failed to serialize to lua table for meta file {entry:?}");
                             continue;
@@ -324,7 +340,7 @@ async fn main() {
             },
             "info" => {
                 let info = impl_info();
-                println!("{info:?}");
+                debug!("{info:?}");
                 pipe_hal.write_to_pico8(info.to_lua_table()).await;
             },
             "debug" => {
@@ -353,7 +369,7 @@ async fn main() {
                     .map(|x| x.to_lua_table())
                     .collect::<Vec<_>>();
 
-                println!("found networks {}", networks.join(","));
+                debug!("found networks {}", networks.join(","));
                 pipe_hal.write_to_pico8(networks.join(",")).await;
             },
             "wifi_connect" => {
@@ -366,14 +382,14 @@ async fn main() {
                 let psk = split.next().unwrap_or_default();
 
                 let res = network_hal.connect(ssid, psk);
-                println!("wifi connection result {res:?}");
+                debug!("wifi connection result {res:?}");
 
                 let status = network_hal.status().unwrap();
                 pipe_hal.write_to_pico8(status).await;
             },
             "wifi_disconnect" => {
                 let res = network_hal.disconnect();
-                println!("wifi disconnection result {res:?}");
+                debug!("wifi disconnection result {res:?}");
 
                 let status = network_hal.status().unwrap();
                 pipe_hal.write_to_pico8(status).await;

@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 pub const DRIVE_DIR: &str = "drive";
 
 lazy_static! {
+    pub static ref LOG_DIR: PathBuf = PathBuf::from("logs");
     pub static ref EXE_DIR: PathBuf = PathBuf::from("drive/exe");
     pub static ref CART_DIR: PathBuf = PathBuf::from("drive/carts");
     pub static ref GAMES_DIR: PathBuf = PathBuf::from("drive/carts/games");
