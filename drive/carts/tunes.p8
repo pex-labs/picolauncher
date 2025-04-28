@@ -152,31 +152,42 @@ function _draw()
   -- header
   draw_title_bar('tunes', 11, 0, true, '♪', 0)
 
-  print(song_menu:cur(), 64-#(song_menu:cur())*2, 20, 12)
-  print(song_menu:cur(), 64-#(song_menu:cur())*2, 19, 7)
+  if song_menu:len() == 0 then
+    -- display no songs found
+    local str='no songs found'
+    print(str, 64-#(str)*2, 48, 6)
+    str='download more from pexsplore'
+    print(str, 64-#(str)*2, 56, 6)
+    str='🐱'
+    print(str, 64-#(str)*2, 64, 6)
 
-  local x=64
-  local y=64
-  local w=64
-  rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
-  draw_label(x, y, w)
-
-  draw_control_icon(64-16, 100, 2)
-  if play_state then
-    draw_control_icon(64-4, 100, 4)
   else
-    draw_control_icon(64-4, 100, 3)
+    print(song_menu:cur(), 64-#(song_menu:cur())*2, 20, 12)
+    print(song_menu:cur(), 64-#(song_menu:cur())*2, 19, 7)
+
+    local x=64
+    local y=64
+    local w=64
+    rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
+    draw_label(x, y, w)
+
+    draw_control_icon(64-16, 100, 2)
+    if play_state then
+      draw_control_icon(64-4, 100, 4)
+    else
+      draw_control_icon(64-4, 100, 3)
+    end
+    draw_control_icon(64+8, 100, 5)
+
+    -- draw help text
+    print('❎pause/play', 3, 120, 6)
+
+    -- if shuffle then
+    --   shuffle_text='on'
+    -- else
+    --   shuffle_text='off'
+    -- end
+    -- print('🅾️shuffle ' .. shuffle_text, 74, 120, 6)
   end
-  draw_control_icon(64+8, 100, 5)
-
-  -- draw help text
-  print('❎pause/play', 3, 120, 6)
-
-  -- if shuffle then
-  --   shuffle_text='on'
-  -- else
-  --   shuffle_text='off'
-  -- end
-  -- print('🅾️shuffle ' .. shuffle_text, 74, 120, 6)
 end
 
