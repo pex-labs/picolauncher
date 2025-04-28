@@ -455,8 +455,8 @@ async fn main() {
             "vnc_join" => {
                 if let Ok(ip) = data.parse::<Ipv4Addr>() {
                     let child = Command::new("vncviewer")
-                        .args(vec![format!("{ip:?}:0")])
-                        .env("DISPLAY", ":-")
+                        .args(vec!["FullScreen=1".into(), format!("{ip:?}:0")])
+                        .env("DISPLAY", ":0")
                         .spawn();
 
                     // TODO error check and send status to pico8

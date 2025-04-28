@@ -65,7 +65,9 @@ function _update60()
     if show_keyboard then
         keyboard:input()
     else
-        if btnp(❎) then
+        if btnp(4) then
+            os_back()
+        elseif btnp(5) then
             show_keyboard = true
             make_vkeyboard_tween(true)
         end
