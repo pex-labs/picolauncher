@@ -31,10 +31,13 @@ function load_label()
   end
 end
 
+-- offset allows for playing music that doesn't begin at 0
+offset=0
+
 -- load sfx and music section
 function load_song()
   song_name=tostring(song_menu:cur())
-  reload(0x3100, 0x3100, 0x0200, song_dir .. '/' .. song_name)
+  reload(0x3100, 0x3100 + offset * 4, 0x0200 - offset * 4, song_dir .. '/' .. song_name)
   reload(0x3200, 0x3200, 0x1100, song_dir .. '/' .. song_name)
 end
 
@@ -67,8 +70,8 @@ function draw_control_icon(x, y, icon)
     line(x+3, y+3, x+3, y+5, 7)
     line(x+4, y+4, x+4, y+4, 7)
   elseif icon == 4 then -- pause
-    rect(x+1, y+2, x+3, y+6, 7)
-    rect(x+5, y+2, x+7, y+6, 7)
+    rect(x+1, y+2, x+2, y+6, 7)
+    rect(x+5, y+2, x+6, y+6, 7)
   elseif icon == 5 then -- next
     line(x+2, y+2, x+2, y+6, 7)
     line(x+3, y+3, x+3, y+5, 7)
@@ -123,6 +126,18 @@ function _update60()
       song_menu:down()
     end
     on_song_change()
+  elseif btnp(2) then -- increment offset
+    offset = offset + 1
+    if offset > 63 then
+      offset = 63
+    end
+    on_song_change()
+  elseif btnp(3) then -- decrement offset
+    offset = offset - 1
+    if offset < 0 then
+      offset = 0
+    end
+    on_song_change()
   -- elseif btnp(4) then -- shuffle
   --  shuffle = not shuffle
   elseif btnp(4) then
@@ -170,6 +185,8 @@ function _draw()
     local w=64
     rectfill(x-w/2, y-w/2, x+w/2, y+w/2, 0)
     draw_label(x, y, w)
+
+    print(sub(tostr(offset, true), 5, 6), 64 - 32, 102, 7)
 
     draw_control_icon(64-16, 100, 2)
     if play_state then
