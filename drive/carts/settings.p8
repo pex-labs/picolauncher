@@ -31,6 +31,47 @@ local scroll_offset = 0
 local wifi_status = {ssid="", state="unknown"}
 local airplane_mode = false
 
+-- virtual keyboard
+local keyboard_up_y = 78
+local keyboard_down_y = 148
+local keyboard = Keyboard:new(7, 0, 8, 14, keyboard_down_y, function(text)
+  show_keyboard = false
+  make_vkeyboard_tween(false)
+
+  -- no-op if empty string
+  if text == "" then return end
+
+  -- currently only used for connecting to networks
+  local ssid = wifi_menu:cur().ssid
+  local psk = text
+  serial_debug('connect to wifi request, ssid: '..ssid..', psk: '..psk)
+  request_loadable('wifi_connect', {ssid, psk})
+end)
+
+-- tweens for keyboard
+vkeyboard_tween = {}
+function make_vkeyboard_tween(show_keyboard)
+  local vkeyboard_target_y = 0
+  if show_keyboard then
+    vkeyboard_target_y = keyboard_up_y
+  else
+    vkeyboard_target_y = keyboard_down_y
+  end
+  vkeyboard_tween=tween_machine:add_tween({
+    func=outQuart,
+    v_start=keyboard.y,
+    v_end=vkeyboard_target_y,
+    duration=0.5
+  })
+  vkeyboard_tween:register_step_callback(function(pos)
+    keyboard.y = pos
+  end)
+  vkeyboard_tween:register_finished_callback(function(tween)
+    tween:remove()
+  end)
+  vkeyboard_tween:restart()
+end
+
 function _init()
   -- TODO fetch the platform to do platform specific settings pages
   -- info is pretty important to get, so retry a couple times
@@ -136,7 +177,6 @@ function _init()
   init_title_bar(14, 2)
 end
 
-
 function new_wifi_menu(networks)
   wifi_menu_items = {
     {label="[scan]", func=function()request_loadable('wifi_list')end},
@@ -147,7 +187,10 @@ function new_wifi_menu(networks)
 
   for i, network in ipairs(networks) do
     add(wifi_menu_items, {ssid=network.ssid, name=network.name, strength=network.strength, func=function()
+      -- each time we show the keyboard, we can decide whether or not
+      -- the text field is to be redacted
       show_keyboard=true
+      keyboard.redact_textfield = true
       make_vkeyboard_tween(true)
     end})
   end
@@ -188,48 +231,6 @@ local joycon_controls = {
 }
 local control_names = {"up", "down", "left", "right", "a", "b"}
 local current_control = 1
-
--- virtual keyboard
-local keyboard_up_y = 78
-local keyboard_down_y = 148
-local keyboard = Keyboard:new(7, 0, 8, 14, keyboard_down_y, function(text)
-  show_keyboard = false
-  make_vkeyboard_tween(false)
-
-  -- no-op if empty string
-  if text == "" then return end
-
-  -- currently only used for connecting to networks
-  local ssid = wifi_menu:cur().ssid
-  local psk = text
-  serial_debug('connect to wifi request, ssid: '..ssid..', psk: '..psk)
-  request_loadable('wifi_connect', {ssid, psk})
-end)
-
--- tweens for keyboard
-vkeyboard_tween = {}
-function make_vkeyboard_tween(show_keyboard)
-  local vkeyboard_target_y = 0
-  if show_keyboard then
-    vkeyboard_target_y = keyboard_up_y
-  else
-    vkeyboard_target_y = keyboard_down_y
-  end
-  vkeyboard_tween=tween_machine:add_tween({
-    func=outQuart,
-    v_start=keyboard.y,
-    v_end=vkeyboard_target_y,
-    duration=0.5
-  })
-  vkeyboard_tween:register_step_callback(function(pos)
-    keyboard.y = pos
-  end)
-  vkeyboard_tween:register_finished_callback(function(tween)
-    tween:remove()
-  end)
-  vkeyboard_tween:restart()
-end
-
 
 function _update60()
   update_loadables()
